@@ -102,7 +102,7 @@ test_text_processing_unicode = do
 test_text_processing_empty :: Assertion
 test_text_processing_empty = do
   trim "" @?= ""
-  splitBy ',' "" @?= []
+  splitBy , "" @?= [""]
   removeComments "" @?= ""
   normalizeIndentation "" @?= ""
 

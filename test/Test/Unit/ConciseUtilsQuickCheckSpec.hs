@@ -58,10 +58,10 @@ prop_splitBy_properties :: Char -> String -> Bool
 prop_splitBy_properties delim s = 
   let parts = splitBy delim s
   in length parts >= 0 && 
-     (if null s then null parts else True) &&
+     (if null s then parts == [""] else True) &&
      (if not (null s) && all (== delim) s then length parts == length s + 1 else True) &&
      (if s == [delim] then parts == ["", ""] else True) &&
-     (if s == "" then parts == [] else True)
+     (if s == "" then parts == [""] else True)
 
 -- | Test properties of splitByCollapsed
 prop_splitByCollapsed_properties :: Char -> String -> Bool
@@ -71,13 +71,13 @@ prop_splitByCollapsed_properties delim s =
 
 -- | Test splitBy with empty string
 prop_splitBy_empty :: Char -> Bool
-prop_splitBy_empty delim = splitBy delim "" == []
+prop_splitBy_empty delim = splitBy delim "" == [""]
 
 -- | Test that splitByComma equals splitBy with comma
 prop_splitByComma_equals_splitBy :: String -> Bool
 prop_splitByComma_equals_splitBy s = 
   let result = splitByComma s == splitBy ',' s
-  in result && (if null s then splitByComma s == [] else True)
+  in result && (if null s then splitByComma s == [""] else True)
 
 -- | Test that splitByCommaCollapsed equals splitByCollapsed with comma
 prop_splitByCommaCollapsed_equals_splitByCollapsed :: String -> Bool

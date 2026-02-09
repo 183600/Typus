@@ -40,13 +40,13 @@ comprehensiveQuickCheckTestSuite = testGroup "Comprehensive QuickCheck Test Suit
 
 -- | 内存优化的测试套件
 memoryOptimizedTestSuite :: TestTree
-memoryOptimizedTestSuite = memoryLevelTestGroup "Memory Optimized QuickCheck Tests" LowMemory
-  [ gcBetweenTests $ CoreUtilsQuickCheckTests.coreUtilsTests
-  , gcBetweenTests $ ParserQuickCheckTests.parserQuickCheckTests
-  , gcBetweenTests $ CompilerCoreQuickCheckTests.compilerCoreQuickCheckTests
-  , gcBetweenTests $ DependencyAnalysisQuickCheckTests.dependencyAnalysisQuickCheckTests
-  , gcBetweenTests $ OwnershipAnalysisQuickCheckTests.ownershipAnalysisQuickCheckTests
-  , gcBetweenTests $ ErrorHandlingQuickCheckTests.errorHandlingQuickCheckTests
+memoryOptimizedTestSuite = memoryLevelTestGroup Minimal "Memory Optimized QuickCheck Tests"
+  [ CoreUtilsQuickCheckTests.coreUtilsTests
+  , ParserQuickCheckTests.parserQuickCheckTests
+  , CompilerCoreQuickCheckTests.compilerCoreQuickCheckTests
+  , DependencyAnalysisQuickCheckTests.dependencyAnalysisQuickCheckTests
+  , OwnershipAnalysisQuickCheckTests.ownershipAnalysisQuickCheckTests
+  , ErrorHandlingQuickCheckTests.errorHandlingQuickCheckTests
   ]
 
 -- | 快速测试套件（仅包含关键测试）
@@ -58,9 +58,9 @@ quickTestSuite = testGroup "Quick QuickCheck Tests"
       , testProperty "remove line comments preserves strings" CoreUtilsQuickCheckTests.prop_remove_line_comments_preserves_strings
       ]
   , testGroup "Parser"
-      [ testProperty "parse identifier basic" ParserQuickCheckTests.prop_parse_identifier_basic
-      , testProperty "parse number" ParserQuickCheckTests.prop_parse_number
-      , testProperty "parse string literal" ParserQuickCheckTests.prop_parse_string_literal
+      [ testProperty "validate identifier" ParserQuickCheckTests.prop_validate_identifier
+      , testProperty "parse empty input" ParserQuickCheckTests.prop_parse_empty_input
+      , testProperty "parse simple expression" ParserQuickCheckTests.prop_parse_simple_expression
       ]
   , testGroup "Compiler"
       [ testProperty "compile basic" CompilerCoreQuickCheckTests.prop_compile_basic

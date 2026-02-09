@@ -57,7 +57,7 @@ prop_split_by_delimiter_not_in_result delim s =
 
 prop_split_by_empty_string :: Char -> Property
 prop_split_by_empty_string delim =
-  splitBy delim "" === []
+  splitBy , "" === [""]
 
 prop_split_by_single_delimiter :: Char -> Property
 prop_split_by_single_delimiter delim =

@@ -42,7 +42,7 @@ prop_split_by_length c s =
   let parts = U.splitBy c s
       rejoined = intercalate [c] parts
   in if null s 
-     then property $ null parts
+     then property $ parts == [""]
      else property $ rejoined === s
 
 -- | 测试removeLineComments不影响字符串字面量
@@ -111,11 +111,11 @@ prop_trim_whitespace s =
 
 -- | 测试splitBy对空字符串的处理
 prop_split_by_empty :: Char -> Property
-prop_split_by_empty c = U.splitBy c "" === []
+prop_split_by_empty c = U.splitBy c "" === [""]
 
 -- | 测试splitByComma对空字符串的处理
 prop_split_by_comma_empty :: Property
-prop_split_by_comma_empty = U.splitByComma "" === []
+prop_split_by_comma_empty = U.splitByComma "" === [""]
 
 -- | 测试removeComments的幂等性
 prop_remove_comments_idempotent :: String -> Property

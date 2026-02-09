@@ -54,7 +54,7 @@ tests = testGroup "Advanced Text Processing Tests"
   
   , testGroup "splitBy function edge cases"
     [ testCase "handles empty input" $
-        splitBy ',' "" @?= []
+        splitBy , "" @?= [""]
       
     , testCase "handles single character" $ do
         splitBy ',' "a" @?= ["a"]

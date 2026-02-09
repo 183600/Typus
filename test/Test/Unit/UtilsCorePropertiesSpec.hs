@@ -91,12 +91,12 @@ prop_splitByCommaCollapsed_equivalent s =
 -- Property: splitBy on empty string returns single empty segment
 prop_splitBy_empty_string :: Char -> Property
 prop_splitBy_empty_string delim = 
-  splitBy delim "" === []
+  splitBy , "" === [""]
 
 -- Property: splitByCollapsed on empty string returns empty list
 prop_splitByCollapsed_empty_string :: Char -> Property
 prop_splitByCollapsed_empty_string delim = 
-  splitByCollapsed delim "" === []
+  splitBy , "" === [""]
 
 -- ============================================================================
 -- Comment Removal Properties

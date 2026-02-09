@@ -159,7 +159,7 @@ test_trim_edge_cases =
 test_splitBy_edge_cases :: [TestTree]
 test_splitBy_edge_cases = 
   [ testCase "splitBy empty string" $ do
-      assertEqual "should return empty list" [] (splitBy ',' "")
+      assertEqual "should return list with empty string" [""] (splitBy ',' "")
   , testCase "splitBy single delimiter" $ do
       assertEqual "should split at delimiter" ["", ""] (splitBy ',' ",")
   , testCase "splitBy consecutive delimiters" $ do

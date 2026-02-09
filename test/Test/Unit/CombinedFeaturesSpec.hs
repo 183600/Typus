@@ -77,7 +77,7 @@ test_trim_edge_cases = do
 
 test_split_edge_cases :: Assertion
 test_split_edge_cases = do
-  splitBy ',' "" @?= []
+  splitBy , "" @?= [""]
   splitBy ',' "," @?= [""]
   splitBy ',' "a,b,c" @?= ["a", "b", "c"]
   splitBy ',' "a,,b" @?= ["a", "", "b"]

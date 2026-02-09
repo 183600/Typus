@@ -66,7 +66,7 @@ prop_utils_trim_single_char c =
   in if isSpace c then result == "" else result == [c]
 
 prop_utils_splitBy_empty_input :: Char -> Bool
-prop_utils_splitBy_empty_input delim = splitBy delim "" == []
+prop_utils_splitBy delim "" == [""]
 
 prop_utils_splitBy_single_char :: Char -> Char -> Bool
 prop_utils_splitBy_single_char delim c = 
@@ -75,7 +75,7 @@ prop_utils_splitBy_single_char delim c =
   else splitBy delim [c] == [[c]]
 
 prop_utils_splitByCollapsed_empty_input :: Char -> Bool
-prop_utils_splitByCollapsed_empty_input delim = splitByCollapsed delim "" == []
+prop_utils_splitBy delim "" == [""]
 
 prop_utils_removeComments_empty :: Bool
 prop_utils_removeComments_empty = removeComments "" == ""

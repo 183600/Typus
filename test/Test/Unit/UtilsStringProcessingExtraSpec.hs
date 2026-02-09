@@ -47,7 +47,7 @@ tests = testGroup "UtilsStringProcessingExtraSpec Tests"
     ]
   
   , testGroup "splitBy函数测试"
-    [ testCase "splitBy empty string" $ splitBy ',' "" @?= []
+    [ testCase "splitBy empty string" $ splitBy ',' "" @?= [""]
     , testCase "splitBy single character" $ splitBy ',' "a" @?= ["a"]
     , testCase "splitBy with delimiter" $ splitBy ',' "a,b,c" @?= ["a", "b", "c"]
     , testCase "splitBy preserves empty segments" $
@@ -69,7 +69,7 @@ tests = testGroup "UtilsStringProcessingExtraSpec Tests"
     ]
   
   , testGroup "splitByComma函数测试"
-    [ testCase "splitByComma empty string" $ splitByComma "" @?= []
+    [ testCase "splitByComma empty string" $ splitByComma "" @?= [""]
     , testCase "splitByComma normal CSV" $ splitByComma "a,b,c" @?= ["a", "b", "c"]
     , testCase "splitByComma preserves empty fields" $
         (splitByComma "a,,c" @?= ["a", "", "c"]) *>
@@ -82,7 +82,7 @@ tests = testGroup "UtilsStringProcessingExtraSpec Tests"
     ]
   
   , testGroup "splitByCommaCollapsed函数测试"
-    [ testCase "splitByCommaCollapsed empty string" $ splitByCommaCollapsed "" @?= []
+    [ testCase "splitBy , "" @?= [""]
     , testCase "splitByCommaCollapsed normal CSV" $ splitByCommaCollapsed "a,b,c" @?= ["a", "b", "c"]
     , testCase "splitByCommaCollapsed collapses consecutive commas" $
         (splitByCommaCollapsed "a,,c" @?= ["a", "c"]) *>

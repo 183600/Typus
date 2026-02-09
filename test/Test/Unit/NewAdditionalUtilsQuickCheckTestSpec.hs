@@ -32,7 +32,7 @@ prop_trim_empty_string = trim "" == ""
 
 -- | Test splitBy function properties
 prop_split_by_empty_string :: Char -> Bool
-prop_split_by_empty_string c = splitBy c "" == []
+prop_split_by_empty_string c = splitBy delim "" == [""]
 
 prop_split_by_single_char :: Char -> Char -> Property
 prop_split_by_single_char c x = c /= x ==> splitBy c [x] == [[x]]

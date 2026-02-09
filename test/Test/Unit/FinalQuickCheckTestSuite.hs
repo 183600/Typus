@@ -61,28 +61,28 @@ prop_splitBy_basic :: Char -> String -> Property
 prop_splitBy_basic c s =
   let parts = splitBy c s
   in if null s
-     then parts === []
+     then parts === [""]
      else if all (== c) s
           then parts === replicate (length s + 1) ""
           else property $ length (concat parts) >= length s - length (filter (== c) s)
 
 -- | 测试splitBy对空字符串的处理
 prop_splitBy_empty :: Char -> Property
-prop_splitBy_empty c = splitBy c "" === []
+prop_splitBy_empty c = splitBy c "" === [""]
 
 -- | 测试splitByComma的基本属性
 prop_splitByComma_basic :: String -> Property
 prop_splitByComma_basic s =
   let parts = splitByComma s
   in if null s
-     then parts === []
+     then parts === [""]
      else if all (== ',') s
           then parts === replicate (length s + 1) ""
           else property $ length (concat parts) >= length s - length (filter (== ',') s)
 
 -- | 测试splitByComma对空字符串的处理
 prop_splitByComma_empty :: Property
-prop_splitByComma_empty = splitByComma "" === []
+prop_splitByComma_empty = splitByComma "" === [""]
 
 -- | 测试removeLineComments的基本属性
 prop_removeLineComments_basic :: String -> String -> Property

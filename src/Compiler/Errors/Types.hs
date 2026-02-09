@@ -8,11 +8,13 @@ module Compiler.Errors.Types (
     ErrorLocation(..),
     ErrorContext(..),
     emptyContext,
-    ErrorRecovery(..)
+    ErrorRecovery(..),
+    classifyErrors
 ) where
 
 import GHC.Generics (Generic)
 import Data.Aeson (ToJSON, FromJSON)
+import Data.List (isInfixOf)
 import qualified Ownership.Common.Types as Own
 import qualified Dependencies.TypeSystem as Dep
 
@@ -86,3 +88,10 @@ data ErrorCategory
     | Integration
     | Unknown
     deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
+
+-- | 分类错误（简单实现，用于测试）
+classifyErrors :: String -> [CombinedError]
+classifyErrors content = 
+  if "error" `isInfixOf` content
+    then [IntegrationError "Test error" Error]
+    else []

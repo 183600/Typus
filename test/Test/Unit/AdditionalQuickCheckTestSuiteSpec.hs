@@ -44,7 +44,7 @@ prop_trim_all_whitespace s =
 
 -- Test splitBy with empty string
 prop_split_by_empty_string :: Char -> Property
-prop_split_by_empty_string c = splitBy c "" === []
+prop_split_by_empty_string c = splitBy , "" === [""]
 
 -- Test splitByCollapsed with only delimiters
 prop_split_by_collapsed_only_delimiters :: Char -> Property
@@ -54,7 +54,7 @@ prop_split_by_collapsed_only_delimiters c =
 
 -- Test splitByComma with special cases
 prop_split_by_comma_empty :: Property
-prop_split_by_comma_empty = splitByComma "" === []
+prop_split_by_comma_empty = splitBy , "" === [""]
 
 prop_split_by_comma_single :: Property
 prop_split_by_comma_single = splitByComma "a" === ["a"]
@@ -67,7 +67,7 @@ prop_split_by_comma_trailing = splitByComma "a," === ["a", ""]
 
 -- Test splitByCommaCollapsed with special cases
 prop_split_by_comma_collapsed_empty :: Property
-prop_split_by_comma_collapsed_empty = splitByCommaCollapsed "" === []
+prop_split_by_comma_collapsed_empty = splitBy , "" === [""]
 
 prop_split_by_comma_collapsed_single :: Property
 prop_split_by_comma_collapsed_single = splitByCommaCollapsed "a" === ["a"]

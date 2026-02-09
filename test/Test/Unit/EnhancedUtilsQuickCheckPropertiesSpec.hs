@@ -112,7 +112,7 @@ prop_trim_removes_trailing_whitespace = forAll genStringWithWhitespace $ \s ->
 -- 属性6: splitBy空字符串应该返回空列表
 prop_split_by_empty_string :: Property
 prop_split_by_empty_string = forAll genDelimiter $ \delim ->
-  property $ splitBy delim "" === []
+  property $ splitBy , "" === [""]
 
 -- 属性7: splitBy单个分隔符应该返回两个空段
 prop_split_by_single_delimiter :: Property

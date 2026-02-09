@@ -59,7 +59,7 @@ prop_trim_idempotent s =
 -- | splitBy should handle empty string correctly
 prop_splitBy_empty_string :: Char -> Property
 prop_splitBy_empty_string delim = 
-  property $ splitBy delim "" == []
+  property $ splitBy delim "" == [""]
 
 -- | splitBy should handle string with only delimiters correctly
 prop_splitBy_only_delimiters :: Char -> Positive Int -> Property

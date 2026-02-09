@@ -51,6 +51,7 @@ data OwnershipError
     | PathSensitiveError String
     | LoopOwnershipError String
     | OwnershipError String
+    | EmptyInput
     deriving (Eq)
 
 instance Show OwnershipError where
@@ -70,6 +71,7 @@ instance Show OwnershipError where
     show (PathSensitiveError msg) = "PathSensitiveError " ++ msg
     show (LoopOwnershipError msg) = "LoopOwnershipError " ++ msg
     show (OwnershipError msg) = "OwnershipError " ++ msg
+    show EmptyInput = "EmptyInput"
 
 instance Ord OwnershipError where
     compare err1 err2 = compare (show err1) (show err2)

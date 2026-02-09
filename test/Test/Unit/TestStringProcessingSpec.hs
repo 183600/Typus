@@ -48,7 +48,7 @@ testStringProcessing = testGroup "String Processing Tests"
       splitBy ',' ",," @?= ["", "", ""]
       
   , testCase "Utils: splitBy handles empty string" $
-      splitBy ',' "" @?= []
+      splitBy , "" @?= [""]
       
   , testCase "Utils: splitByCollapsed removes empty segments" $
       splitByCollapsed ',' "a,,b" @?= ["a", "b"]

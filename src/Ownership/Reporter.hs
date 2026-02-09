@@ -4,7 +4,7 @@ module Ownership.Reporter
 
 import Data.List (intercalate)
 
-import Ownership.Common.Types (OwnershipError(UseAfterMove, DoubleMove, BorrowWhileMoved, MutBorrowWhileBorrowed, BorrowWhileMutBorrowed, MultipleMutBorrows, UseWhileMutBorrowed, OutOfScope, BorrowError, ParseError, CrossFunctionMove, ParameterMoveMismatch, ControlFlowError, PathSensitiveError, LoopOwnershipError, OwnershipError))
+import Ownership.Common.Types (OwnershipError(UseAfterMove, DoubleMove, BorrowWhileMoved, MutBorrowWhileBorrowed, BorrowWhileMutBorrowed, MultipleMutBorrows, UseWhileMutBorrowed, OutOfScope, BorrowError, ParseError, CrossFunctionMove, ParameterMoveMismatch, ControlFlowError, PathSensitiveError, LoopOwnershipError, OwnershipError, EmptyInput))
 
 formatOwnershipErrors :: [OwnershipError] -> String
 formatOwnershipErrors = intercalate "; " . map formatError
@@ -25,3 +25,4 @@ formatOwnershipErrors = intercalate "; " . map formatError
     formatError (PathSensitiveError msg) = "Path sensitive error: " ++ msg
     formatError (LoopOwnershipError msg) = "Loop ownership error: " ++ msg
     formatError (OwnershipError msg) = "Ownership error: " ++ msg
+    formatError EmptyInput = "Empty input"

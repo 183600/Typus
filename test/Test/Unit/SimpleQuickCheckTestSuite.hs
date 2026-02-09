@@ -74,14 +74,14 @@ prop_splitBy_basic :: Char -> String -> Property
 prop_splitBy_basic c s =
   let parts = Utils.splitBy c s
   in if null s
-     then parts === []
+     then parts === [""]
      else if all (== c) s
           then parts === replicate (length s + 1) ""
           else property $ length (concat parts) >= length s - length (filter (== c) s)
 
 -- | 测试splitBy对空字符串的处理
 prop_splitBy_empty :: Char -> Property
-prop_splitBy_empty c = Utils.splitBy c "" === []
+prop_splitBy_empty c = Utils.splitBy c "" === [""]
 
 -- | 测试splitBy对连续分隔符的处理
 prop_splitBy_collapsed :: Char -> String -> Property
@@ -98,14 +98,14 @@ prop_splitByComma_basic :: String -> Property
 prop_splitByComma_basic s =
   let parts = Utils.splitByComma s
   in if null s
-     then parts === []
+     then parts === [""]
      else if all (== ',') s
           then parts === replicate (length s + 1) ""
           else property $ length (concat parts) >= length s - length (filter (== ',') s)
 
 -- | 测试splitByComma对空字符串的处理
 prop_splitByComma_empty :: Property
-prop_splitByComma_empty = Utils.splitByComma "" === []
+prop_splitByComma_empty = Utils.splitByComma "" === [""]
 
 -- | 测试splitByComma对连续逗号的处理
 prop_splitByComma_collapsed :: String -> Property
@@ -428,7 +428,7 @@ test_trim_edge_cases = do
 -- | 测试splitBy的边界情况
 test_splitBy_edge_cases :: Assertion
 test_splitBy_edge_cases = do
-  assertEqual "Empty string" [] (Utils.splitBy ',' "")
+  assertEqual "Empty string" [""] (Utils.splitBy ',' "")
   assertEqual "No separator" ["single"] (Utils.splitBy 'x' "single")
   assertEqual "Single separator" ["", ""] (Utils.splitBy ',' ",")
   assertEqual "Multiple separators" ["a", "", "b"] (Utils.splitBy ',' "a,,b")
@@ -436,7 +436,7 @@ test_splitBy_edge_cases = do
 -- | 测试splitByComma的边界情况
 test_splitByComma_edge_cases :: Assertion
 test_splitByComma_edge_cases = do
-  assertEqual "Empty string" [] (Utils.splitByComma "")
+  assertEqual "Empty string" [""] (Utils.splitByComma "")
   assertEqual "No commas" ["single"] (Utils.splitByComma "single")
   assertEqual "Single comma" ["", ""] (Utils.splitByComma ",")
   assertEqual "Multiple commas" ["a", "", "b"] (Utils.splitByComma "a,,b")

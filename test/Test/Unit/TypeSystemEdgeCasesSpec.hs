@@ -114,7 +114,7 @@ prop_char_validation_consistent c =
 test_typesystem_edge_empty :: Assertion
 test_typesystem_edge_empty = do
   trim "" @?= ""
-  splitBy ',' "" @?= []
+  splitBy , "" @?= [""]
   normalizeIndentation "" @?= ""
   safeProcessString "" @?= Right ""
 

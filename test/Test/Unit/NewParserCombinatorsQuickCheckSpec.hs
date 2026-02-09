@@ -97,7 +97,7 @@ parseIdentifier (c:cs)
 -- | Simple number parser
 parseNumber :: String -> Either String Int
 parseNumber s = case reads s of
-  [(n, "")] -> Right n
+  [(n, "")] -> if n >= 0 then Right n else Left "Negative number not allowed"
   _ -> Left "Invalid number"
 
 -- | Simple string literal parser

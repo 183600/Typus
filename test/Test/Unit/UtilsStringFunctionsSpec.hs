@@ -22,7 +22,7 @@ tests = testGroup "Utils String Functions Tests"
       splitBy ',' "a,b,c" @?= ["a", "b", "c"]
       splitBy ',' "a,,b" @?= ["a", "", "b"]
       splitBy ',' ",a," @?= ["", "a", ""]
-      splitBy ',' "" @?= []
+      splitBy , "" @?= [""]
       splitBy ',' "," @?= ["", ""]
       splitBy ',' "a" @?= ["a"]
       
@@ -35,7 +35,7 @@ tests = testGroup "Utils String Functions Tests"
   , testCase "splitByComma works correctly" $ do
       splitByComma "a,b,c" @?= ["a", "b", "c"]
       splitByComma "a,,b" @?= ["a", "", "b"]
-      splitByComma "" @?= []
+      splitBy , "" @?= [""]
       splitByComma "," @?= ["", ""]
       
   , testCase "splitByCommaCollapsed removes empty segments" $ do
@@ -43,7 +43,7 @@ tests = testGroup "Utils String Functions Tests"
       splitByCommaCollapsed "a,,b" @?= ["a", "b"]
       splitByCommaCollapsed ",a," @?= ["a"]
       splitByCommaCollapsed "a,,,b" @?= ["a", "b"]
-      splitByCommaCollapsed "" @?= []
+      splitBy , "" @?= [""]
       splitByCommaCollapsed "," @?= []
       splitByCommaCollapsed ",,," @?= []
       

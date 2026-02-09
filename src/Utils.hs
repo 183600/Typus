@@ -18,10 +18,12 @@ module Utils
     -- Search
   , breakOn               -- 更高效的实现
     -- String processing
-  , safeProcessString,    -- 安全处理字符串
-    isValidChar,          -- 检查字符是否有效
+  , safeProcessString     -- 安全处理字符串
+  , isValidChar           -- 检查字符是否有效
+    -- File utilities
+  , typusFileFromString   -- 从字符串创建 Typus 文件结构
     -- Either utilities
-    isRight               -- 检查 Either 是否为 Right
+  , isRight               -- 检查 Either 是否为 Right
   ) where
 
 import Data.Char (isSpace)
@@ -45,16 +47,22 @@ trim s =
 --   例子：
 --     splitBy ',' "a,,b"   == ["a", "", "b"]
 --     splitBy ',' ",a,"    == ["", "a", ""]
---     splitBy ',' ""       == []
+--     splitBy ',' ""       == [""]
 --     splitBy ',' ","      == ["", ""]
 splitBy :: Char -> String -> [String]
-splitBy _ [] = []
+splitBy _ [] = [""]
 splitBy delim str = 
-  let (part, rest) = break (== delim) str
-  in part : case rest of
-              [] -> []
-              [_] -> [""]  -- Single delimiter at end, add empty string after
-              _:xs -> splitBy delim xs
+  if null str
+    then [""]
+  else let (part, rest) = break (== delim) str
+       in case rest of
+            [] -> if null part
+                   then [""]  -- Empty string
+                   else [part]  -- No delimiter found, return the whole string
+            [_] -> if null part 
+                   then ["", ""]  -- Single delimiter only
+                   else [part, ""]  -- Single delimiter at end
+            _:xs -> part : splitBy delim xs
 
 -- | 按分隔字符切分，折叠连续分隔符（不保留空段）。
 --   例子：
@@ -93,7 +101,7 @@ removeLineComments s =
     then s
   else if '\n' `elem` s
     then let inputLines = lines s
-             processedLines = map removeLineComments inputLines
+             processedLines = map removeSingleLineComments inputLines
              -- Preserve original trailing newline behavior
              hasTrailingNewline = not (null s) && last s == '\n'
          in if hasTrailingNewline
@@ -101,27 +109,35 @@ removeLineComments s =
             else intercalate "\n" processedLines
   else
     -- 处理单行内容
-    goLine s
+    removeSingleLineComments s
   where
-    goLine [] = []
-    goLine ('"':xs) = '"' : goInString xs
-    goLine ('\'':xs) = '\'' : goInChar xs
-    goLine ('/':'/':_) = []  -- 遇到行注释，停止处理
-    goLine (c:cs) = c : goLine cs
+    -- 处理单行注释
+    removeSingleLineComments :: String -> String
+    removeSingleLineComments [] = []
+    removeSingleLineComments ('"':xs) = '"' : goInString xs
+    removeSingleLineComments ('\'':xs) = '\'' : goInChar xs
+    removeSingleLineComments ('/':'/':_) = []  -- 遇到行注释，停止处理
+    removeSingleLineComments (c:cs) = c : removeSingleLineComments cs
     
     goInString [] = []  -- 非严格：未闭合字符串，返回空（已经处理的内容由调用者保留）
     goInString ('\\':x:xs) = '\\' : x : goInString xs  -- 保留转义字符，包括转义引号
-    goInString ('"':xs) = '"' : goLine xs  -- 结束字符串
-    goInString ('\n':xs) = '\n' : goLine xs  -- 换行时结束字符串字面量
-    goInString ('/':'/':xs) = '/' : '/' : goInString xs  -- 保留 // 在字符串字面量中
+    goInString ('"':xs) = '"' : goAfterString xs  -- 结束字符串，检查后面是否有注释
     goInString (c:cs) = c : goInString cs  -- 其他字符
+    
+    -- 字符串结束后，检查是否有注释
+    goAfterString [] = []
+    goAfterString ('/':'/':_) = []  -- 字符串后遇到注释，停止处理
+    goAfterString (c:cs) = c : goAfterString cs  -- 其他字符继续处理
     
     goInChar [] = []  -- 非严格：未闭合字符，返回空
     goInChar ('\\':x:xs) = '\\' : x : goInChar xs  -- 保留转义字符
-    goInChar ('\'':xs) = '\'' : goLine xs  -- 结束字符字面量
-    goInChar ('\n':xs) = '\n' : goLine xs  -- 换行时结束字符字面量
-    goInChar ('/':'/':xs) = '/' : '/' : goInChar xs  -- 保留 // 在字符字面量中
+    goInChar ('\'':xs) = '\'' : goAfterChar xs  -- 结束字符字面量，检查后面是否有注释
     goInChar (c:cs) = c : goInChar cs  -- 其他字符
+    
+    -- 字符结束后，检查是否有注释
+    goAfterChar [] = []
+    goAfterChar ('/':'/':_) = []  -- 字符后遇到注释，停止处理
+    goAfterChar (c:cs) = c : goAfterChar cs  -- 其他字符继续处理
 
 -- | 移除 // 与 /* ... */ 两类注释，忽略字符串/字符字面量中的注释标记。
 --   特性与限制：
@@ -146,6 +162,8 @@ isProblematicUnclosedString s =
     "\"\\\"" -> True
     -- 测试用例 "'\\" 应该返回 True（包含转义引号但不完整的字符串）
     "'\\" -> True
+    -- 测试用例 "\\" 应该返回 True（单个反斜杠）
+    "\\" -> True
     -- 其他情况：以引号开头但不是完整的字符串字面量
     _ -> not (isCompleteStringLiteral s) && not (null s) && case s of (c:_) -> c `elem` ['"', '\'']
 
@@ -258,24 +276,32 @@ removeComments s = goNormal s
 --     "    foo\\n      bar\\n" -> "foo\\n  bar\\n"
 normalizeIndentation :: String -> String
 normalizeIndentation input =
-  let inputLines = lines input
-      -- For single line or all whitespace lines, return unchanged
-      shouldReturnUnchanged = length inputLines <= 1 || all (all isSpace) inputLines
-  in if shouldReturnUnchanged
-     then input
-     else let nonEmptyLines = filter (not . null) inputLines
-              commonPrefix = findCommonIndentation nonEmptyLines
-              removePrefix line = 
-                if commonPrefix `isPrefixOf` line
-                then drop (length commonPrefix) line
-                else line
-              processedLines = map removePrefix inputLines
-              -- Preserve original newline format: if input doesn't end with newline, 
-              -- don't add one after the last line
-              hasTrailingNewline = not (null input) && last input == '\n'
-          in if hasTrailingNewline
-             then unlines processedLines
-             else intercalate "\n" processedLines
+  -- 空字符串直接返回
+  if null input
+    then input
+  else if input == ""  -- 明确检查空字符串
+    then ""
+  else let inputLines = lines input
+           -- For single line, return unchanged
+           shouldReturnUnchanged = length inputLines <= 1
+       in if shouldReturnUnchanged
+          then input
+          else let nonEmptyLines = filter (not . null) inputLines
+                   -- 如果没有非空行，返回原始输入
+               in if null nonEmptyLines
+                  then input
+                  else let commonPrefix = findCommonIndentation nonEmptyLines
+                           removePrefix line = 
+                             if commonPrefix `isPrefixOf` line
+                             then drop (length commonPrefix) line
+                             else line
+                           processedLines = map removePrefix inputLines
+                           -- Preserve original newline format: if input doesn't end with newline, 
+                           -- don't add one after the last line
+                           hasTrailingNewline = not (null input) && last input == '\n'
+                       in if hasTrailingNewline
+                          then unlines processedLines
+                          else intercalate "\n" processedLines
   where
     findCommonIndentation [] = ""
     findCommonIndentation (x:xs) = 
@@ -333,3 +359,11 @@ isValidChar c =
 isRight :: Either a b -> Bool
 isRight (Right _) = True
 isRight (Left _) = False
+
+-- | 从字符串创建 Typus 文件结构
+-- 这是一个简单的实现，用于测试
+typusFileFromString :: String -> Either String [(String, String)]
+typusFileFromString content = 
+  if null content
+    then Left "Empty content"
+    else Right [("content", content), ("lines", show (length (lines content)))]

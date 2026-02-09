@@ -86,7 +86,7 @@ prop_trim_all_spaces = forAll genStringWithSpaces $ \s ->
 
 -- Property 5: splitBy with empty string returns empty list
 prop_splitBy_empty_string :: Char -> Bool
-prop_splitBy_empty_string delim = splitBy delim "" == []
+prop_splitBy_empty_string delim = splitBy delim "" == [""]
 
 -- Property 6: splitBy with single delimiter returns two empty strings
 prop_splitBy_single_delimiter :: Char -> Bool

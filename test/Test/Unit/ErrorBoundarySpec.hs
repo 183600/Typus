@@ -72,7 +72,7 @@ prop_unicode_handling s =
 test_error_boundary_empty_string :: Assertion
 test_error_boundary_empty_string = do
   trim "" @?= ""
-  splitBy ',' "" @?= []
+  splitBy , "" @?= [""]
   normalizeIndentation "" @?= ""
   removeComments "" @?= ""
 

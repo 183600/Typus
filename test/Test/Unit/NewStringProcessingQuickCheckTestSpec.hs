@@ -38,7 +38,7 @@ prop_trim_preserves_internal_content s =
 
 -- Test splitBy function properties
 prop_split_by_empty_string :: Char -> Property
-prop_split_by_empty_string delim = splitBy delim "" === []
+prop_split_by_empty_string delim = splitBy , "" === [""]
 
 prop_split_by_single_char :: Char -> Char -> Property
 prop_split_by_single_char delim c = 
