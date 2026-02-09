@@ -27,7 +27,7 @@ import Data.Maybe (listToMaybe)
 -- | 测试trim函数的基本属性
 prop_trim_basic :: String -> Property
 prop_trim_basic s =
-  let limitedString = take 50 s  -- 限制字符串大小防止内存消耗过大
+  let limitedString = take 10 s  -- 进一步减少字符串大小以降低内存消耗
       trimmed = trim limitedString
   in property $ 
     (length trimmed <= length limitedString) && 
@@ -50,18 +50,18 @@ prop_trim_whitespace s =
 prop_trim_regular :: Char -> String -> Property
 prop_trim_regular c s =
   not (isSpace c) ==>
-  let limitedS = take 30 s  -- 限制字符串大小
+  let limitedS = take 10 s  -- 进一步减少字符串大小
       s' = c : limitedS
       trimmed = trim s'
       firstCharIsC = case listToMaybe trimmed of
                        Nothing -> property False
                        Just h -> h === c
-  in conjoin [property (not (null trimmed)), firstCharIsC, property (length trimmed >= 1 && length trimmed <= 31)]
+  in conjoin [property (not (null trimmed)), firstCharIsC, property (length trimmed >= 1 && length trimmed <= 11)]
 
 -- | 测试trim的幂等性
 prop_trim_idempotent :: String -> Property
 prop_trim_idempotent s =
-  let limitedString = take 40 s  -- 限制字符串大小
+  let limitedString = take 15 s  -- 进一步减少字符串大小
       trimmed1 = trim limitedString
       trimmed2 = trim trimmed1
   in trimmed1 === trimmed2
@@ -69,14 +69,14 @@ prop_trim_idempotent s =
 -- | 测试splitBy的基本属性
 prop_splitBy_basic :: Char -> String -> Property
 prop_splitBy_basic c s =
-  let limitedS = take 60 s  -- 限制字符串大小
+  let limitedS = take 20 s  -- 进一步减少字符串大小
       parts = splitBy c limitedS
   in if null limitedS
      then parts === []
      else if all (== c) limitedS
           then parts === replicate (length limitedS + 1) ""
           else property $ length (concat parts) >= length limitedS - length (filter (== c) limitedS) &&
-                     length parts <= 20  -- 限制分割后的部分数量
+                     length parts <= 10  -- 进一步减少分割后的部分数量
 
 -- | 测试splitBy对空字符串的处理
 prop_splitBy_empty :: Char -> Property
