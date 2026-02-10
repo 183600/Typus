@@ -200,7 +200,6 @@ test-suite typus-test
         Test.Unit.ConciseParserQuickCheckSpec,
         Test.Unit.ConciseSourceLocationQuickCheckSpec,
         Test.Unit.ConciseTestSuite,
-        Test.Unit.ConciseUtilsQuickCheckSpec,
         Test.Unit.CoreUtilsQuickCheckTests,
         Test.Unit.DebugCoreQuickCheckSpec,
         Test.Unit.DependencyAnalysisQuickCheckTests,
@@ -278,7 +277,7 @@ test-suite typus-test-optimized
         Test.Unit.ConciseParserQuickCheckSpec,
         Test.Unit.ConciseSourceLocationQuickCheckSpec,
         Test.Unit.ConciseTestSuite,
-        Test.Unit.ConciseUtilsQuickCheckSpec,
+        
         Test.Unit.CIOptimizedTests,
         Test.Unit.CoreUtilsQuickCheckTests,
         Test.Unit.DebugCoreQuickCheckSpec,

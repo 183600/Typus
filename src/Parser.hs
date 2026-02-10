@@ -174,7 +174,10 @@ parseExpression s =
   let trimmed = trim s
   in if all isDigit trimmed
      then Right (Literal trimmed)
-     else if (all isDigit (dropWhile (== '-') trimmed) && not (null trimmed) && head trimmed == '-')
+     else if (all isDigit (dropWhile (== '-') trimmed) && not (null trimmed) && 
+              case trimmed of
+                [] -> False
+                (c:_) -> c == '-')
           then Right (Literal trimmed)  -- 处理负数
      else if all isAlphaNum trimmed && not (null trimmed)
           then Right (Variable trimmed)  -- 处理标识符

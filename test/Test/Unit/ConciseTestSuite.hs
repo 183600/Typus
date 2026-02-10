@@ -7,7 +7,7 @@ module Test.Unit.ConciseTestSuite where
 
 import Test.Tasty (TestTree)
 import TestSupport.MemoryLimits (withAggressiveMemoryLimits, aggressiveMemoryLimitedTestGroup)
-import qualified Test.Unit.ConciseUtilsQuickCheckSpec as Utils
+import qualified Test.Unit.SimpleQuickCheckTestSuite as Utils
 import qualified Test.Unit.ConciseSourceLocationQuickCheckSpec as SourceLocation
 import qualified Test.Unit.ConciseParserQuickCheckSpec as Parser
 import qualified Test.Unit.ConciseCompilerQuickCheckSpec as Compiler

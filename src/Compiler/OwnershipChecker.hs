@@ -111,6 +111,11 @@ ownershipErrorToCompilerError err = case err of
         [ "Validate the ownership directives and syntax"
         , "Reduce complex expressions and re-run the analysis"
         ]
+    EmptyInput -> mk "OWN0011"
+        ("Empty input provided for ownership analysis")
+        [ "Provide non-empty code content"
+        , "Check file reading operations"
+        ]
     CrossFunctionMove var fn -> mk "OWN0011"
         ("Value '" ++ var ++ "' moved across function boundary '" ++ fn ++ "'")
         [ "Return the value explicitly instead of moving implicitly"

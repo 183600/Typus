@@ -266,9 +266,7 @@ prop_normalize_indentation_tabs s =
       normalized = U.normalizeIndentation withTabs
   in if null s
      then property $ True  -- 对于空字符串，normalizeIndentation返回原始输入，这是正确的
-     else if length (lines withTabs) <= 1
-          then property $ normalized == withTabs  -- 对于单行，normalizeIndentation返回原始输入
-          else property $ not ("\t\t" `isPrefixOf` normalized)  -- 对于多行，应该移除制表符
+     else property $ not ("\t\t" `isPrefixOf` normalized)  -- 移除制表符
 
 -- | 测试splitBy对特殊字符的处理
 prop_split_by_special :: String -> Property

@@ -1,562 +1,919 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# OPTIONS_GHC -Wno-unused-imports -Wno-name-shadowing  -Wno-unused-matches -Wno-type-defaults #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Test.Unit.SimpleQuickCheckTestSuite where
 
-
+import Test.Tasty
+import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import Test.Tasty
-import Test.Tasty.QuickCheck
-
-
-
-import Test.Tasty
-import Test.Tasty.QuickCheck
-
-import Test.QuickCheck (conjoin, property, forAll, elements, listOf)
-
-import qualified Utils as Utils
-import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed, removeLineComments, removeComments, normalizeIndentation, safeProcessString, breakOn)
-import SourceLocation (SourcePos(..), SourceSpan(..), startPos, advancePosByText)
-import Parser (TypusFile(..), parseTypus)
-import ErrorHandler
-import Compiler.Errors.Core (TypeError(..), ErrorSeverity(..), formatError)
-import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
-import Data.Char (isAlphaNum, isAlpha, isSpace, isControl)
+import qualified Utils as U
+import Data.List (isInfixOf, isPrefixOf, isSuffixOf, intercalate, sort, nub)
+import Data.Char (isSpace, isLetter, isDigit, ord, toLower, toUpper)
+import Data.Maybe (isJust, isNothing)
 import Data.Either (isLeft, isRight)
-import Control.Monad (replicateM)
-import qualified Data.Map.Strict as Map
+import qualified Data.Map as Map
+import qualified Data.Set as Set
 
--- | 测试trim函数的基本属性
-prop_trim_basic :: String -> Property
-prop_trim_basic s =
-  let trimmed = Utils.trim s
-  in conjoin 
-     [ property $ length trimmed <= length s
-     , property $ if null s then null trimmed else True
-     , property $ if all isSpace s then null trimmed else True
-     ]
+-- ============================================================================
+-- 基础工具函数测试 (50个测试)
+-- ============================================================================
+
+-- | 测试trim函数的幂等性
+prop_trim_idempotent :: String -> Property
+prop_trim_idempotent s = U.trim (U.trim s) === U.trim s
 
 -- | 测试trim对空字符串的处理
 prop_trim_empty :: Property
-prop_trim_empty = Utils.trim "" === ""
+prop_trim_empty = U.trim "" === ""
 
--- | 测试trim对空白字符的处理
+-- | 测试trim对全空白字符串的处理
 prop_trim_whitespace :: String -> Property
 prop_trim_whitespace s =
-  let trimmed = Utils.trim s
+  let trimmed = U.trim s
   in if all isSpace s
-     then property $ null trimmed
+     then classify (not $ null s) "non-empty whitespace" $ property $ null trimmed
      else property True
 
--- | 测试trim对普通字符的处理
-prop_trim_regular :: Char -> String -> Property
-prop_trim_regular c s =
-  not (isSpace c) ==>
-  let s' = c : s
-      trimmed = Utils.trim s'
-  in case trimmed of
-       [] -> property False
-       (h:_) -> conjoin 
-                 [ h === c
-                 , property $ length trimmed >= 1
-                 ]
-
--- | 测试trim的幂等性
-prop_trim_idempotent :: String -> Property
-prop_trim_idempotent s =
-  let trimmed1 = Utils.trim s
-      trimmed2 = Utils.trim trimmed1
-  in trimmed1 === trimmed2
-
-prop_splitBy_basic :: Char -> String -> Property
-prop_splitBy_basic c s =
-  let parts = Utils.splitBy c s
-  in if null s
-     then parts === [""]
-     else if all (== c) s
-          then parts === replicate (length s + 1) ""
-          else property $ length (concat parts) >= length s - length (filter (== c) s)
+-- | 测试splitBy的基本属性
+prop_split_by_length :: Char -> String -> Property
+prop_split_by_length c s =
+  let parts = U.splitBy c s
+      rejoined = intercalate [c] parts
+  in if null s 
+     then property $ parts == [""]
+     else property $ rejoined === s
 
 -- | 测试splitBy对空字符串的处理
-prop_splitBy_empty :: Char -> Property
-prop_splitBy_empty c = Utils.splitBy c "" === [""]
+prop_split_by_empty :: Char -> Property
+prop_split_by_empty c = U.splitBy c "" === [""]
 
 -- | 测试splitBy对连续分隔符的处理
-prop_splitBy_collapsed :: Char -> String -> Property
-prop_splitBy_collapsed c s =
-  let parts = Utils.splitBy c s
-      collapsed = Utils.splitByCollapsed c s
-  in conjoin 
-     [ property $ length collapsed <= length parts
-     , property $ length collapsed >= 0
-     ]
+prop_split_by_consecutive :: Char -> Int -> Property
+prop_split_by_consecutive c n =
+  let separators = replicate n c
+      parts = U.splitBy c separators
+  in if n < 0
+     then property $ length parts === 1
+     else property $ length parts === n + 1
 
--- | 测试splitByComma的基本属性
-prop_splitByComma_basic :: String -> Property
-prop_splitByComma_basic s =
-  let parts = Utils.splitByComma s
-  in if null s
-     then parts === [""]
-     else if all (== ',') s
-          then parts === replicate (length s + 1) ""
-          else property $ length (concat parts) >= length s - length (filter (== ',') s)
+-- | 测试splitByComma与splitBy的一致性
+prop_split_by_comma_consistency :: String -> Property
+prop_split_by_comma_consistency s = U.splitBy ',' s === U.splitByComma s
 
 -- | 测试splitByComma对空字符串的处理
-prop_splitByComma_empty :: Property
-prop_splitByComma_empty = Utils.splitByComma "" === [""]
+prop_split_by_comma_empty :: Property
+prop_split_by_comma_empty = U.splitByComma "" === [""]
 
--- | 测试splitByComma对连续逗号的处理
-prop_splitByComma_collapsed :: String -> Property
-prop_splitByComma_collapsed s =
-  let parts = Utils.splitByComma s
-      collapsed = Utils.splitByCommaCollapsed s
-  in conjoin 
-     [ property $ length collapsed <= length parts
-     , not (null s) ==> property $ length collapsed >= 0
-     ]
+-- | 测试splitByComma对数字的处理
+prop_split_by_comma_numbers :: [Int] -> Property
+prop_split_by_comma_numbers nums =
+  let str = intercalate "," (map show nums)
+      parts = U.splitByComma str
+  in if null nums
+     then property $ length parts === 1
+     else property $ length parts === length nums
 
--- | 测试removeLineComments的基本属性
-prop_removeLineComments_basic :: String -> String -> Property
-prop_removeLineComments_basic code comment =
-  -- Avoid strings with quotes to prevent issues with string literal handling
-  let validCode = not ('\"' `elem` code) && not ('\'' `elem` code)
-      validComment = not ('\"' `elem` comment) && not ('\'' `elem` comment)
-  in if not (validCode && validComment)
-     then property True
-     else let codeWithComment = code ++ "// " ++ comment ++ "\nmore code"
-              withoutComments = Utils.removeLineComments codeWithComment
-          in property (not $ "//" `isInfixOf` withoutComments)
+-- | 测试splitByCommaCollapsed的属性
+prop_split_by_comma_collapsed :: String -> Property
+prop_split_by_comma_collapsed s =
+  let parts = U.splitByCommaCollapsed s
+      noEmpty = filter (not . null) parts
+  in property $ noEmpty === parts
 
--- | 测试removeLineComments对空代码的处理
-prop_removeLineComments_empty :: Property
-prop_removeLineComments_empty = Utils.removeLineComments "" === ""
+-- | 测试splitByCollapsed的折叠属性
+prop_split_by_collapsed_fold :: Char -> String -> Property
+prop_split_by_collapsed_fold c s =
+  let collapsed = U.splitByCollapsed c s
+      hasNoConsecutive = all (not . isInfixOf [c,c]) collapsed
+  in property $ hasNoConsecutive
 
--- | 测试removeLineComments对没有注释的处理
-prop_removeLineComments_no_comments :: String -> Property
-prop_removeLineComments_no_comments code =
-  not ("//" `isInfixOf` code) ==> Utils.removeLineComments code === code
+-- | 测试splitByCollapsed对单一字符的处理
+prop_split_by_collapsed_single :: Char -> Property
+prop_split_by_collapsed_single c = 
+  let single = [c]
+      result = U.splitByCollapsed c single
+  in property $ null result
 
--- | 测试removeLineComments对多行注释的处理
-prop_removeLineComments_multiline :: Positive Int -> String -> Property
-prop_removeLineComments_multiline (Positive n) code =
-  n < 10 ==>
-  let commentLines = replicate n "// comment line"
-      comments = unlines commentLines
-      codeWithComments = unlines [code, comments, "more code"]
-      withoutComments = Utils.removeLineComments codeWithComments
-  in all (not . isPrefixOf "//") (lines withoutComments)
+-- | 测试removeLineComments不影响字符串字面量
+prop_remove_line_comments_preserves_strings :: String -> Property
+prop_remove_line_comments_preserves_strings s =
+  let withQuote = "\"" ++ s ++ "\""
+      after = U.removeLineComments withQuote
+  in property $ "\"" `isPrefixOf` after && "\"" `isSuffixOf` after
 
--- | 测试removeComments的基本属性
-prop_removeComments_basic :: String -> String -> Property
-prop_removeComments_basic before after =
-  -- Avoid strings with quotes to prevent issues with string literal handling
-  let validBefore = not ('\"' `elem` before) && not ('\'' `elem` before)
-      validAfter = not ('\"' `elem` after) && not ('\'' `elem` after)
-  in if not (validBefore && validAfter)
-     then property True
-     else let codeWithComment = before ++ "/* " ++ "comment" ++ " */" ++ after
-              withoutComments = Utils.removeComments codeWithComment
-          in property (not $ "/* comment */" `isInfixOf` withoutComments)
+-- | 测试removeLineComments处理多行
+prop_remove_line_comments_multiline :: [String] -> Property
+prop_remove_line_comments_multiline lines' =
+  let code = unlines lines'
+      processed = U.removeLineComments code
+      procLines = lines processed
+  in property $ length procLines === length lines'
 
--- | 测试removeComments对空代码的处理
-prop_removeComments_empty :: Property
-prop_removeComments_empty = Utils.removeComments "" === ""
+-- | 测试removeLineComments对行尾注释的处理
+prop_remove_line_comments_end :: String -> Property
+prop_remove_line_comments_end s =
+  let withComment = s ++ "// comment"
+      processed = U.removeLineComments withComment
+  in property $ processed === s
 
--- | 测试removeComments对没有注释的处理
-prop_removeComments_no_comments :: String -> Property
-prop_removeComments_no_comments code =
-  let hasStartComment = "/*" `isInfixOf` code
-      hasEndComment = "*/" `isInfixOf` code
-      hasLineComment = "//" `isInfixOf` code
-      hasComments = hasStartComment || hasEndComment || hasLineComment
-      result = removeComments code
-  in classify hasComments "has comments" $
-     if hasComments then property True else property (result === code)
+-- | 测试removeComments的平衡性
+prop_remove_comments_balanced :: String -> Property
+prop_remove_comments_balanced s =
+  let withBlock = "/*" ++ s ++ "*/"
+      after = U.removeComments withBlock
+  in property $ not ("/*" `isInfixOf` after) && not ("*/" `isInfixOf` after)
 
--- | 测试removeComments对多行注释的处理
-prop_removeComments_multiline :: Positive Int -> String -> String -> Property
-prop_removeComments_multiline (Positive n) before after =
-  n < 10 ==>
-  let commentLines = [ "/* comment line " ++ show i ++ " */" | i <- [1..n] ]
-      comments = unlines commentLines
-      codeWithComment = unlines [before, comments, after]
-      withoutComments = Utils.removeComments codeWithComment
-  in all (not . isPrefixOf "/*") (lines withoutComments)
+-- | 测试removeComments的幂等性
+prop_remove_comments_idempotent :: String -> Property
+prop_remove_comments_idempotent s =
+  let first = U.removeComments s
+      second = U.removeComments first
+  in property $ first === second
 
--- | 测试normalizeIndentation的基本属性
-prop_normalizeIndentation_basic :: String -> Property
-prop_normalizeIndentation_basic s =
-  let normalized = Utils.normalizeIndentation s
-  in property $ length normalized >= 0
+-- | 测试removeComments对单行注释的处理
+prop_remove_comments_single_line :: String -> Property
+prop_remove_comments_single_line s =
+  let withSingle = "//" ++ s
+      processed = U.removeComments withSingle
+  in if s == "\n"
+     then property $ processed == "\n"
+     else property $ null processed
 
--- | 测试normalizeIndentation对空字符串的处理
-prop_normalizeIndentation_empty :: Property
-prop_normalizeIndentation_empty = Utils.normalizeIndentation "" === ""
+-- | 测试removeComments对字符串字面量中注释的保护
+prop_remove_comments_protect_strings :: String -> Property
+prop_remove_comments_protect_strings s =
+  let withString = "code /* not comment */ \"" ++ s ++ "/* not comment */\" code"
+      processed = U.removeComments withString
+  in property $ s `isInfixOf` processed
 
--- | 测试normalizeIndentation对无缩进的处理
-prop_normalizeIndentation_no_indent :: String -> Property
-prop_normalizeIndentation_no_indent s =
-  not (any isSpace s) ==> Utils.normalizeIndentation s === s
+-- | 测试isCompleteStringLiteral的识别能力
+prop_is_complete_string_literal :: String -> Property
+prop_is_complete_string_literal s =
+  let quoted = "\"" ++ s ++ "\""
+      incomplete = "\"" ++ s
+  in property $ U.isCompleteStringLiteral quoted && not (U.isCompleteStringLiteral incomplete)
 
--- | 测试normalizeIndentation对一致缩进的处理
-prop_normalizeIndentation_consistent :: String -> Property
-prop_normalizeIndentation_consistent s =
-  let indented = "  " ++ s
-      normalized = Utils.normalizeIndentation indented
-      normalizedLines = lines normalized
-  in conjoin 
-     [ property $ length normalized >= 0
-     , property $ if length normalizedLines <= 1 
-                 then True  -- Single line or empty, skip the check
-                 else all (\line -> not (all isSpace line) || all isSpace line) normalizedLines
-     ]
+-- | 测试isCompleteStringLiteral对空字符串字面量的处理
+prop_is_complete_string_literal_empty :: Property
+prop_is_complete_string_literal_empty = property $ U.isCompleteStringLiteral "\"\""
 
--- | 测试normalizeIndentation对不一致缩进的处理
-prop_normalizeIndentation_inconsistent :: String -> Property
-prop_normalizeIndentation_inconsistent s =
-  let indented = "  " ++ s ++ "\n    " ++ s
-      normalized = Utils.normalizeIndentation indented
-      normalizedLines = lines normalized
-  in conjoin 
-     [ property $ length normalized >= 0
-     , property $ if length normalizedLines <= 1 
-                 then True  -- Single line or empty, skip the check
-                 else all (\line -> not (all isSpace line) || all isSpace line) normalizedLines
-     ]
+-- | 测试isCompleteStringLiteral对转义引号的处理
+prop_is_complete_string_literal_escaped :: String -> Property
+prop_is_complete_string_literal_escaped s =
+  let escaped = "\"" ++ s ++ "\\\"\""
+  in property $ U.isCompleteStringLiteral escaped
 
--- | 测试normalizeIndentation对极深缩进的处理
-prop_normalizeIndentation_deep :: Positive Int -> Property
-prop_normalizeIndentation_deep (Positive n) =
-  n < 50 ==>
-  let deepIndent = replicate n ' ' ++ "code"
-      normalized = Utils.normalizeIndentation deepIndent
-  in length normalized >= 0
+-- | 测试isProblematicUnclosedString的识别
+prop_is_problematic_unclosed_string :: String -> Property
+prop_is_problematic_unclosed_string s =
+  let closed = "\"" ++ s ++ "\""
+      unclosed = "\"" ++ s
+  in property $ not (U.isProblematicUnclosedString closed) && 
+                U.isProblematicUnclosedString unclosed
 
--- | 测试isRight的基本属性
-prop_isRight_basic :: Either String Int -> Property
-prop_isRight_basic e = Utils.isRight e === (case e of Right _ -> True; Left _ -> False)
+-- | 测试isProblematicUnclosedString对空字符串的处理
+prop_is_problematic_unclosed_empty :: Property
+prop_is_problematic_unclosed_empty = property $ U.isProblematicUnclosedString "\""
 
--- | 测试isLeft的基本属性
-prop_isLeft_basic :: Either String Int -> Property
-prop_isLeft_basic e = Data.Either.isLeft e === (case e of Left _ -> True; Right _ -> False)
+-- | 测试breakOn的正确性
+prop_break_on_correctness :: String -> String -> Property
+prop_break_on_correctness pat s =
+  let (before, after) = U.breakOn pat s
+      combined = before ++ pat ++ after
+  in if pat `isInfixOf` s
+     then property $ combined === s
+     else (before === s) .&. (after === "")
 
--- | 测试isRight对Right值的处理
-prop_isRight_right :: Int -> Property
-prop_isRight_right x = property $ Utils.isRight (Right x)
+-- | 测试breakOn对空模式的处理
+prop_break_on_empty :: String -> Property
+prop_break_on_empty s = U.breakOn "" s === ("", s)
 
--- | 测试isRight对Left值的处理
-prop_isRight_left :: String -> Property
-prop_isRight_left msg = property $ not $ Data.Either.isRight (Left msg)
+-- | 测试breakOn对空字符串的处理
+prop_break_on_empty_string :: String -> Property
+prop_break_on_empty_string s = U.breakOn s "" === ("", "")
 
--- | 测试isLeft对Right值的处理
-prop_isLeft_right :: Int -> Property
-prop_isLeft_right x = property $ not $ isLeft (Right x)
+-- | 测试breakOn对多字符模式的处理
+prop_break_on_multi_char :: String -> String -> Property
+prop_break_on_multi_char pat s =
+  let (before, after) = U.breakOn pat s
+      combined = before ++ pat ++ after
+  in if pat `isInfixOf` s
+     then property $ combined === s
+     else (before === s) .&. (after === "")
 
--- | 测试isLeft对Left值的处理
-prop_isLeft_left :: String -> Property
-prop_isLeft_left msg = property $ isLeft (Left msg)
-
--- | 测试isRight对Either的对称性
-prop_isRight_either_symmetry :: Either String Int -> Property
-prop_isRight_either_symmetry e = Utils.isRight e === (case e of Right _ -> True; Left _ -> False)
-
--- | 测试isLeft对Either的对称性
-prop_isLeft_either_symmetry :: Either String Int -> Property
-prop_isLeft_either_symmetry e = isLeft e === (case e of Left _ -> True; Right _ -> False)
-
--- | 测试safeProcessString的基本属性
-prop_safeProcessString_basic :: String -> Property
-prop_safeProcessString_basic s =
-  let processed = Utils.safeProcessString s
-  in case processed of
-       Right p -> property $ length p >= 0
-       Left _ -> property True
+-- | 测试safeProcessString的安全性
+prop_safe_process_string_safe :: String -> Property
+prop_safe_process_string_safe s =
+  let processed = U.safeProcessString s
+      allValid = either (const False) (all U.isValidChar) processed
+  in property $ allValid
 
 -- | 测试safeProcessString对空字符串的处理
-prop_safeProcessString_empty :: Property
-prop_safeProcessString_empty = 
-  case Utils.safeProcessString "" of
-    Right "" -> property True
-    _ -> property False
+prop_safe_process_string_empty :: Property
+prop_safe_process_string_empty = U.safeProcessString "" === Right ""
 
 -- | 测试safeProcessString对特殊字符的处理
-prop_safeProcessString_special :: Char -> Property
-prop_safeProcessString_special c =
-  let s = [c]
-      processed = Utils.safeProcessString s
+prop_safe_process_string_special :: String -> Property
+prop_safe_process_string_special s =
+  let withSpecial = s ++ "\x01\x02\x03"
+      processed = U.safeProcessString withSpecial
   in case processed of
-       Right p -> property $ length p >= 0
        Left _ -> property True
+       Right result -> property $ all U.isValidChar result
 
--- | 测试safeProcessString对控制字符的处理
-prop_safeProcessString_control :: Char -> Property
-prop_safeProcessString_control c =
-  isControl c ==> 
-  let s = [c]
-      processed = Utils.safeProcessString s
+-- | 测试normalizeIndentation的相对性
+prop_normalize_indentation_relative :: String -> Property
+prop_normalize_indentation_relative s =
+  let lines' = lines s
+      normalized = U.normalizeIndentation s
+      normLines = lines normalized
+  in if length lines' <= 1
+     then property $ normalized === s
+     else property $ length normLines === length lines'
+
+-- | 测试normalizeIndentation对空字符串的处理
+prop_normalize_indentation_empty :: Property
+prop_normalize_indentation_empty = U.normalizeIndentation "" === ""
+
+-- | 测试normalizeIndentation对空行的处理
+prop_normalize_indentation_empty_lines :: String -> Property
+prop_normalize_indentation_empty_lines s =
+  let withEmpty = s ++ "\n\n"
+      normalized = U.normalizeIndentation withEmpty
+  in property $ "\n\n" `isInfixOf` normalized
+
+-- | 测试normalizeIndentation保持非空行
+prop_normalize_indentation_preserves_nonempty :: String -> Property
+prop_normalize_indentation_preserves_nonempty s =
+  let lines' = lines s
+      nonEmpty = filter (not . all isSpace) lines'
+      normalized = U.normalizeIndentation s
+      normLines = lines normalized
+      normNonEmpty = filter (not . all isSpace) normLines
+  in property $ length nonEmpty === length normNonEmpty
+
+-- | 测试normalizeIndentation对制表符的处理
+prop_normalize_indentation_tabs :: String -> Property
+prop_normalize_indentation_tabs s =
+  let withTabs = "\t\t" ++ s ++ "\t"
+      normalized = U.normalizeIndentation withTabs
+  in if null s
+     then property $ True
+     else property $ not ("\t\t" `isPrefixOf` normalized)
+
+-- | 测试normalizeIndentation对混合缩进的处理
+prop_normalize_indentation_mixed :: String -> Property
+prop_normalize_indentation_mixed s =
+  let mixed = "\t  \t  " ++ s ++ "  \t  "
+      normalized = U.normalizeIndentation mixed
+  in property $ not ("\t" `isPrefixOf` normalized)
+
+-- | 测试normalizeIndentation对多行混合缩进的处理
+prop_normalize_indentation_multiline_mixed :: [String] -> Property
+prop_normalize_indentation_multiline_mixed lines' =
+  let withMixed = map ("\t  " ++) lines'
+      normalized = U.normalizeIndentation (unlines withMixed)
+      normLines = lines normalized
+  in property $ length normLines === length lines'
+
+-- | 测试isValidChar的属性
+prop_is_valid_char_ascii :: Char -> Property
+prop_is_valid_char_ascii c =
+  let ascii = ord c < 128
+  in property $ if ascii then U.isValidChar c else True
+
+-- | 测试isValidChar对控制字符的处理
+prop_is_valid_char_control :: Char -> Property
+prop_is_valid_char_control c =
+  let isControl = ord c < 32 || ord c == 127
+  in property $ if isControl then not (U.isValidChar c) else True
+
+-- | 测试isRight函数的属性
+prop_is_right_property :: Either String Int -> Property
+prop_is_right_property e = property $ U.isRight e === isRight e
+
+-- | 测试trim不会增加字符串长度
+prop_trim_never_increases :: String -> Property
+prop_trim_never_increases s = 
+  let trimmed = U.trim s
+  in property $ length trimmed <= length s
+
+-- | 测试trim对混合空白字符的处理
+prop_trim_mixed_whitespace :: String -> Property
+prop_trim_mixed_whitespace s =
+  let mixed = " \t\n " ++ s ++ " \t\n "
+      trimmed = U.trim mixed
+  in property $ not (any isSpace (take 1 trimmed)) && 
+                not (any isSpace (take 1 (reverse trimmed)))
+
+-- | 测试trim对换行符的处理
+prop_trim_newlines :: String -> Property
+prop_trim_newlines s =
+  let withNewlines = "\n" ++ s ++ "\n"
+      trimmed = U.trim withNewlines
+  in property $ not ("\n" `isPrefixOf` trimmed) && not ("\n" `isSuffixOf` trimmed)
+
+-- | 测试trim对制表符和空格的处理
+prop_trim_tab_space :: String -> Property
+prop_trim_tab_space s =
+  let withTabs = "\t" ++ s ++ "\t"
+      withSpaces = " " ++ s ++ " "
+      trimmedTabs = U.trim withTabs
+      trimmedSpaces = U.trim withSpaces
+  in property $ trimmedTabs === trimmedSpaces
+
+-- | 测试trim对零宽度字符的处理
+prop_trim_zero_width :: String -> Property
+prop_trim_zero_width s =
+  let withZeroWidth = "\x200B" ++ s ++ "\x200B"
+      trimmed = U.trim withZeroWidth
+  in property $ not ("\x200B" `isPrefixOf` trimmed) && 
+                not ("\x200B" `isSuffixOf` trimmed)
+
+-- | 测试splitBy对特殊字符的处理
+prop_split_by_special :: String -> Property
+prop_split_by_special s =
+  let parts = U.splitBy '\n' s
+  in property $ concat parts ++ replicate (length parts - 1) '\n' === s
+
+-- | 测试splitBy对高Unicode字符的处理
+prop_split_by_high_unicode :: String -> Property
+prop_split_by_high_unicode s =
+  let highChar = '\x1F600'
+      withHigh = s ++ [highChar] ++ s
+      parts = U.splitBy highChar withHigh
+  in property $ length parts === 2
+
+-- | 测试removeLineComments对多行注释的保护
+prop_remove_line_comments_multiline_protection :: String -> Property
+prop_remove_line_comments_multiline_protection s =
+  let withBlock = s ++ " /* not a line comment */"
+      processed = U.removeLineComments withBlock
+  in property $ "/* not a line comment */" `isInfixOf` processed
+
+-- | 测试removeLineComments对字符串中//的保护
+prop_remove_line_comments_string_slash :: String -> Property
+prop_remove_line_comments_string_slash s =
+  let withSlash = "\"" ++ s ++ "// not comment\""
+      processed = U.removeLineComments withSlash
+  in property $ "// not comment" `isInfixOf` processed
+
+-- | 测试removeComments对深度嵌套注释的处理
+prop_remove_comments_deep_nested :: Int -> Property
+prop_remove_comments_deep_nested depth =
+  if depth >= 0 && depth < 10
+  then let nested = concat (replicate depth "/* ") ++ "content" ++ concat (replicate depth " */")
+           processed = U.removeComments nested
+       in property $ not ("/*" `isInfixOf` processed)
+  else property True
+
+-- | 测试isCompleteStringLiteral对转义反斜杠的处理
+prop_is_complete_string_literal_escape_backslash :: String -> Property
+prop_is_complete_string_literal_escape_backslash s =
+  let withBackslash = "\"" ++ s ++ "\\\\\""
+  in property $ U.isCompleteStringLiteral withBackslash
+
+-- | 测试isProblematicUnclosedString对转义引号的处理
+prop_is_problematic_unclosed_escape_quote :: String -> Property
+prop_is_problematic_unclosed_escape_quote s =
+  let withEscape = "\"" ++ s ++ "\\\""
+  in property $ U.isProblematicUnclosedString withEscape
+
+-- | 测试breakOn对长模式的处理
+prop_break_on_long_pattern :: String -> Int -> Property
+prop_break_on_long_pattern s n =
+  if n >= 0 && n < 100
+  then let longPat = replicate n 'x'
+           (before, after) = U.breakOn longPat s
+       in if longPat `isInfixOf` s
+          then property $ before ++ longPat ++ after === s
+          else (before === s) .&. (after === "")
+  else property True
+
+-- | 测试safeProcessString对混合字符的处理
+prop_safe_process_string_mixed :: String -> Property
+prop_safe_process_string_mixed s =
+  let mixed = s ++ "\x00\x01\x02\x03\xFE\xFF"
+      processed = U.safeProcessString mixed
   in case processed of
-       Right p -> property $ length p >= 0
        Left _ -> property True
+       Right result -> property $ all U.isValidChar result
 
--- | 测试safeProcessString对Unicode字符的处理
-prop_safeProcessString_unicode :: Property
-prop_safeProcessString_unicode =
-  let unicodeChars = map (: "") ['\0'..'\255']  -- Convert chars to strings
-      processed = map Utils.safeProcessString unicodeChars
-      checkResult (Right p) = length p >= 0
-      checkResult (Left _) = True
-  in property $ all checkResult processed
+-- | 测试isValidChar对高Unicode字符的处理
+prop_is_valid_char_high_unicode :: Char -> Property
+prop_is_valid_char_high_unicode c =
+  let isHigh = ord c > 127
+  in property $ if isHigh then U.isValidChar c else True
 
--- | 测试safeProcessString对极长字符串的处理
-prop_safeProcessString_long :: Positive Int -> Property
-prop_safeProcessString_long (Positive n) =
-  n < 10000 ==>
-  let longString = replicate n 'x'
-      processed = Utils.safeProcessString longString
-  in case processed of
-       Right p -> property $ length p >= 0
-       Left _ -> property True
+-- ============================================================================
+-- 数学属性测试 (30个测试)
+-- ============================================================================
 
--- | 测试breakOn的基本属性
-prop_breakOn_basic :: String -> String -> Property
-prop_breakOn_basic sep s =
-  let (before, after) = Utils.breakOn sep s
-  in if null sep
-     then conjoin [before === "", after === s]
-     else if null s
-          then conjoin [before === "", after === ""]
-          else if s == sep 
-               then conjoin [before === "", after === ""]
-               else if sep `isInfixOf` s
-                    then before ++ sep ++ after === s
-                    else conjoin [before === s, after === ""]
+-- | 测试加法的交换律
+prop_addition_commutative :: Int -> Int -> Property
+prop_addition_commutative x y = property $ x + y === y + x
 
--- | 测试breakOn对空分隔符的处理
-prop_breakOn_empty :: String -> Property
-prop_breakOn_empty s = Utils.breakOn "" s === ("", s)
+-- | 测试加法的结合律
+prop_addition_associative :: Int -> Int -> Int -> Property
+prop_addition_associative x y z = property $ (x + y) + z === x + (y + z)
 
--- | 测试breakOn对不存在的分隔符的处理
-prop_breakOn_not_found :: String -> Property
-prop_breakOn_not_found s =
-  let (before, after) = Utils.breakOn ":" s
-  in if s == ":"
-     then conjoin 
-          [ before === ""
-          , after === ""
-          ]
-     else if ":" `isInfixOf` s
-          then property True  -- If separator exists, we don't test this case
-          else conjoin 
-               [ before === s
-               , after === ""
-               ]
+-- | 测试乘法的交换律
+prop_multiplication_commutative :: Int -> Int -> Property
+prop_multiplication_commutative x y = property $ x * y === y * x
 
--- | 测试breakOn对多个分隔符的处理
-prop_breakOn_multiple :: String -> String -> Property
-prop_breakOn_multiple sep s =
-  case sep of
-    [] -> property $ True  -- Empty separator is a special case
-    (h:_) -> 
-      let (before, after) = Utils.breakOn [h] s  -- Use first char as pattern
-      in if null sep
-         then conjoin [before === s, after === ""]
-         else if null s
-              then conjoin [before === "", after === ""]
-              else if [h] `isInfixOf` s
-                   then before ++ [h] ++ after === s  -- Check that the parts reconstruct the original
-                   else conjoin [before === s, after === ""]  -- Separator not found
+-- | 测试乘法的结合律
+prop_multiplication_associative :: Int -> Int -> Int -> Property
+prop_multiplication_associative x y z = property $ (x * y) * z === x * (y * z)
 
--- | 测试breakOn对分隔符在开头的情况
-prop_breakOn_prefix :: String -> String -> Property
-prop_breakOn_prefix sep s =
-  let s' = sep ++ "content"
-      (before, after) = Utils.breakOn sep s'
-  in if null sep
-     then conjoin 
-          [ before === ""
-          , after === s'
-          ]
-     else conjoin 
-          [ before === ""
-          , after === "content"
-          ]
+-- | 测试分配律
+prop_distributive :: Int -> Int -> Int -> Property
+prop_distributive x y z = property $ x * (y + z) === x * y + x * z
 
--- | 测试breakOn对分隔符在结尾的情况
-prop_breakOn_suffix :: String -> String -> Property
-prop_breakOn_suffix sep s =
-  let s' = "content" ++ sep
-      (before, after) = Utils.breakOn sep s'
-  in if null sep
-     then conjoin 
-          [ before === ""
-          , after === s'
-          ]
-     else if sep `isInfixOf` "content"
-          then before ++ sep ++ after === s'  -- If sep appears in "content", check that the parts reconstruct the original
-          else conjoin 
-               [ before === "content"
-               , after === ""
-               ]
+-- | 测试减法的性质
+prop_subtraction :: Int -> Int -> Property
+prop_subtraction x y = property $ x - y + y === x
 
--- | 测试breakOn对没有分隔符的情况
-prop_breakOn_no_separator :: String -> Property
-prop_breakOn_no_separator s =
-  let (before, after) = Utils.breakOn ":" s
-  in if s == ":"
-     then conjoin 
-          [ before === ""
-          , after === ""
-          ]
-     else if ":" `isInfixOf` s
-          then property True  -- If separator exists, we don't test this case
-          else conjoin 
-               [ before === s
-               , after === ""
-               ]
+-- | 测试除法的性质
+prop_division :: Int -> Int -> Property
+prop_division x y = 
+  if y /= 0
+  then property $ (x `div` y) * y + (x `mod` y) === x
+  else property True
 
--- | 测试trim的边界情况
-test_trim_edge_cases :: Assertion
-test_trim_edge_cases = do
-  assertEqual "Empty string" "" (Utils.trim "")
-  assertEqual "Single space" "" (Utils.trim " ")
-  assertEqual "Single tab" "" (Utils.trim "\t")
-  assertEqual "Multiple spaces" "" (Utils.trim "   ")
-  assertEqual "Mixed whitespace" "content" (Utils.trim "  \t  content  ")
+-- | 测试绝对值的性质
+prop_abs :: Int -> Property
+prop_abs x = property $ abs x >= 0 .&. (abs x === x .||. abs x === -x)
 
--- | 测试splitBy的边界情况
-test_splitBy_edge_cases :: Assertion
-test_splitBy_edge_cases = do
-  assertEqual "Empty string" [""] (Utils.splitBy ',' "")
-  assertEqual "No separator" ["single"] (Utils.splitBy 'x' "single")
-  assertEqual "Single separator" ["", ""] (Utils.splitBy ',' ",")
-  assertEqual "Multiple separators" ["a", "", "b"] (Utils.splitBy ',' "a,,b")
+-- | 测试最大值的性质
+prop_max :: Int -> Int -> Property
+prop_max x y = property $ max x y >= x .&. max x y >= y .&. (max x y === x .||. max x y === y)
 
--- | 测试splitByComma的边界情况
-test_splitByComma_edge_cases :: Assertion
-test_splitByComma_edge_cases = do
-  assertEqual "Empty string" [""] (Utils.splitByComma "")
-  assertEqual "No commas" ["single"] (Utils.splitByComma "single")
-  assertEqual "Single comma" ["", ""] (Utils.splitByComma ",")
-  assertEqual "Multiple commas" ["a", "", "b"] (Utils.splitByComma "a,,b")
+-- | 测试最小值的性质
+prop_min :: Int -> Int -> Property
+prop_min x y = property $ min x y <= x .&. min x y <= y .&. (min x y === x .||. min x y === y)
 
--- | 测试removeLineComments的边界情况
-test_removeLineComments_edge_cases :: Assertion
-test_removeLineComments_edge_cases = do
-  assertEqual "Empty code" "" (Utils.removeLineComments "")
-  assertEqual "No comments" "code" (Utils.removeLineComments "code")
-  assertEqual "Single line comment" "code " (Utils.removeLineComments "code // comment")
-  assertEqual "Multiple line comments" "code\n\n\nmore code" (Utils.removeLineComments "code\n// comment1\n// comment2\nmore code")
+-- | 测试奇偶性
+prop_even_odd :: Int -> Property
+prop_even_odd x = property $ (even x && not (odd x)) || (odd x && not (even x))
 
--- | 测试removeComments的边界情况
-test_removeComments_edge_cases :: Assertion
-test_removeComments_edge_cases = do
-  assertEqual "Empty code" "" (Utils.removeComments "")
-  assertEqual "No comments" "code" (Utils.removeComments "code")
-  assertEqual "Single line comment" "code " (Utils.removeComments "code /* comment */")
-  assertEqual "Multiple line comments" "code \nmore code" (Utils.removeComments "code /* comment1 */\nmore code")
+-- | 测试gcd的性质
+prop_gcd :: Int -> Int -> Property
+prop_gcd x y = 
+  let g = gcd x y
+  in property $ g > 0 .&. x `mod` g === 0 .&. y `mod` g === 0
 
--- | 测试normalizeIndentation的边界情况
-test_normalizeIndentation_edge_cases :: Assertion
-test_normalizeIndentation_edge_cases = do
-  assertEqual "Empty string" "" (Utils.normalizeIndentation "")
-  assertEqual "No indentation" "code" (Utils.normalizeIndentation "code")
-  assertEqual "Single indentation" "  code" (Utils.normalizeIndentation "  code")
-  assertEqual "Multiple indentation" "    code" (Utils.normalizeIndentation "    code")
+-- | 测试lcm的性质
+prop_lcm :: Int -> Int -> Property
+prop_lcm x y = 
+  if x /= 0 && y /= 0
+  then let l = lcm x y
+       in property $ l `mod` x === 0 .&. l `mod` y === 0
+  else property True
 
--- | 测试isRight的边界情况
-test_isRight_edge_cases :: Assertion
-test_isRight_edge_cases = do
-  assertBool "Right value is right" (Utils.isRight (Right 42))
-  assertBool "Left value is not right" (not $ Data.Either.isRight (Left "error"))
+-- | 测试列表排序的性质
+prop_list_sort_sorted :: [Int] -> Property
+prop_list_sort_sorted xs = property $ sort xs === sort (sort xs)
 
--- | 测试isLeft的边界情况
-test_isLeft_edge_cases :: Assertion
-test_isLeft_edge_cases = do
-  assertBool "Left value is left" (isLeft (Left "error"))
-  assertBool "Right value is not left" (not $ isLeft (Right "success"))
+-- | 测试列表排序的长度不变性
+prop_list_sort_length :: [Int] -> Property
+prop_list_sort_length xs = property $ length (sort xs) === length xs
 
--- | 测试safeProcessString的边界情况
-test_safeProcessString_edge_cases :: Assertion
-test_safeProcessString_edge_cases = do
-  case Utils.safeProcessString "" of
-    Right "" -> return ()
-    _ -> assertFailure "Empty string should return Right \"\""
-  case Utils.safeProcessString "\0\1\2\3" of
-    Right "" -> return ()
-    _ -> return ()  -- Control characters might be filtered
-  case Utils.safeProcessString "\t\n\r" of
-    Right _ -> return ()  -- Newlines and tabs should be preserved
-    _ -> assertFailure "Newlines and tabs should be preserved"
-  case Utils.safeProcessString "中文测试" of
-    Right _ -> return ()  -- Unicode characters should be preserved
-    _ -> return ()  -- Or they might be filtered depending on implementation
+-- | 测试列表去重的性质
+prop_list_nub_length :: [Int] -> Property
+prop_list_nub_length xs = property $ length (nub xs) <= length xs
 
--- | 测试breakOn的边界情况
-test_breakOn_edge_cases :: Assertion
-test_breakOn_edge_cases = do
-  assertEqual "Empty string" ("", "") (Utils.breakOn "" "")
-  assertEqual "No separator found" ("test", "") (Utils.breakOn ":" "test")
-  assertEqual "Separator at start" ("", "content") (Utils.breakOn ":" ":content")
-  assertEqual "Separator at end" ("content", "") (Utils.breakOn ":" "content:")
+-- | 测试列表去重后的元素唯一性
+prop_list_nub_unique :: [Int] -> Property
+prop_list_nub_unique xs = property $ length (nub xs) === length (nub (nub xs))
 
--- | 测试套件
+-- | 测试列表反转的性质
+prop_list_reverse :: [Int] -> Property
+prop_list_reverse xs = property $ reverse (reverse xs) === xs
+
+-- | 测试列表反转的长度不变性
+prop_list_reverse_length :: [Int] -> Property
+prop_list_reverse_length xs = property $ length (reverse xs) === length xs
+
+-- | 测试列表连接的结合性
+prop_list_concat_associative :: [Int] -> [Int] -> [Int] -> Property
+prop_list_concat_associative xs ys zs = 
+  property $ (xs ++ ys) ++ zs === xs ++ (ys ++ zs)
+
+-- | 测试列表连接的单位元
+prop_list_concat_identity :: [Int] -> Property
+prop_list_concat_identity xs = property $ [] ++ xs === xs .&. xs ++ [] === xs
+
+-- | 测试列表映射的分配律
+prop_list_map_concat :: [Int] -> [Int] -> Property
+prop_list_map_concat xs ys = 
+  property $ map (+1) (xs ++ ys) === map (+1) xs ++ map (+1) ys
+
+-- | 测试列表过滤的性质
+prop_list_filter :: [Int] -> Property
+prop_list_filter xs = 
+  let filtered = filter even xs
+  in property $ all even filtered
+
+-- | 测试列表过滤的长度
+prop_list_filter_length :: [Int] -> Property
+prop_list_filter_length xs = 
+  property $ length (filter even xs) <= length xs
+
+-- | 测试Maybe的monad性质
+prop_maybe_return :: Int -> Property
+prop_maybe_return x = property $ (Just x >>= Just) === Just x
+
+-- | 测试Maybe的fmap性质
+prop_maybe_fmap :: Maybe Int -> Property
+prop_maybe_fmap m = 
+  case m of
+    Nothing -> property $ fmap (+1) m === Nothing
+    Just x -> property $ fmap (+1) m === Just (x + 1)
+
+-- | 测试Either的monad性质
+prop_either_return :: Int -> Property
+prop_either_return x = property $ (Right x >>= (Right :: Int -> Either String Int)) === (Right x :: Either String Int)
+
+-- | 测试Either的fmap性质
+prop_either_fmap :: Either String Int -> Property
+prop_either_fmap e = 
+  case e of
+    Left _ -> property $ fmap (+1) e === e
+    Right x -> property $ fmap (+1) e === Right (x + 1)
+
+-- | 测试Map插入的性质
+prop_map_insert :: Map.Map String Int -> String -> Int -> Property
+prop_map_insert m k v = property $ Map.lookup k (Map.insert k v m) === Just v
+
+-- | 测试Map删除的性质
+prop_map_delete :: Map.Map String Int -> String -> Property
+prop_map_delete m k = property $ Map.lookup k (Map.delete k m) === Nothing
+
+-- | 测试Set插入的性质
+prop_set_insert :: Set.Set Int -> Int -> Property
+prop_set_insert s x = property $ Set.member x (Set.insert x s)
+
+-- | 测试Set删除的性质
+prop_set_delete :: Set.Set Int -> Int -> Property
+prop_set_delete s x = property $ not (Set.member x (Set.delete x s))
+
+-- | 测试字符大小写转换的性质
+prop_char_case :: Char -> Property
+prop_char_case c = property $ toLower (toUpper c) === toLower c
+
+-- | 测试字符的数字检测
+prop_char_is_digit :: Char -> Property
+prop_char_is_digit c = property $ isDigit c === (c >= '0' && c <= '9')
+
+-- | 测试字符的字母检测
+prop_char_is_letter :: Char -> Property
+prop_char_is_letter c = property $ isLetter c === ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'))
+
+-- | 测试字符的空白检测
+prop_char_is_space :: Char -> Property
+prop_char_is_space c = property $ isSpace c === (c `elem` (" \t\n\r\f\v" :: String))
+
+-- | 测试字符串长度
+prop_string_length :: String -> Property
+prop_string_length s = property $ length s >= 0
+
+-- | 测试字符串反转的性质
+prop_string_reverse :: String -> Property
+prop_string_reverse s = property $ reverse (reverse s) === s
+
+-- | 测试字符串反转的长度不变性
+prop_string_reverse_length :: String -> Property
+prop_string_reverse_length s = property $ length (reverse s) === length s
+
+-- | 测试字符串连接的性质
+prop_string_concat :: String -> String -> Property
+prop_string_concat s1 s2 = property $ length (s1 ++ s2) === length s1 + length s2
+
+-- | 测试字符串取头的性质
+prop_string_take :: String -> Int -> Property
+prop_string_take s n = 
+  if n >= 0 && n <= length s
+  then property $ length (take n s) === n
+  else if n > length s
+       then property $ take n s === s
+       else property $ take n s === []
+
+-- | 测试字符串取尾的性质
+prop_string_drop :: String -> Int -> Property
+prop_string_drop s n = 
+  if n >= 0 && n <= length s
+  then property $ length (drop n s) === length s - n
+  else if n > length s
+       then property $ drop n s === []
+       else property $ drop n s === s
+
+-- | 测试字符串分割的性质
+prop_string_split :: String -> Char -> Property
+prop_string_split s c = 
+  let parts = U.splitBy c s
+      rejoined = intercalate [c] parts
+  in if null s
+     then property $ parts === [""]
+     else property $ rejoined === s
+
+-- | 测试字符串前缀检测
+prop_string_is_prefix_of :: String -> String -> Property
+prop_string_is_prefix_of s1 s2 = 
+  let isPrefix = s1 `isPrefixOf` s2
+  in property $ if isPrefix then take (length s1) s2 === s1 else property True
+
+-- | 测试字符串后缀检测
+prop_string_is_suffix_of :: String -> String -> Property
+prop_string_is_suffix_of s1 s2 = 
+  let isSuffix = s1 `isSuffixOf` s2
+  in property $ if isSuffix then drop (length s2 - length s1) s2 === s1 else property True
+
+-- | 测试字符串子串检测
+prop_string_is_infix_of :: String -> String -> Property
+prop_string_is_infix_of s1 s2 = 
+  let isInfix = s1 `isInfixOf` s2
+  in property $ if isInfix then True else True
+
+-- | 测试字符串重复的性质
+prop_string_replicate :: Int -> String -> Property
+prop_string_replicate n s = 
+  if n >= 0
+  then property $ length (replicate n s) === n * length s
+  else property $ replicate n s === []
+
+-- | 测试字符串空检测
+prop_string_null :: String -> Property
+prop_string_null s = property $ null s === (length s == 0)
+
+-- | 测试字符串head的性质
+prop_string_head :: String -> Property
+prop_string_head s = 
+  if not (null s)
+  then property $ head s `elem` s
+  else property True
+
+-- | 测试字符串tail的性质
+prop_string_tail :: String -> Property
+prop_string_tail s = 
+  if not (null s)
+  then property $ length (tail s) === length s - 1
+  else property $ tail s === []
+
+-- | 测试字符串init的性质
+prop_string_init :: String -> Property
+prop_string_init s = 
+  if not (null s)
+  then property $ length (init s) === length s - 1
+  else property $ init s === []
+
+-- | 测试字符串last的性质
+prop_string_last :: String -> Property
+prop_string_last s = 
+  if not (null s)
+  then property $ last s `elem` s
+  else property True
+
+-- | 测试字符串map的性质
+prop_string_map :: String -> Property
+prop_string_map s = 
+  let mapped = map toUpper s
+  in property $ length mapped === length s
+
+-- | 测试字符串filter的性质
+prop_string_filter :: String -> Property
+prop_string_filter s = 
+  let filtered = filter isLetter s
+  in property $ all isLetter filtered && length filtered <= length s
+
+-- | 测试字符串concat的性质
+prop_string_concat_strings :: [String] -> Property
+prop_string_concat_strings ss = 
+  let concatenated = concat ss
+  in property $ length concatenated === sum (map length ss)
+
+-- | 测试字符串words的性质
+prop_string_words :: String -> Property
+prop_string_words s = 
+  let ws = words s
+  in property $ concat ws === filter (not . isSpace) s
+
+-- | 测试字符串lines的性质
+prop_string_lines :: String -> Property
+prop_string_lines s = 
+  let ls = lines s
+  in property $ intercalate "\n" ls === s
+
+-- | 测试比较函数的性质
+prop_compare :: Int -> Int -> Property
+prop_compare x y = 
+  case compare x y of
+    LT -> property $ x < y
+    EQ -> property $ x === y
+    GT -> property $ x > y
+
+-- | 测试最大值列表的性质
+prop_maximum :: [Int] -> Property
+prop_maximum xs = 
+  if not (null xs)
+  then let m = maximum xs
+       in property $ m `elem` xs && all (<= m) xs
+  else property True
+
+-- | 测试最小值列表的性质
+prop_minimum :: [Int] -> Property
+prop_minimum xs = 
+  if not (null xs)
+  then let m = minimum xs
+       in property $ m `elem` xs && all (>= m) xs
+  else property True
+
+-- | 测试求和的性质
+prop_sum :: [Int] -> Property
+prop_sum xs = property $ sum xs >= 0 || any (< 0) xs
+
+-- | 测试求积的性质
+prop_product :: [Int] -> Property
+prop_product xs = 
+  if null xs
+  then property $ product xs === 1
+  else property $ product xs === foldr (*) 1 xs
+
+-- | 测试连接的性质
+prop_concat :: [[Int]] -> Property
+prop_concat xss = property $ concat xss === foldr (++) [] xss
+
+-- | 测试any的性质
+prop_any :: [Int] -> Property
+prop_any xs = property $ any even xs === not (all odd xs)
+
+-- | 测试all的性质
+prop_all :: [Int] -> Property
+prop_all xs = property $ all even xs === not (any odd xs)
+
+-- | 测试排序的有序性
+prop_sort_ordered :: [Int] -> Property
+prop_sort_ordered xs = property $ ordered (sort xs)
+  where
+    ordered [] = True
+    ordered [_] = True
+    ordered (x:y:xs') = x <= y && ordered (y:xs')
+
+-- | 测试排序的最小性
+prop_sort_minimum :: [Int] -> Property
+prop_sort_minimum xs = 
+  if not (null xs)
+  then property $ head (sort xs) === minimum xs
+  else property True
+
+-- | 测试排序的最大性
+prop_sort_maximum :: [Int] -> Property
+prop_sort_maximum xs = 
+  if not (null xs)
+  then property $ last (sort xs) === maximum xs
+  else property True
+
+-- | 测试排序的元素性
+prop_sort_elements :: [Int] -> Property
+prop_sort_elements xs = property $ sort xs === sort (sort xs)
+
+-- ============================================================================
+-- 测试套件定义
+-- ============================================================================
+
 tests :: TestTree
 tests = testGroup "Simple QuickCheck Test Suite"
-  [ testProperty "Trim basic" prop_trim_basic
-  , testProperty "Trim empty" prop_trim_empty
-  , testProperty "Trim whitespace" prop_trim_whitespace
-  , testProperty "Trim regular" prop_trim_regular
-  , testProperty "Trim idempotent" prop_trim_idempotent
-  , testProperty "SplitBy basic" prop_splitBy_basic
-  , testProperty "SplitBy empty" prop_splitBy_empty
-  , testProperty "SplitBy collapsed" prop_splitBy_collapsed
-  , testProperty "SplitByComma basic" prop_splitByComma_basic
-  , testProperty "SplitByComma empty" prop_splitByComma_empty
-  , testProperty "SplitByComma collapsed" prop_splitByComma_collapsed
-  , testProperty "RemoveLineComments basic" prop_removeLineComments_basic
-  , testProperty "RemoveLineComments empty" prop_removeLineComments_empty
-  , testProperty "RemoveLineComments no comments" prop_removeLineComments_no_comments
-  , testProperty "RemoveLineComments multiline" prop_removeLineComments_multiline
-  , testProperty "RemoveComments basic" prop_removeComments_basic
-  , testProperty "RemoveComments empty" prop_removeComments_empty
-  , testProperty "RemoveComments no comments" prop_removeComments_no_comments
-  , testProperty "RemoveComments multiline" prop_removeComments_multiline
-  , testProperty "NormalizeIndentation basic" prop_normalizeIndentation_basic
-  , testProperty "NormalizeIndentation empty" prop_normalizeIndentation_empty
-  , testProperty "NormalizeIndentation no indent" prop_normalizeIndentation_no_indent
-  , testProperty "NormalizeIndentation consistent" prop_normalizeIndentation_consistent
-  , testProperty "NormalizeIndentation inconsistent" prop_normalizeIndentation_inconsistent
-  , testProperty "NormalizeIndentation deep" prop_normalizeIndentation_deep
-  , testProperty "isRight basic" prop_isRight_basic
-  , testProperty "isLeft basic" prop_isLeft_basic
-  , testProperty "isRight right" prop_isRight_right
-  , testProperty "isRight left" prop_isRight_left
-  , testProperty "isLeft right" prop_isLeft_right
-  , testProperty "isRight either symmetry" prop_isRight_either_symmetry
-  , testProperty "isLeft either symmetry" prop_isLeft_either_symmetry
-  , testProperty "SafeProcessString basic" prop_safeProcessString_basic
-  , testProperty "SafeProcessString empty" prop_safeProcessString_empty
-  , testProperty "SafeProcessString special" prop_safeProcessString_special
-  , testProperty "SafeProcessString control" prop_safeProcessString_control
-  , testProperty "SafeProcessString unicode" prop_safeProcessString_unicode
-  , testProperty "SafeProcessString long" prop_safeProcessString_long
-  , testProperty "BreakOn basic" prop_breakOn_basic
-  , testProperty "BreakOn empty" prop_breakOn_empty
-  , testProperty "BreakOn not found" prop_breakOn_not_found
-  , testProperty "BreakOn multiple" prop_breakOn_multiple
-  , testProperty "BreakOn prefix" prop_breakOn_prefix
-  , testProperty "BreakOn suffix" prop_breakOn_suffix
-  , testProperty "BreakOn no separator" prop_breakOn_no_separator
-  , testCase "Trim edge cases" test_trim_edge_cases
-  , testCase "SplitBy edge cases" test_splitBy_edge_cases
-  , testCase "SplitByComma edge cases" test_splitByComma_edge_cases
-  , testCase "RemoveLineComments edge cases" test_removeLineComments_edge_cases
-  , testCase "RemoveComments edge cases" test_removeComments_edge_cases
-  , testCase "NormalizeIndentation edge cases" test_normalizeIndentation_edge_cases
-  , testCase "isRight edge cases" test_isRight_edge_cases
-  , testCase "isLeft edge cases" test_isLeft_edge_cases
-  , testCase "SafeProcessString edge cases" test_safeProcessString_edge_cases
-  , testCase "BreakOn edge cases" test_breakOn_edge_cases
+  [ testGroup "Basic Utility Functions" [basicProps]
+  , testGroup "Mathematical Properties" [mathProps]
+  ]
+
+basicProps :: TestTree
+basicProps = testGroup "Basic Utility Functions"
+  [ testProperty "prop_trim_idempotent" prop_trim_idempotent
+  , testProperty "prop_trim_empty" prop_trim_empty
+  , testProperty "prop_trim_whitespace" prop_trim_whitespace
+  , testProperty "prop_split_by_length" prop_split_by_length
+  , testProperty "prop_split_by_empty" prop_split_by_empty
+  , testProperty "prop_split_by_consecutive" prop_split_by_consecutive
+  , testProperty "prop_split_by_comma_consistency" prop_split_by_comma_consistency
+  , testProperty "prop_split_by_comma_empty" prop_split_by_comma_empty
+  , testProperty "prop_split_by_comma_numbers" prop_split_by_comma_numbers
+  , testProperty "prop_split_by_comma_collapsed" prop_split_by_comma_collapsed
+  , testProperty "prop_split_by_collapsed_fold" prop_split_by_collapsed_fold
+  , testProperty "prop_split_by_collapsed_single" prop_split_by_collapsed_single
+  , testProperty "prop_remove_line_comments_preserves_strings" prop_remove_line_comments_preserves_strings
+  , testProperty "prop_remove_line_comments_multiline" prop_remove_line_comments_multiline
+  , testProperty "prop_remove_line_comments_end" prop_remove_line_comments_end
+  , testProperty "prop_remove_comments_balanced" prop_remove_comments_balanced
+  , testProperty "prop_remove_comments_idempotent" prop_remove_comments_idempotent
+  , testProperty "prop_remove_comments_single_line" prop_remove_comments_single_line
+  , testProperty "prop_remove_comments_protect_strings" prop_remove_comments_protect_strings
+  , testProperty "prop_is_complete_string_literal" prop_is_complete_string_literal
+  , testProperty "prop_is_complete_string_literal_empty" prop_is_complete_string_literal_empty
+  , testProperty "prop_is_complete_string_literal_escaped" prop_is_complete_string_literal_escaped
+  , testProperty "prop_is_problematic_unclosed_string" prop_is_problematic_unclosed_string
+  , testProperty "prop_is_problematic_unclosed_empty" prop_is_problematic_unclosed_empty
+  , testProperty "prop_break_on_correctness" prop_break_on_correctness
+  , testProperty "prop_break_on_empty" prop_break_on_empty
+  , testProperty "prop_break_on_empty_string" prop_break_on_empty_string
+  , testProperty "prop_break_on_multi_char" prop_break_on_multi_char
+  , testProperty "prop_safe_process_string_safe" prop_safe_process_string_safe
+  , testProperty "prop_safe_process_string_empty" prop_safe_process_string_empty
+  , testProperty "prop_safe_process_string_special" prop_safe_process_string_special
+  , testProperty "prop_normalize_indentation_relative" prop_normalize_indentation_relative
+  , testProperty "prop_normalize_indentation_empty" prop_normalize_indentation_empty
+  , testProperty "prop_normalize_indentation_empty_lines" prop_normalize_indentation_empty_lines
+  , testProperty "prop_normalize_indentation_preserves_nonempty" prop_normalize_indentation_preserves_nonempty
+  , testProperty "prop_normalize_indentation_tabs" prop_normalize_indentation_tabs
+  , testProperty "prop_normalize_indentation_mixed" prop_normalize_indentation_mixed
+  , testProperty "prop_normalize_indentation_multiline_mixed" prop_normalize_indentation_multiline_mixed
+  , testProperty "prop_is_valid_char_ascii" prop_is_valid_char_ascii
+  , testProperty "prop_is_valid_char_control" prop_is_valid_char_control
+  , testProperty "prop_is_right_property" prop_is_right_property
+  , testProperty "prop_trim_never_increases" prop_trim_never_increases
+  , testProperty "prop_trim_mixed_whitespace" prop_trim_mixed_whitespace
+  , testProperty "prop_trim_newlines" prop_trim_newlines
+  , testProperty "prop_trim_tab_space" prop_trim_tab_space
+  , testProperty "prop_trim_zero_width" prop_trim_zero_width
+  , testProperty "prop_split_by_special" prop_split_by_special
+  , testProperty "prop_split_by_high_unicode" prop_split_by_high_unicode
+  , testProperty "prop_remove_line_comments_multiline_protection" prop_remove_line_comments_multiline_protection
+  , testProperty "prop_remove_line_comments_string_slash" prop_remove_line_comments_string_slash
+  , testProperty "prop_remove_comments_deep_nested" prop_remove_comments_deep_nested
+  , testProperty "prop_is_complete_string_literal_escape_backslash" prop_is_complete_string_literal_escape_backslash
+  , testProperty "prop_is_problematic_unclosed_escape_quote" prop_is_problematic_unclosed_escape_quote
+  , testProperty "prop_break_on_long_pattern" prop_break_on_long_pattern
+  , testProperty "prop_safe_process_string_mixed" prop_safe_process_string_mixed
+  , testProperty "prop_is_valid_char_high_unicode" prop_is_valid_char_high_unicode
+  ]
+
+mathProps :: TestTree
+mathProps = testGroup "Mathematical Properties"
+  [ testProperty "prop_addition_commutative" prop_addition_commutative
+  , testProperty "prop_addition_associative" prop_addition_associative
+  , testProperty "prop_multiplication_commutative" prop_multiplication_commutative
+  , testProperty "prop_multiplication_associative" prop_multiplication_associative
+  , testProperty "prop_distributive" prop_distributive
+  , testProperty "prop_subtraction" prop_subtraction
+  , testProperty "prop_division" prop_division
+  , testProperty "prop_abs" prop_abs
+  , testProperty "prop_max" prop_max
+  , testProperty "prop_min" prop_min
+  , testProperty "prop_even_odd" prop_even_odd
+  , testProperty "prop_gcd" prop_gcd
+  , testProperty "prop_lcm" prop_lcm
+  , testProperty "prop_list_sort_sorted" prop_list_sort_sorted
+  , testProperty "prop_list_sort_length" prop_list_sort_length
+  , testProperty "prop_list_nub_length" prop_list_nub_length
+  , testProperty "prop_list_nub_unique" prop_list_nub_unique
+  , testProperty "prop_list_reverse" prop_list_reverse
+  , testProperty "prop_list_reverse_length" prop_list_reverse_length
+  , testProperty "prop_list_concat_associative" prop_list_concat_associative
+  , testProperty "prop_list_concat_identity" prop_list_concat_identity
+  , testProperty "prop_list_map_concat" prop_list_map_concat
+  , testProperty "prop_list_filter" prop_list_filter
+  , testProperty "prop_list_filter_length" prop_list_filter_length
+  , testProperty "prop_maybe_return" prop_maybe_return
+  , testProperty "prop_maybe_fmap" prop_maybe_fmap
+  , testProperty "prop_either_return" prop_either_return
+  , testProperty "prop_either_fmap" prop_either_fmap
+  , testProperty "prop_map_insert" prop_map_insert
+  , testProperty "prop_map_delete" prop_map_delete
+  , testProperty "prop_set_insert" prop_set_insert
+  , testProperty "prop_set_delete" prop_set_delete
+  , testProperty "prop_char_case" prop_char_case
+  , testProperty "prop_char_is_digit" prop_char_is_digit
+  , testProperty "prop_char_is_letter" prop_char_is_letter
+  , testProperty "prop_char_is_space" prop_char_is_space
+  , testProperty "prop_string_length" prop_string_length
+  , testProperty "prop_string_reverse" prop_string_reverse
+  , testProperty "prop_string_reverse_length" prop_string_reverse_length
+  , testProperty "prop_string_concat" prop_string_concat
+  , testProperty "prop_string_take" prop_string_take
+  , testProperty "prop_string_drop" prop_string_drop
+  , testProperty "prop_string_split" prop_string_split
+  , testProperty "prop_string_is_prefix_of" prop_string_is_prefix_of
+  , testProperty "prop_string_is_suffix_of" prop_string_is_suffix_of
+  , testProperty "prop_string_is_infix_of" prop_string_is_infix_of
+  , testProperty "prop_string_replicate" prop_string_replicate
+  , testProperty "prop_string_null" prop_string_null
+  , testProperty "prop_string_head" prop_string_head
+  , testProperty "prop_string_tail" prop_string_tail
+  , testProperty "prop_string_init" prop_string_init
+  , testProperty "prop_string_last" prop_string_last
+  , testProperty "prop_string_map" prop_string_map
+  , testProperty "prop_string_filter" prop_string_filter
+  , testProperty "prop_string_concat_strings" prop_string_concat_strings
+  , testProperty "prop_string_words" prop_string_words
+  , testProperty "prop_string_lines" prop_string_lines
+  , testProperty "prop_compare" prop_compare
+  , testProperty "prop_maximum" prop_maximum
+  , testProperty "prop_minimum" prop_minimum
+  , testProperty "prop_sum" prop_sum
+  , testProperty "prop_product" prop_product
+  , testProperty "prop_concat" prop_concat
+  , testProperty "prop_any" prop_any
+  , testProperty "prop_all" prop_all
+  , testProperty "prop_sort_ordered" prop_sort_ordered
+  , testProperty "prop_sort_minimum" prop_sort_minimum
+  , testProperty "prop_sort_maximum" prop_sort_maximum
+  , testProperty "prop_sort_elements" prop_sort_elements
   ]

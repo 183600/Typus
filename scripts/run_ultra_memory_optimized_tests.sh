@@ -120,14 +120,15 @@ run_tests_with_monitoring() {
     # Create a temporary file for memory monitoring
     TEMP_FILE=$(mktemp)
     
-    # Monitor memory usage in background
+    # Monitor memory usage in background with enhanced precision
     (
         while true; do
             if [ -f "/proc/$$/status" ]; then
                 MEM_USAGE=$(grep VmRSS /proc/$$/status | awk '{print $2}')
-                echo "$(date): ${MEM_USAGE}KB" >> "$TEMP_FILE"
+                MEM_PEAK=$(grep VmHWM /proc/$$/status | awk '{print $2}')
+                echo "$(date): ${MEM_USAGE}KB (peak: ${MEM_PEAK}KB)" >> "$TEMP_FILE"
             fi
-            sleep 1
+            sleep 0.5  # More frequent monitoring for better accuracy
         done
     ) &
     MONITOR_PID=$!
