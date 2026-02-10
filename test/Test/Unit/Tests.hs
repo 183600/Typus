@@ -33,6 +33,8 @@ import qualified Test.Unit.UltraMemoryOptimizedTestSuite as UltraMemoryOptimized
 import qualified Test.Unit.ConciseTestSuite as ConciseTestSuite
 import qualified Test.Unit.OptimizedTests as OptimizedTests
 import qualified Test.Unit.FinalExact200QuickCheckTests as FinalExact200QuickCheckTests
+-- 新添加的增强测试套件
+import qualified Test.Unit.NewEnhancedQuickCheckTestSuite as NewEnhancedQuickCheckTestSuite
 
 -- 极简的内存优化测试属性
 prop_minimal_basic_property :: String -> Property
@@ -74,6 +76,9 @@ tests = minimalMemoryLimitedTestGroup "Typus Memory-Optimized Test Suite"
     
     -- 新添加的200个测试
     withMinimalMemoryLimits FinalExact200QuickCheckTests.exact200QuickCheckTests,
+    
+    -- 新添加的增强测试套件
+    withMinimalMemoryLimits NewEnhancedQuickCheckTestSuite.newEnhancedQuickCheckTestSuite,
     
     -- 创建最小内存配置的额外测试
     createOptimizedMemorySuite minimalOptimizedConfig "Critical Tests"
