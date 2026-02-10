@@ -119,7 +119,7 @@ saveErrors errors filepath = do
 -- | 从文件加载错误（简单实现，用于测试）
 loadErrors :: String -> IO [TypeError]
 loadErrors filepath = do
-  content <- readFile filepath
+  _content <- readFile filepath
   return []  -- 简单实现，返回空列表
 
 -- | 版本化错误（简单实现，用于测试）

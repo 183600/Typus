@@ -320,7 +320,9 @@ analyzeWithErrorRecovery code =
           analysis = OwnershipAnalysis [] [] errors
       in if null errors
          then Right analysis
-         else Left (head errors)
+         else case errors of
+                (e:_) -> Left e
+                [] -> Right analysis  -- This case shouldn't happen due to null check
 
 -- | Analyze interactively (placeholder for tests)
 analyzeInteractive :: String -> Either OwnershipError OwnershipAnalysis
@@ -332,7 +334,9 @@ analyzeInteractive code =
           analysis = OwnershipAnalysis [] [] errors
       in if null errors
          then Right analysis
-         else Left (head errors)
+         else case errors of
+                (e:_) -> Left e
+                [] -> Right analysis  -- This case shouldn't happen due to null check
 
 -- | Analyze batch (placeholder for tests)
 analyzeBatch :: [String] -> [Either OwnershipError OwnershipAnalysis]
@@ -341,4 +345,7 @@ analyzeBatch codes = map (\code ->
       analysis = OwnershipAnalysis [] [] errors
   in if null errors
      then Right analysis
-     else Left (head errors)) codes
+     else case errors of
+            (e:_) -> Left e
+            [] -> Right analysis  -- This case shouldn't happen due to null check
+  ) codes

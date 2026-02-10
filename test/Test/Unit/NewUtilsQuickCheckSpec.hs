@@ -38,7 +38,9 @@ prop_trim_non_whitespace_handling c s =
   let limitedS = take 50 s
       s' = c : limitedS
       trimmed = trim s'
-  in property $ not (null trimmed) && head trimmed == c
+  in if null trimmed 
+     then property False
+     else property $ head trimmed == c
 
 -- | 测试trim函数的组合性
 prop_trim_composition :: String -> String -> Property
