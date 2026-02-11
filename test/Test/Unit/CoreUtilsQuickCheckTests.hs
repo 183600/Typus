@@ -10,6 +10,7 @@ import Data.List (isInfixOf, isPrefixOf, isSuffixOf, intercalate)
 import Data.Char (isSpace, isLetter, isDigit, ord)
 import Data.Maybe (isJust, isNothing)
 import Data.Either (isLeft, isRight)
+import Control.Monad (when)
 import Control.Arrow ((***))
 
 -- | 测试trim函数的幂等性

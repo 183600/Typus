@@ -2,11 +2,14 @@ import Utils
 
 main :: IO ()
 main = do
-    let s = "\\"
-    let quoted = "\"" ++ s ++ "\""
-    let incomplete = "\"" ++ s
-    putStrLn $ "s = " ++ show s
-    putStrLn $ "quoted = " ++ show quoted
-    putStrLn $ "incomplete = " ++ show incomplete
-    putStrLn $ "isCompleteStringLiteral quoted = " ++ show (Utils.isCompleteStringLiteral quoted)
-    putStrLn $ "isCompleteStringLiteral incomplete = " ++ show (Utils.isCompleteStringLiteral incomplete)
+    let testCases = 
+            [ ("\"b\"", "b followed by quote")
+            , ("\"b\\\"\"", "b followed by escaped quote")
+            , ("\"b\"\"\"", "b followed by quote and quote")
+            ]
+    
+    mapM_ (\(s, desc) -> do
+        putStrLn $ desc ++ ": " ++ show s
+        putStrLn $ "  isCompleteStringLiteral: " ++ show (isCompleteStringLiteral s)
+        putStrLn ""
+        ) testCases

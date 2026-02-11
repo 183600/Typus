@@ -1,14 +1,20 @@
-import Utils (removeLineComments)
+import Utils
 
+-- 测试 prop_remove_line_comments_multiline 失败的情况
 main :: IO ()
 main = do
-    let lines' = ["",""]
+    putStrLn "Testing removeLineComments with multiline..."
+    
+    -- 根据测试失败信息，输入是 ["\n"]
+    let lines' = ["\n"]
     let code = unlines lines'
-    putStrLn $ "Input lines': " ++ show lines'
-    putStrLn $ "code: " ++ show code
     let processed = removeLineComments code
-    putStrLn $ "processed: " ++ show processed
     let procLines = lines processed
-    putStrLn $ "procLines: " ++ show procLines
-    putStrLn $ "length lines': " ++ show (length lines')
-    putStrLn $ "length procLines: " ++ show (length procLines)
+    
+    putStrLn $ "Input lines: " ++ show lines'
+    putStrLn $ "Code: " ++ show code
+    putStrLn $ "Processed: " ++ show processed
+    putStrLn $ "Processed lines: " ++ show procLines
+    putStrLn $ "Expected length: 1"
+    putStrLn $ "Actual length: " ++ show (length procLines)
+    putStrLn $ "Test passes: " ++ show (length procLines == 1)

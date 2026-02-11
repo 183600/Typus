@@ -1,15 +1,25 @@
--- Test the failing case
-import qualified Utils as U
+import Utils
 
+-- 测试 prop_is_complete_string_literal_escaped 失败的情况
 main :: IO ()
 main = do
-    let s = "\""
-    let escaped = "\"" ++ s ++ "\\\"\""
+    putStrLn "Testing isCompleteStringLiteral with escaped quotes..."
     
-    putStrLn $ "Input s: " ++ show s
-    putStrLn $ "Escaped: " ++ show escaped
+    -- 测试用例 "c"
+    let test1 = "\"c\\\"\""
+    putStrLn $ "Test 1: " ++ show test1 ++ " -> " ++ show (isCompleteStringLiteral test1)
     
-    putStrLn $ "U.isCompleteStringLiteral escaped: " ++ show (U.isCompleteStringLiteral escaped)
+    -- 其他一些测试用例
+    let test2 = "\"a\\\"\""
+    putStrLn $ "Test 2: " ++ show test2 ++ " -> " ++ show (isCompleteStringLiteral test2)
     
-    -- The test expects this to be True
-    putStrLn $ "Test result: " ++ show (U.isCompleteStringLiteral escaped)
+    let test3 = "\"b\\\"\""
+    putStrLn $ "Test 3: " ++ show test3 ++ " -> " ++ show (isCompleteStringLiteral test3)
+    
+    -- 空字符串
+    let test4 = "\"\""
+    putStrLn $ "Test 4: " ++ show test4 ++ " -> " ++ show (isCompleteStringLiteral test4)
+    
+    -- 单个引号
+    let test5 = "\""
+    putStrLn $ "Test 5: " ++ show test5 ++ " -> " ++ show (isCompleteStringLiteral test5)
