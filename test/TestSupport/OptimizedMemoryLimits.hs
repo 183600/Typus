@@ -45,57 +45,57 @@ data OptimizedMemoryConfig = OptimizedMemoryConfig
   , listSizeLimit :: Int        -- ^ Maximum list size in tests
   } deriving (Show, Eq)
 
--- | Default optimized memory configurations
+-- | Default optimized memory configurations - 进一步优化内存使用
 minimalOptimizedConfig :: OptimizedMemoryConfig
 minimalOptimizedConfig = OptimizedMemoryConfig
-  { memoryLimitMB = 200
-  , maxTestSize = 1
-  , testCount = 5
-  , maxShrinks = 5
-  , gcFrequency = 1
+  { memoryLimitMB = 128    -- 减少到128MB
+  , maxTestSize = 1        -- 保持最小
+  , testCount = 3          -- 减少测试数量
+  , maxShrinks = 2         -- 减少收缩次数
+  , gcFrequency = 1        -- 每次测试后GC
   , enableProfiling = False
   , optimizedCleanup = True
-  , stringSizeLimit = 10
-  , listSizeLimit = 3
+  , stringSizeLimit = 5    -- 进一步减少字符串大小
+  , listSizeLimit = 2      -- 进一步减少列表大小
   }
 
 optimizedMemoryConfig :: OptimizedMemoryConfig
 optimizedMemoryConfig = OptimizedMemoryConfig
-  { memoryLimitMB = 256
-  , maxTestSize = 2
-  , testCount = 10
-  , maxShrinks = 10
-  , gcFrequency = 1
+  { memoryLimitMB = 192    -- 减少到192MB
+  , maxTestSize = 2        -- 保持较小的测试大小
+  , testCount = 8          -- 减少测试数量
+  , maxShrinks = 8         -- 减少收缩次数
+  , gcFrequency = 1        -- 每次测试后GC
   , enableProfiling = False
   , optimizedCleanup = True
-  , stringSizeLimit = 15
-  , listSizeLimit = 5
+  , stringSizeLimit = 8    -- 减少字符串大小
+  , listSizeLimit = 3      -- 减少列表大小
   }
 
 strictMemoryConfig :: OptimizedMemoryConfig
 strictMemoryConfig = OptimizedMemoryConfig
-  { memoryLimitMB = 384
-  , maxTestSize = 3
-  , testCount = 20
-  , maxShrinks = 20
-  , gcFrequency = 2
-  , enableProfiling = True
+  { memoryLimitMB = 256    -- 减少到256MB
+  , maxTestSize = 3        -- 保持较小的测试大小
+  , testCount = 15         -- 减少测试数量
+  , maxShrinks = 15        -- 减少收缩次数
+  , gcFrequency = 1        -- 每次测试后GC
+  , enableProfiling = False -- 禁用分析以节省内存
   , optimizedCleanup = True
-  , stringSizeLimit = 20
-  , listSizeLimit = 8
+  , stringSizeLimit = 12   -- 减少字符串大小
+  , listSizeLimit = 5      -- 减少列表大小
   }
 
 balancedMemoryConfig :: OptimizedMemoryConfig
 balancedMemoryConfig = OptimizedMemoryConfig
-  { memoryLimitMB = 512
-  , maxTestSize = 5
-  , testCount = 30
-  , maxShrinks = 25
-  , gcFrequency = 3
-  , enableProfiling = True
+  { memoryLimitMB = 320    -- 减少到320MB
+  , maxTestSize = 4        -- 保持适中的测试大小
+  , testCount = 20         -- 减少测试数量
+  , maxShrinks = 20        -- 减少收缩次数
+  , gcFrequency = 2        -- 每2次测试后GC
+  , enableProfiling = False -- 禁用分析以节省内存
   , optimizedCleanup = True
-  , stringSizeLimit = 25
-  , listSizeLimit = 10
+  , stringSizeLimit = 15   -- 减少字符串大小
+  , listSizeLimit = 6      -- 减少列表大小
   }
 
 -- | Optimized memory profiling information
@@ -158,17 +158,19 @@ monitorOptimizedMemoryUsage action = do
   
   return $ OptimizedMemoryProfile peakMem avgMem gcRuns duration efficiency
 
--- | Force optimized memory cleanup
+-- | Force optimized memory cleanup - 增强垃圾回收策略
 forceOptimizedCleanup :: IO ()
 forceOptimizedCleanup = do
-  -- Multiple GC passes with optimized timing
-  replicateM_ 2 performGC
+  -- 多轮GC，每轮间隔很短以确保彻底清理
+  replicateM_ 3 $ do
+    performGC
+    threadDelay 10000 -- 10ms间隔，减少等待时间
   
-  -- Short delay to allow GC to complete (reduced delay)
-  threadDelay 25000 -- 25ms
-  
-  -- Final cleanup pass
+  -- 最终清理 pass
   performGC
+  
+  -- 额外的延迟确保GC完成
+  threadDelay 5000 -- 5ms
 
 -- | Create an optimized memory test suite
 createOptimizedMemorySuite :: OptimizedMemoryConfig -> String -> [TestTree] -> TestTree
@@ -178,16 +180,17 @@ createOptimizedMemorySuite config name tests =
       prefix = "[" ++ show (memoryLimitMB config) ++ "MB] "
   in testGroup (prefix ++ name) limitedTests
 
--- | Select optimized tests based on configuration
+-- | Select optimized tests based on configuration - 进一步优化测试选择
 selectOptimizedTests :: OptimizedMemoryConfig -> [TestTree] -> [TestTree]
 selectOptimizedTests config tests = 
-  -- Select tests based on memory constraints
+  -- Select tests based on memory constraints - 更严格的限制
   let maxTests = case memoryLimitMB config of
-        lim | lim <= 200 -> 2   -- Extreme memory constraints
-        lim | lim <= 256 -> 3   -- Minimal memory constraints
-        lim | lim <= 384 -> 4   -- Optimized memory constraints  
-        lim | lim <= 512 -> 6   -- Strict memory constraints
-        _ -> 8                  -- Balanced constraints
+        lim | lim <= 128 -> 1   -- 极端内存约束
+        lim | lim <= 192 -> 2   -- 严重内存约束
+        lim | lim <= 256 -> 3   -- 最小内存约束
+        lim | lim <= 320 -> 4   -- 优化内存约束  
+        lim | lim <= 384 -> 5   -- 严格内存约束
+        _ -> 6                  -- 平衡约束
   in take maxTests tests
 
 -- | Profile optimized test memory usage

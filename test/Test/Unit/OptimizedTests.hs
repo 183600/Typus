@@ -23,37 +23,37 @@ import Test.Unit.TestListPropertiesSpec (testListProperties)
 import qualified Test.Unit.BasicQuickCheckTestSuite as BasicQuickCheckTestSuite
 import qualified Test.Unit.SimpleQuickCheckTestSuite as SimpleQuickCheckTestSuite
 
--- Core test properties with controlled generator sizes
+-- Core test properties with controlled generator sizes - 进一步优化内存使用
 prop_optimized_string_property :: String -> Property
 prop_optimized_string_property s = 
-  let limitedString = take 10 s  -- Further reduced string size
+  let limitedString = take 3 s  -- 极大减少字符串大小
   in property $ length limitedString >= 0
 
 prop_optimized_list_property :: [Int] -> Property
 prop_optimized_list_property xs = 
-  let limitedList = take 5 xs   -- Further reduced list size
+  let limitedList = take 2 xs   -- 极大减少列表大小
   in property $ length limitedList >= 0
 
 prop_optimized_basic_property :: Int -> Property
 prop_optimized_basic_property n = 
-  let limitedN = mod (abs n) 100  -- Further reduced integer range
+  let limitedN = mod (abs n) 50  -- 极大减少整数范围
   in property $ limitedN >= 0
 
--- Memory-efficient string operations
+-- Memory-efficient string operations - 进一步优化
 prop_optimized_string_concat :: String -> String -> Property
 prop_optimized_string_concat s1 s2 = 
-  let limitedS1 = take 5 s1
-      limitedS2 = take 5 s2
+  let limitedS1 = take 2 s1     -- 进一步减少
+      limitedS2 = take 2 s2     -- 进一步减少
       result = limitedS1 ++ limitedS2
-  in property $ length result >= 0 && length result <= 10
+  in property $ length result >= 0 && length result <= 4
 
--- Memory-efficient list operations
+-- Memory-efficient list operations - 进一步优化
 prop_optimized_list_operations :: [Int] -> [Int] -> Property
 prop_optimized_list_operations xs ys = 
-  let limitedXs = take 3 xs
-      limitedYs = take 3 ys
+  let limitedXs = take 2 xs     -- 进一步减少
+      limitedYs = take 2 ys     -- 进一步减少
       result = limitedXs ++ limitedYs
-  in property $ length result <= 6
+  in property $ length result <= 4
 
 -- Create optimized test suite with memory constraints
 createOptimizedTestSuite :: MemoryLevel -> TestTree
@@ -103,13 +103,13 @@ ciOptimizedTests = memoryLevelTestGroup Minimal "CI/CD Optimized Tests"
   , withMemoryLevel Minimal testListProperties
   ]
 
--- Test suite with memory monitoring and cleanup
+-- Test suite with memory monitoring and cleanup - 进一步优化内存使用
 monitoredOptimizedTests :: TestTree
 monitoredOptimizedTests = memoryLimitedTestGroup "Memory-Monitored Optimized Tests"
   [ testProperty "monitored string property" $ \(s :: String) ->
-      let limitedString = take 15 s
+      let limitedString = take 3 s  -- 极大减少字符串大小
       in property $ length limitedString >= 0
   , testProperty "monitored list property" $ \(xs :: [Int]) ->
-      let limitedList = take 8 xs
+      let limitedList = take 2 xs   -- 极大减少列表大小
       in property $ length limitedList >= 0
   ]

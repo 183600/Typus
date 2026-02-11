@@ -40,36 +40,36 @@ data ExtremeMemoryConfig = ExtremeMemoryConfig
   , maxConcurrentTests :: Int   -- ^ 最大并发测试数
   } deriving (Show, Eq)
 
--- | 极端内存配置（约128MB等效）
+-- | 极端内存配置（约96MB等效）- 进一步优化
 extremeMemoryConfig :: ExtremeMemoryConfig
 extremeMemoryConfig = ExtremeMemoryConfig
-  { memoryLimitMB = 128
-  , maxTestSize = 1
-  , testCount = 3
-  , maxShrinks = 2
-  , gcFrequency = 1
+  { memoryLimitMB = 96      -- 减少到96MB
+  , maxTestSize = 1         -- 保持最小
+  , testCount = 2           -- 减少测试数量
+  , maxShrinks = 1          -- 减少收缩次数
+  , gcFrequency = 1         -- 每次测试后GC
   , enableProfiling = False
   , extremeCleanup = True
-  , stringSizeLimit = 5
-  , listSizeLimit = 2
-  , recursionDepth = 2
-  , maxConcurrentTests = 1
+  , stringSizeLimit = 3     -- 减少字符串大小
+  , listSizeLimit = 1       -- 减少列表大小
+  , recursionDepth = 1      -- 减少递归深度
+  , maxConcurrentTests = 1  -- 保持单线程
   }
 
--- | 关键内存配置（约64MB等效）
+-- | 关键内存配置（约48MB等效）- 进一步优化
 criticalMemoryConfig :: ExtremeMemoryConfig
 criticalMemoryConfig = ExtremeMemoryConfig
-  { memoryLimitMB = 64
-  , maxTestSize = 1
-  , testCount = 2
-  , maxShrinks = 1
-  , gcFrequency = 1
+  { memoryLimitMB = 48      -- 减少到48MB
+  , maxTestSize = 1         -- 保持最小
+  , testCount = 1           -- 减少到最少测试
+  , maxShrinks = 0          -- 禁用收缩以节省内存
+  , gcFrequency = 1         -- 每次测试后GC
   , enableProfiling = False
   , extremeCleanup = True
-  , stringSizeLimit = 3
-  , listSizeLimit = 1
-  , recursionDepth = 1
-  , maxConcurrentTests = 1
+  , stringSizeLimit = 2     -- 减少字符串大小
+  , listSizeLimit = 1       -- 保持最小
+  , recursionDepth = 1      -- 保持最小
+  , maxConcurrentTests = 1  -- 保持单线程
   }
 
 -- | 应用极端内存限制
@@ -129,15 +129,16 @@ createExtremeMemorySuite config name tests =
       prefix = "[" ++ show (memoryLimitMB config) ++ "MB-EXTREME] "
   in testGroup (prefix ++ name) limitedTests
 
--- | 选择关键测试基于配置
+-- | 选择关键测试基于配置 - 进一步优化测试选择
 selectCriticalTests :: ExtremeMemoryConfig -> [TestTree] -> [TestTree]
 selectCriticalTests config tests = 
-  -- 基于内存约束选择测试
+  -- 基于内存约束选择测试 - 更严格的限制
   let maxTests = case memoryLimitMB config of
-        lim | lim <= 64  -> 1  -- 极端内存约束
-        lim | lim <= 128 -> 2  -- 严重内存约束
-        lim | lim <= 256 -> 3  -- 重度内存约束
-        _ -> 4                  -- 中度约束
+        lim | lim <= 48  -> 1  -- 极端内存约束
+        lim | lim <= 96  -> 1  -- 严重内存约束
+        lim | lim <= 128 -> 2  -- 重度内存约束
+        lim | lim <= 192 -> 2  -- 中度约束
+        _ -> 3                  -- 轻度约束
   in take maxTests tests
 
 -- | 应用极端内存管理

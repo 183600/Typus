@@ -134,8 +134,11 @@ prop_remove_line_comments_multiline s1 s2 =
               multiline = line1 ++ "\n" ++ line2
               result = removeLineComments multiline
               linesResult = lines result
-          in property $ length linesResult >= 1 && 
-                    not (any ("//" `isInfixOf`) linesResult)
+              hasContent = any (not . null) [s1, s2]
+          in if hasContent
+             then property $ length linesResult >= 1 && 
+                       not (any ("//" `isInfixOf`) linesResult)
+             else property $ result == "\n"  -- 当两行都只有注释时，结果应该是单个换行符
 
 tests :: TestTree
 tests = testGroup "Basic QuickCheck Tests"

@@ -1,11 +1,13 @@
-import Utils
-import Data.List (isPrefixOf)
+import Utils (normalizeIndentation)
 
 main :: IO ()
 main = do
-  let input = " "
-  let result = normalizeIndentation input
-  putStrLn $ "Input: " ++ show input
-  putStrLn $ "Result: " ++ show result
-  putStrLn $ "Input lines: " ++ show (lines input)
-  putStrLn $ "All space: " ++ show (all (\c -> c == ' ' || c == '\t') input)
+    let codeBlock = "    if condition {\n        // do something\n        return \n    }"
+    putStrLn "Input code block:"
+    putStrLn $ show codeBlock
+    putStrLn "\nNormalized:"
+    putStrLn $ show $ normalizeIndentation codeBlock
+    putStrLn "\nNormalized lines:"
+    mapM_ (putStrLn . show) $ lines $ normalizeIndentation codeBlock
+    putStrLn "\nNon-comment lines:"
+    mapM_ (putStrLn . show) $ filter (not . (Data.List.isPrefixOf "//")) $ lines $ normalizeIndentation codeBlock

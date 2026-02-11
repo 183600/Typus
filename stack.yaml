@@ -30,7 +30,6 @@ snapshot: lts-23.0
 #   - wai
 packages:
 - .
-- dlist-1.0
 # Dependency packages to be pulled from upstream that are not in the snapshot.
 # These entries can reference officially published versions as well as
 # forks / in-progress versions pinned to a git hash. For example:

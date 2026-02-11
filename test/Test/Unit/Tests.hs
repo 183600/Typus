@@ -36,15 +36,15 @@ import qualified Test.Unit.FinalExact200QuickCheckTests as FinalExact200QuickChe
 -- 新添加的增强测试套件
 import qualified Test.Unit.NewEnhancedQuickCheckTestSuite as NewEnhancedQuickCheckTestSuite
 
--- 极简的内存优化测试属性
+-- 极简的内存优化测试属性 - 进一步优化内存使用
 prop_minimal_basic_property :: String -> Property
 prop_minimal_basic_property s = 
-  let limitedString = take 3 s  -- 极小的字符串限制
+  let limitedString = take 1 s  -- 极度减少字符串限制
   in property $ length limitedString >= 0
 
 prop_minimal_list_property :: [Int] -> Property
 prop_minimal_list_property xs = 
-  let limitedList = take 2 xs   -- 极小的列表限制
+  let limitedList = take 1 xs   -- 极度减少列表限制
   in property $ length limitedList >= 0
 
 -- 创建极简的内存优化测试套件

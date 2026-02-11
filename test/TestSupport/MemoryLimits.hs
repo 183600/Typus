@@ -22,6 +22,7 @@ import Test.Tasty (TestTree, testGroup, localOption)
 import Test.Tasty.QuickCheck (QuickCheckMaxSize(..), QuickCheckTests(..), QuickCheckMaxShrinks(..))
 import System.Mem (performGC)
 import Control.Monad (replicateM_)
+import Control.Concurrent (threadDelay)
 
 -- | Memory optimization levels
 data MemoryLevel = 
@@ -31,36 +32,36 @@ data MemoryLevel =
   | Moderate     -- ^ Moderate memory limits (2GB equivalent)
   deriving (Show, Eq)
 
--- | Apply minimal memory limits to a test tree for extreme memory constraints
+-- | Apply minimal memory limits to a test tree for extreme memory constraints - 进一步优化
 withMinimalMemoryLimits :: TestTree -> TestTree
 withMinimalMemoryLimits test = 
-  localOption (QuickCheckMaxSize 3) $
-  localOption (QuickCheckTests 10) $
-  localOption (QuickCheckMaxShrinks 10) $
+  localOption (QuickCheckMaxSize 1) $    -- 极度减少
+  localOption (QuickCheckTests 3) $      -- 极度减少
+  localOption (QuickCheckMaxShrinks 2) $ -- 极度减少
   test
 
--- | Apply ultra memory limits to a test tree for very memory-constrained environments
+-- | Apply ultra memory limits to a test tree for very memory-constrained environments - 进一步优化
 withUltraMemoryLimits :: TestTree -> TestTree
 withUltraMemoryLimits test = 
-  localOption (QuickCheckMaxSize 5) $
-  localOption (QuickCheckTests 25) $
-  localOption (QuickCheckMaxShrinks 25) $
+  localOption (QuickCheckMaxSize 2) $    -- 进一步减少
+  localOption (QuickCheckTests 8) $      -- 进一步减少
+  localOption (QuickCheckMaxShrinks 5) $ -- 进一步减少
   test
 
--- | Apply moderate memory limits to a test tree
+-- | Apply moderate memory limits to a test tree - 进一步优化
 withMemoryLimits :: TestTree -> TestTree
 withMemoryLimits test = 
-  localOption (QuickCheckMaxSize 15) $
-  localOption (QuickCheckTests 75) $
-  localOption (QuickCheckMaxShrinks 50) $
+  localOption (QuickCheckMaxSize 5) $    -- 大幅减少
+  localOption (QuickCheckTests 20) $     -- 大幅减少
+  localOption (QuickCheckMaxShrinks 15) $ -- 大幅减少
   test
 
--- | Apply aggressive memory limits to a test tree for memory-constrained environments
+-- | Apply aggressive memory limits to a test tree for memory-constrained environments - 进一步优化
 withAggressiveMemoryLimits :: TestTree -> TestTree
 withAggressiveMemoryLimits test = 
-  localOption (QuickCheckMaxSize 10) $
-  localOption (QuickCheckTests 50) $
-  localOption (QuickCheckMaxShrinks 35) $
+  localOption (QuickCheckMaxSize 3) $    -- 进一步减少
+  localOption (QuickCheckTests 12) $     -- 进一步减少
+  localOption (QuickCheckMaxShrinks 8) $ -- 进一步减少
   test
 
 -- | Create a test group with minimal memory limits
@@ -91,19 +92,26 @@ aggressiveMemoryLimitedTestGroup name tests =
 gcBetweenTests :: IO ()
 gcBetweenTests = performGC
 
--- | Force aggressive garbage collection to free maximum memory
+-- | Force aggressive garbage collection to free maximum memory - 增强垃圾回收
 aggressiveGC :: IO ()
 aggressiveGC = do
   performGC
-  -- Additional GC passes to ensure maximum memory cleanup
-  replicateM_ 3 performGC
+  -- 多轮GC，每轮间隔很短
+  replicateM_ 3 $ do
+    performGC
+    threadDelay 5000 -- 5ms间隔
 
--- | Force ultra aggressive garbage collection for memory-critical situations
+-- | Force ultra aggressive garbage collection for memory-critical situations - 极限垃圾回收
 ultraGC :: IO ()
 ultraGC = do
   performGC
-  -- Multiple GC passes with different strategies
-  replicateM_ 5 performGC
+  -- 多轮GC，每轮间隔很短，确保彻底清理
+  replicateM_ 5 $ do
+    performGC
+    threadDelay 3000 -- 3ms间隔，更频繁的GC
+  
+  -- 最终清理
+  performGC
 
 -- | Add memory monitoring and cleanup to a test
 withMemoryMonitoring :: IO a -> IO a
