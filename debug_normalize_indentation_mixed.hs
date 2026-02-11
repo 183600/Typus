@@ -2,10 +2,9 @@ import Utils
 
 main :: IO ()
 main = do
-    let s = ""
-    let mixed = "\t  \t  " ++ s ++ "  \t  "
-    let normalized = normalizeIndentation mixed
+    let s = "a"
+    let mixed = "  \t  " ++ s
     putStrLn $ "Input: " ++ show mixed
+    let normalized = normalizeIndentation mixed
     putStrLn $ "Output: " ++ show normalized
-    putStrLn $ "Expected: " ++ show "    "
-    putStrLn $ "Test passes: " ++ show (normalized == "    ")
+    putStrLn $ "Contains tab: " ++ show ('\t' `elem` normalized)

@@ -298,7 +298,7 @@ saveOwnershipAnalysis analysis filepath = do
 -- | Load ownership analysis (placeholder for tests)
 loadOwnershipAnalysis :: String -> IO OwnershipAnalysis
 loadOwnershipAnalysis filepath = do
-  content <- readFile filepath
+  _ <- readFile filepath
   return $ OwnershipAnalysis [] [] []  -- Simple implementation
 
 -- | Version ownership analysis (placeholder for tests)

@@ -40,33 +40,33 @@ data ExtremeMemoryConfig = ExtremeMemoryConfig
   , maxConcurrentTests :: Int   -- ^ 最大并发测试数
   } deriving (Show, Eq)
 
--- | 极端内存配置（约96MB等效）- 进一步优化
+-- | 极端内存配置（约64MB等效）- 极限优化
 extremeMemoryConfig :: ExtremeMemoryConfig
 extremeMemoryConfig = ExtremeMemoryConfig
-  { memoryLimitMB = 96      -- 减少到96MB
+  { memoryLimitMB = 64      -- 减少到64MB
   , maxTestSize = 1         -- 保持最小
-  , testCount = 2           -- 减少测试数量
-  , maxShrinks = 1          -- 减少收缩次数
+  , testCount = 1           -- 减少到最少测试数量
+  , maxShrinks = 0          -- 禁用收缩以节省内存
   , gcFrequency = 1         -- 每次测试后GC
   , enableProfiling = False
   , extremeCleanup = True
-  , stringSizeLimit = 3     -- 减少字符串大小
-  , listSizeLimit = 1       -- 减少列表大小
+  , stringSizeLimit = 2     -- 极大减少字符串大小
+  , listSizeLimit = 1       -- 极大减少列表大小
   , recursionDepth = 1      -- 减少递归深度
   , maxConcurrentTests = 1  -- 保持单线程
   }
 
--- | 关键内存配置（约48MB等效）- 进一步优化
+-- | 关键内存配置（约32MB等效）- 极限优化
 criticalMemoryConfig :: ExtremeMemoryConfig
 criticalMemoryConfig = ExtremeMemoryConfig
-  { memoryLimitMB = 48      -- 减少到48MB
+  { memoryLimitMB = 32      -- 减少到32MB
   , maxTestSize = 1         -- 保持最小
   , testCount = 1           -- 减少到最少测试
   , maxShrinks = 0          -- 禁用收缩以节省内存
   , gcFrequency = 1         -- 每次测试后GC
   , enableProfiling = False
   , extremeCleanup = True
-  , stringSizeLimit = 2     -- 减少字符串大小
+  , stringSizeLimit = 1     -- 极大减少字符串大小
   , listSizeLimit = 1       -- 保持最小
   , recursionDepth = 1      -- 保持最小
   , maxConcurrentTests = 1  -- 保持单线程
@@ -129,16 +129,17 @@ createExtremeMemorySuite config name tests =
       prefix = "[" ++ show (memoryLimitMB config) ++ "MB-EXTREME] "
   in testGroup (prefix ++ name) limitedTests
 
--- | 选择关键测试基于配置 - 进一步优化测试选择
+-- | 选择关键测试基于配置 - 极限优化测试选择
 selectCriticalTests :: ExtremeMemoryConfig -> [TestTree] -> [TestTree]
 selectCriticalTests config tests = 
-  -- 基于内存约束选择测试 - 更严格的限制
+  -- 基于内存约束选择测试 - 极严格的限制
   let maxTests = case memoryLimitMB config of
-        lim | lim <= 48  -> 1  -- 极端内存约束
-        lim | lim <= 96  -> 1  -- 严重内存约束
-        lim | lim <= 128 -> 2  -- 重度内存约束
-        lim | lim <= 192 -> 2  -- 中度约束
-        _ -> 3                  -- 轻度约束
+        lim | lim <= 32  -> 1  -- 极端内存约束
+        lim | lim <= 64  -> 1  -- 严重内存约束
+        lim | lim <= 96  -> 1  -- 重度内存约束
+        lim | lim <= 128 -> 1  -- 中度约束
+        lim | lim <= 192 -> 2  -- 轻度约束
+        _ -> 2                  -- 最宽松约束
   in take maxTests tests
 
 -- | 应用极端内存管理

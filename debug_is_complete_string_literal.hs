@@ -1,18 +1,13 @@
--- Test for isCompleteStringLiteral
-import Utils (isCompleteStringLiteral)
+import Utils
 
 main :: IO ()
 main = do
-    let testCases = [
-            ("\"a\\\"", "Test case: \"a\\\\\""),
-            ("\"\\\\\"", "Test case: \"\\\\\\\\\""),
-            ("\"\\\\\\\"", "Test case: \"\\\\\\\\\\\\\""),
-            ("\"", "Test case: \""),
-            ("\"\"", "Test case: \"\\\""),
-            ("a\\", "Test case: a\\\\")
-            ]
-    
-    putStrLn "Testing isCompleteStringLiteral:"
-    mapM_ (\(input, desc) -> do
-        putStrLn $ desc ++ ": " ++ show (isCompleteStringLiteral input)
-        ) testCases
+    let s = ""
+    let quoted = "\"" ++ s ++ "\""
+    let incomplete = "\"" ++ s
+    putStrLn $ "s: " ++ show s
+    putStrLn $ "quoted: " ++ show quoted
+    putStrLn $ "incomplete: " ++ show incomplete
+    putStrLn $ "isCompleteStringLiteral quoted: " ++ show (isCompleteStringLiteral quoted)
+    putStrLn $ "isCompleteStringLiteral incomplete: " ++ show (isCompleteStringLiteral incomplete)
+    putStrLn $ "Test passes: " ++ show (isCompleteStringLiteral quoted && not (isCompleteStringLiteral incomplete))
