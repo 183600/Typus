@@ -1,12 +1,10 @@
-import qualified Utils as U
+import Utils (removeComments)
 
 main :: IO ()
 main = do
-  putStrLn "Testing removeLineComments with \"\\n\":"
-  print $ U.removeLineComments "\n"
-  
-  putStrLn "Testing removeComments with \"//\\n \":"
-  print $ U.removeComments "//\n "
-  
-  putStrLn "Testing removeComments with \"//\\n\":"
-  print $ U.removeComments "//\n"
+    let input = "//a\""
+    let result = removeComments input
+    putStrLn $ "Input: " ++ show input
+    putStrLn $ "Result: " ++ show result
+    putStrLn $ "Expected: \"\" (empty string)"
+    putStrLn $ "Test passes: " ++ show (null result)

@@ -1,10 +1,9 @@
-import Utils
+import Utils (normalizeIndentation)
 
 main :: IO ()
 main = do
-    let s = "a"
-    let mixed = "  \t  " ++ s
-    putStrLn $ "Input: " ++ show mixed
-    let normalized = normalizeIndentation mixed
-    putStrLn $ "Output: " ++ show normalized
-    putStrLn $ "Contains tab: " ++ show ('\t' `elem` normalized)
+    let input = "\t  \t  a  \t  "
+    putStrLn $ "Input: " ++ show input
+    let output = normalizeIndentation input
+    putStrLn $ "Output: " ++ show output
+    putStrLn $ "Equal: " ++ show (input == output)

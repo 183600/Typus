@@ -2,12 +2,6 @@ import Utils
 
 main :: IO ()
 main = do
-    let s = ""
-    let quoted = "\"" ++ s ++ "\""
-    let incomplete = "\"" ++ s
-    putStrLn $ "s: " ++ show s
-    putStrLn $ "quoted: " ++ show quoted
-    putStrLn $ "incomplete: " ++ show incomplete
-    putStrLn $ "isCompleteStringLiteral quoted: " ++ show (isCompleteStringLiteral quoted)
-    putStrLn $ "isCompleteStringLiteral incomplete: " ++ show (isCompleteStringLiteral incomplete)
-    putStrLn $ "Test passes: " ++ show (isCompleteStringLiteral quoted && not (isCompleteStringLiteral incomplete))
+    let s = "\\"
+    putStrLn $ "s = " ++ show s
+    putStrLn $ "isCompleteStringLiteral s = " ++ show (Utils.isCompleteStringLiteral s)
