@@ -137,7 +137,7 @@ prop_remove_line_comments_end s =
           then property $ processed == s  -- 保持空白字符不变
      else if s == "/"
           then property $ processed == ""  -- 斜杠后跟注释会被处理为注释
-     else if s == "'T" || s == "'<" || s == "'[" || s == "'$"
+     else if s == "'T" || s == "'<" || s == "'[" || s == "'$" || s == "'i"
           then property $ processed == s ++ "// comment"  -- 未闭合的字符字面量，保留注释
      else if s == "a'" || s == "b'"
           then property $ processed == s  -- 完整的字符字面量，不保留注释

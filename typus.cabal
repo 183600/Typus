@@ -147,10 +147,47 @@ test-suite typus-test-advanced
                 unix,
                 process
         default-language: Haskell2010
-    
-    
-    
 
+-- Enhanced Memory-Optimized Test Suite with advanced memory management
+test-suite typus-test-enhanced
+    type:             exitcode-stdio-1.0
+    build-tool-depends: typus:typus
+    main-is:          EnhancedMemoryTestRunner.hs
+    hs-source-dirs:   test
+    default-extensions: NoMonomorphismRestriction
+    ghc-options:      -Wall -Wcompat
+                      -Wno-unused-top-binds -Wno-unused-matches 
+                      -Wno-orphans -Wno-name-shadowing
+                      -Wno-type-defaults -Wno-unused-local-binds
+                      -Wno-unused-imports
+                      -rtsopts
+                      -O0
+    other-modules:
+        Test.Unit.BasicQuickCheckTestSuite
+        Test.Unit.SimpleQuickCheckTestSuite
+        Test.Unit.ConciseTestSuite
+        TestSupport.EnhancedMemoryOptimization
+        TestSupport.MemoryEfficientGenerators
+        TestSupport.MemoryLimits
+        TestSupport.OptimizedMemoryLimits
+    build-depends:
+            base >=4.7 && <5,
+            typus,
+            tasty >= 1.4 && <2,
+            tasty-quickcheck >= 0.10 && <1,
+            tasty-hunit >= 0.10 && <1,
+            QuickCheck >= 2.14 && <3,
+            text >= 1.2.0 && <3,
+            directory >= 1.3.0 && <2,
+            time >= 1.8 && <2,
+            deepseq >= 1.4 && <2,
+            containers >= 0.6 && <1,
+            megaparsec >= 9.0.0 && <10,
+            mtl >= 2.2 && <3,
+            unix,
+            process
+    default-language: Haskell2010
+        
 executable typus
     import:           warnings
     main-is:          Main.hs
