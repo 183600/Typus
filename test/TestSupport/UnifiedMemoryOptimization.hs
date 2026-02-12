@@ -53,10 +53,10 @@ data UnifiedMemoryConfig = UnifiedMemoryConfig
   , memoryThreshold :: Int      -- ^ 内存阈值（MB）
   } deriving (Show, Eq)
 
--- | 极端内存配置（32MB）- 用于CI/CD等资源受限环境
+-- | 极端内存配置（16MB）- 用于CI/CD等资源受限环境
 extremeMemoryConfig :: UnifiedMemoryConfig
 extremeMemoryConfig = UnifiedMemoryConfig
-  { memoryLimitMB = 32
+  { memoryLimitMB = 16
   , maxTestSize = 1
   , testCount = 2
   , maxShrinks = 1
@@ -65,13 +65,13 @@ extremeMemoryConfig = UnifiedMemoryConfig
   , adaptiveCleanup = True
   , maxConcurrentTests = 1
   , testSelectionRatio = 0.05  -- 只运行5%的测试
-  , memoryThreshold = 32
+  , memoryThreshold = 16
   }
 
--- | 最小内存配置（64MB）- 用于轻度受限环境
+-- | 最小内存配置（32MB）- 用于轻度受限环境
 minimalMemoryConfig :: UnifiedMemoryConfig
 minimalMemoryConfig = UnifiedMemoryConfig
-  { memoryLimitMB = 64
+  { memoryLimitMB = 32
   , maxTestSize = 1
   , testCount = 3
   , maxShrinks = 2
@@ -80,13 +80,13 @@ minimalMemoryConfig = UnifiedMemoryConfig
   , adaptiveCleanup = True
   , maxConcurrentTests = 1
   , testSelectionRatio = 0.1   -- 运行10%的测试
-  , memoryThreshold = 64
+  , memoryThreshold = 32
   }
 
--- | 标准内存配置（128MB）- 用于开发环境
+-- | 标准内存配置（64MB）- 用于开发环境
 standardMemoryConfig :: UnifiedMemoryConfig
 standardMemoryConfig = UnifiedMemoryConfig
-  { memoryLimitMB = 128
+  { memoryLimitMB = 64
   , maxTestSize = 2
   , testCount = 8
   , maxShrinks = 5
@@ -95,13 +95,13 @@ standardMemoryConfig = UnifiedMemoryConfig
   , adaptiveCleanup = True
   , maxConcurrentTests = 1
   , testSelectionRatio = 0.2   -- 运行20%的测试
-  , memoryThreshold = 128
+  , memoryThreshold = 64
   }
 
--- | CI内存配置（96MB）- 平衡的CI环境配置
+-- | CI内存配置（48MB）- 平衡的CI环境配置
 ciMemoryConfig :: UnifiedMemoryConfig
 ciMemoryConfig = UnifiedMemoryConfig
-  { memoryLimitMB = 96
+  { memoryLimitMB = 48
   , maxTestSize = 1
   , testCount = 5
   , maxShrinks = 3
@@ -110,7 +110,7 @@ ciMemoryConfig = UnifiedMemoryConfig
   , adaptiveCleanup = True
   , maxConcurrentTests = 1
   , testSelectionRatio = 0.15  -- 运行15%的测试
-  , memoryThreshold = 96
+  , memoryThreshold = 48
   }
 
 -- | 应用统一内存限制
@@ -194,6 +194,30 @@ createOptimizedTestRunner config testAction = do
     
     -- 自适应清理
     when (adaptiveCleanup config) forceAggressiveCleanup
+
+-- | 创建内存优化的完整测试套件（保留所有测试）
+createMemoryOptimizedFullSuite :: [TestTree] -> UnifiedMemoryConfig -> TestTree
+createMemoryOptimizedFullSuite testTrees config = 
+  testGroup "Memory-Optimized Full Test Suite" 
+    $ map (withUnifiedMemoryLimits config) testTrees
+
+-- | 批量优化测试文件（保留所有测试）
+optimizeAllTestFiles :: [(String, TestTree)] -> UnifiedMemoryConfig -> TestTree
+optimizeAllTestFiles testFiles config = 
+  testGroup "All Memory-Optimized Tests"
+    [ testGroup name $ [withUnifiedMemoryLimits config tests]
+    | (name, tests) <- testFiles
+    ]
+
+-- | 智能测试分组（按内存需求分组）
+groupTestsByMemoryNeeds :: [TestTree] -> (TestTree, TestTree, TestTree)
+groupTestsByMemoryNeeds tests = 
+  let (lightTests, mediumTests) = splitAt (length tests `div` 3) tests
+      (heavyTests, remaining) = splitAt (length tests `div` 3) mediumTests
+  in ( testGroup "Light Memory Tests" lightTests
+     , testGroup "Medium Memory Tests" remaining
+     , testGroup "Heavy Memory Tests" heavyTests
+     )
 
 -- | 优化测试文件结构建议
 optimizeTestFileStructure :: IO ()

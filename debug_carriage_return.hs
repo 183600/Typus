@@ -1,13 +1,15 @@
-import Utils
-import Data.List (isPrefixOf)
+import qualified Utils as U
+
+-- 测试 "\r" 的情况
+testCarriageReturn :: IO ()
+testCarriageReturn = do
+  let input = "\r"
+      normalized = U.normalizeIndentation input
+      expected = "    "
+  putStrLn $ "Input: " ++ show input
+  putStrLn $ "Normalized: " ++ show normalized
+  putStrLn $ "Expected: " ++ show expected
+  putStrLn $ "Pass: " ++ show (normalized == expected)
 
 main :: IO ()
-main = do
-    let s = "\r"
-    let withTabs = "\t\t" ++ s ++ "\t"
-    let normalized = normalizeIndentation withTabs
-    putStrLn $ "s = " ++ show s
-    putStrLn $ "withTabs = " ++ show withTabs
-    putStrLn $ "normalized = " ++ show normalized
-    putStrLn $ "startsWithTabs = " ++ show ("\t\t" `isPrefixOf` normalized)
-    putStrLn $ "Test passes: " ++ show (not ("\t\t" `isPrefixOf` normalized))
+main = testCarriageReturn

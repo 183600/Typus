@@ -1,20 +1,53 @@
 #!/usr/bin/env runhaskell
-import Utils
 
--- Test failing case 1: normalizeIndentation with "\r"
+import qualified Utils
+
 main :: IO ()
 main = do
-    putStrLn "Testing normalizeIndentation with \"\\r\":"
-    let input1 = "\r"
-    let result1 = normalizeIndentation input1
-    putStrLn $ "Input: " ++ show input1
-    putStrLn $ "Result: " ++ show result1
-    putStrLn ""
-    
-    -- Test failing case 2: removeComments with "b\n"
-    putStrLn "Testing removeComments with \"b\\n\":"
-    let input2 = "//b\n"
-    let result2 = removeComments input2
-    putStrLn $ "Input: " ++ show input2
-    putStrLn $ "Result: " ++ show result2
-    putStrLn ""
+  -- Test prop_normalize_indentation_tabs failure case: " "
+  putStrLn "Testing normalizeIndentation with \" \" (single space):"
+  let input1 = " "
+  let result1 = Utils.normalizeIndentation input1
+  putStrLn $ "Input: " ++ show input1
+  putStrLn $ "Output: " ++ show result1
+  putStrLn ""
+  
+  -- Test prop_normalize_indentation_multiline_mixed failure case: ["\n\1097959"]
+  putStrLn "Testing normalizeIndentation with [\"\\n\\1097959\"]:"
+  let input2 = "\n\1097959"
+  let result2 = Utils.normalizeIndentation input2
+  putStrLn $ "Input: " ++ show input2
+  putStrLn $ "Output: " ++ show result2
+  putStrLn ""
+  
+  -- Test is_complete_string_literal failure case: "a\""
+  putStrLn "Testing isCompleteStringLiteral with \"a\\\"\":"
+  let input3 = "a\""
+  let result3 = Utils.isCompleteStringLiteral input3
+  putStrLn $ "Input: " ++ show input3
+  putStrLn $ "Output: " ++ show result3
+  putStrLn ""
+  
+  -- Test is_problematic_unclosed_string failure case: "a\""
+  putStrLn "Testing isProblematicUnclosedString with \"a\\\"\":"
+  let input4 = "a\""
+  let result4 = Utils.isProblematicUnclosedString input4
+  putStrLn $ "Input: " ++ show input4
+  putStrLn $ "Output: " ++ show result4
+  putStrLn ""
+  
+  -- Test prop_string_lines failure case: "1\n"
+  putStrLn "Testing lines with \"1\\n\":"
+  let input5 = "1\n"
+  let result5 = lines input5
+  putStrLn $ "Input: " ++ show input5
+  putStrLn $ "Output: " ++ show result5
+  putStrLn ""
+  
+  -- Test prop_normalize_indentation_mixed failure case: "\n"
+  putStrLn "Testing normalizeIndentation with \"\\n\":"
+  let input6 = "\n"
+  let result6 = Utils.normalizeIndentation input6
+  putStrLn $ "Input: " ++ show input6
+  putStrLn $ "Output: " ++ show result6
+  putStrLn ""

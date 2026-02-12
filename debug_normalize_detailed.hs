@@ -1,37 +1,56 @@
-import qualified Utils as U
+import Data.Char (chr, ord, isSpace, isPrint)
 import Data.List (isPrefixOf)
-import Data.Char (isSpace)
+
+-- Replicate the functions
+safeLast :: String -> Char
+safeLast [] = '\0'  -- 默认值，调用者需要检查
+safeLast xs = case reverse xs of
+                [] -> '\0'
+                (c:_) -> c
+
+endsWith :: String -> Char -> Bool
+endsWith [] _ = False
+endsWith s c = safeLast s == c
+
+safeInit :: String -> String
+safeInit [] = []
+safeInit xs = init xs
+
+-- Replicate the normalizeIndentation logic
+normalizeIndentationDebug :: String -> IO String
+normalizeIndentationDebug input = do
+    putStrLn $ "=== normalizeIndentation called with: " ++ show input
+    
+    -- Check the specific condition
+    if "\t\t" `isPrefixOf` input && endsWith input '\t'
+       then do
+           putStrLn $ "Condition 1 matched: \"\\t\\t\" prefix and \"\\t\" suffix"
+           let middle = drop 2 (init input)
+           putStrLn $ "middle: " ++ show middle
+           let isControlChar c = ord c < 32 || c == '\DEL'
+           let hasControl = any isControlChar middle
+           putStrLn $ "hasControl: " ++ show hasControl
+           let isSingleSpace = middle == " "
+           putStrLn $ "isSingleSpace: " ++ show isSingleSpace
+           
+           if hasControl
+              then do
+                  putStrLn "Returning input (control char)"
+                  return input
+              else if isSingleSpace
+                   then do
+                       putStrLn "Returning input (single space)"
+                       return input
+                   else do
+                       let result = "  " ++ middle ++ "\t"
+                       putStrLn $ "Returning converted: " ++ show result
+                       return result
+       else do
+           putStrLn $ "Condition 1 NOT matched"
+           return "NOT MATCHED"
 
 main :: IO ()
 main = do
-  putStrLn "Debugging normalizeIndentation in detail:"
-  
-  -- Test case 1: prop_normalize_indentation_tabs with "a"
-  putStrLn "\n=== Test case 1: prop_normalize_indentation_tabs with \"a\" ==="
-  let input1 = "a"
-  let withTabs1 = "\t\t" ++ input1 ++ "\t"
-  let normalized1 = U.normalizeIndentation withTabs1
-  putStrLn $ "Input string: " ++ show input1
-  putStrLn $ "With tabs: " ++ show withTabs1
-  putStrLn $ "Normalized: " ++ show normalized1
-  putStrLn $ "Starts with \"\\t\\t\": " ++ show ("\t\t" `isPrefixOf` normalized1)
-  
-  -- Check individual conditions
-  putStrLn $ "All spaces: " ++ show (all isSpace withTabs1)
-  putStrLn $ "Starts with \t\t: " ++ show ("\t\t" `isPrefixOf` withTabs1)
-  
-  -- Test case 2: prop_normalize_indentation_multiline_mixed with [""]
-  putStrLn "\n=== Test case 2: prop_normalize_indentation_multiline_mixed with [\"\"] ==="
-  let input2 = [""]
-  let withMixed2 = map ("\t  " ++) input2
-  let unlines2 = unlines withMixed2
-  let normalized2 = U.normalizeIndentation unlines2
-  putStrLn $ "Input lines: " ++ show input2
-  putStrLn $ "With mixed: " ++ show withMixed2
-  putStrLn $ "Unlines: " ++ show unlines2
-  putStrLn $ "Normalized: " ++ show normalized2
-  putStrLn $ "Expected: \"    \""
-  putStrLn $ "Matches expected: " ++ show (normalized2 == "    ")
-  
-  -- Check if unlines2 matches the special case
-  putStrLn $ "unlines2 == \"\\t  \\n\": " ++ show (unlines2 == "\t  \n")
+    let input = "\t\t \t"
+    result <- normalizeIndentationDebug input
+    putStrLn $ "=== Final result: " ++ show result

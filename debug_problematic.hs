@@ -1,8 +1,14 @@
-import Utils
+#!/usr/bin/env runhaskell
+
+import qualified Utils
 
 main :: IO ()
 main = do
-    let input = "a\""
-    let result = isProblematicUnclosedString input
-    putStrLn $ "Input: " ++ show input
-    putStrLn $ "isProblematicUnclosedString: " ++ show result
+  -- Test isProblematicUnclosedString with "\"a\""
+  putStrLn "Testing isProblematicUnclosedString with \"\\\"a\\\"\":"
+  let input = "\"a\""
+  let result = Utils.isProblematicUnclosedString input
+  putStrLn $ "Input: " ++ show input
+  putStrLn $ "Output: " ++ show result
+  putStrLn $ "Expected: True"
+  putStrLn ""

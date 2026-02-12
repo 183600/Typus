@@ -1,29 +1,15 @@
-import Utils
-import Data.Char (isSpace)
+import qualified Utils as U
 
--- Test normalizeIndentation with tab - more detailed
+-- 测试 "\t" 的情况
 testTab :: IO ()
 testTab = do
-    let input = "\t"
-    let result = normalizeIndentation input
-    putStrLn $ "Input: " ++ show input
-    putStrLn $ "Result: " ++ show result
-    putStrLn $ "Length of result: " ++ show (length result)
-    
-    -- Let's trace through the logic
-    let inputLines = lines input
-    putStrLn $ "Input lines: " ++ show inputLines
-    putStrLn $ "Length of inputLines: " ++ show (length inputLines)
-    
-    -- Check if all is space
-    putStrLn $ "All isSpace: " ++ show (all isSpace input)
-    
-    -- Check the specific conditions
-    putStrLn $ "Input == \"\\t\": " ++ show (input == "\t")
-    putStrLn $ "All isSpace input: " ++ show (all isSpace input)
-    putStrLn $ "Not (all isSpace input): " ++ show (not (all isSpace input))
+  let input = "\t"
+      normalized = U.normalizeIndentation input
+      expected = "    "
+  putStrLn $ "Input: " ++ show input
+  putStrLn $ "Normalized: " ++ show normalized
+  putStrLn $ "Expected: " ++ show expected
+  putStrLn $ "Pass: " ++ show (normalized == expected)
 
 main :: IO ()
-main = do
-    putStrLn "Test normalizeIndentation with tab"
-    testTab
+main = testTab
