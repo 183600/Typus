@@ -1,1 +1,2 @@
 Hello, Typus!
+This is a test asset file for the Typus compiler project.
