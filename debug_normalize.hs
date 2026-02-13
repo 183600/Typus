@@ -1,15 +1,26 @@
-import Utils (normalizeIndentation)
-import Data.List (isPrefixOf)
-import Data.Char (isSpace)
+import Utils
 
 main :: IO ()
 main = do
-  let input = "\t\ta\t"
-  putStrLn $ "Input: " ++ show input
-  putStrLn $ "All isSpace: " ++ show (all isSpace input)
-  putStrLn $ "IsPrefixOf \"\\t\\t\": " ++ show ("\t\t" `isPrefixOf` input)
-  putStrLn $ "Not all isSpace: " ++ show (not (all isSpace input))
-  putStrLn $ "Condition 1: " ++ show ("\t\t" `isPrefixOf` input && not (all isSpace input))
+  -- Test case 1: prop_normalize_indentation_mixed with s = ""
+  let s1 = ""
+      mixed1 = "\t  \t  " ++ s1 ++ "  \t  "
+      result1 = normalizeIndentation mixed1
+  putStrLn $ "Test 1 - s = \"\""
+  putStrLn $ "Input: " ++ show mixed1
+  putStrLn $ "Expected: \"    \""
+  putStrLn $ "Actual: " ++ show result1
+  putStrLn $ "Match: " ++ show (result1 == "    ")
+  putStrLn ""
   
-  let normalized = normalizeIndentation input
-  putStrLn $ "Normalized: " ++ show normalized
+  -- Test case 2: prop_normalize_indentation_multiline_mixed with lines' = [""]
+  let lines' = [""]
+      withMixed = map ("\t  " ++) lines'
+      input2 = unlines withMixed
+      result2 = normalizeIndentation input2
+  putStrLn $ "Test 2 - lines' = [\"\"]"
+  putStrLn $ "Input: " ++ show input2
+  putStrLn $ "Expected: \"    \""
+  putStrLn $ "Actual: " ++ show result2
+  putStrLn $ "Match: " ++ show (result2 == "    ")
+  putStrLn ""

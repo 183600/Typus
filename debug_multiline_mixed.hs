@@ -1,20 +1,15 @@
-#!/usr/bin/env runhaskell
-
-import qualified Utils
+import qualified Utils as U
 
 main :: IO ()
 main = do
-  -- Test prop_normalize_indentation_multiline_mixed failure case: ["\n\1097959"]
-  putStrLn "Testing prop_normalize_indentation_multiline_mixed with lines' = [\"\\n\\1097959\"]:"
-  let lines' = ["\n\1097959"]
-  let withMixed = map ("\t  " ++) lines'
-  let normalized = Utils.normalizeIndentation (unlines withMixed)
-  let normLines = lines normalized
-  putStrLn $ "lines': " ++ show lines'
-  putStrLn $ "withMixed: " ++ show withMixed
-  putStrLn $ "normalized: " ++ show normalized
-  putStrLn $ "normLines: " ++ show normLines
-  putStrLn $ "length normLines: " ++ show (length normLines)
-  putStrLn $ "Expected length: 2"
-  putStrLn $ "Test passes: " ++ show (length normLines == 2)
-  putStrLn ""
+  -- Test case for prop_normalize_indentation_multiline_mixed with [""]
+  let lines' = [""]
+      withMixed = map ("\t  " ++) lines'
+      input = unlines withMixed
+      normalized = U.normalizeIndentation input
+  putStrLn $ "Input lines': " ++ show lines'
+  putStrLn $ "With mixed: " ++ show withMixed
+  putStrLn $ "Input: " ++ show input
+  putStrLn $ "Expected: \"    \""
+  putStrLn $ "Actual: " ++ show normalized
+  putStrLn $ "Test passes: " ++ show (normalized == "    ")

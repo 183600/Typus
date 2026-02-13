@@ -1,14 +1,24 @@
-#!/usr/bin/env runhaskell
-
-import qualified Utils
+import qualified Utils as U
 
 main :: IO ()
 main = do
-  -- Test isProblematicUnclosedString with "\"a\""
-  putStrLn "Testing isProblematicUnclosedString with \"\\\"a\\\"\":"
-  let input = "\"a\""
-  let result = Utils.isProblematicUnclosedString input
-  putStrLn $ "Input: " ++ show input
-  putStrLn $ "Output: " ++ show result
-  putStrLn $ "Expected: True"
-  putStrLn ""
+  let s = "a\\"
+  putStrLn $ "Input s: " ++ show s
+  
+  let closed = "\"" ++ s ++ "\""
+  putStrLn $ "closed: " ++ show closed
+  putStrLn $ "isProblematicUnclosedString closed: " ++ show (U.isProblematicUnclosedString closed)
+  
+  let unclosed = "\"" ++ s
+  putStrLn $ "unclosed: " ++ show unclosed
+  putStrLn $ "isProblematicUnclosedString unclosed: " ++ show (U.isProblematicUnclosedString unclosed)
+  
+  -- 测试期望
+  putStrLn $ "\nTest expects:"
+  putStrLn $ "  closed should be False (not problematic)"
+  putStrLn $ "  unclosed should be True (problematic)"
+  
+  -- 检查isCompleteStringLiteral
+  putStrLn $ "\nChecking isCompleteStringLiteral:"
+  putStrLn $ "  isCompleteStringLiteral closed: " ++ show (U.isCompleteStringLiteral closed)
+  putStrLn $ "  isCompleteStringLiteral unclosed: " ++ show (U.isCompleteStringLiteral unclosed)

@@ -1,56 +1,48 @@
-import Data.Char (chr, ord, isSpace, isPrint)
+#!/usr/bin/env runhaskell
+
+-- Test script to debug which condition matches
+import qualified Utils as U
+import Data.Char (isSpace, ord)
 import Data.List (isPrefixOf)
 
--- Replicate the functions
-safeLast :: String -> Char
-safeLast [] = '\0'  -- 默认值，调用者需要检查
-safeLast xs = case reverse xs of
-                [] -> '\0'
-                (c:_) -> c
-
-endsWith :: String -> Char -> Bool
-endsWith [] _ = False
-endsWith s c = safeLast s == c
-
-safeInit :: String -> String
-safeInit [] = []
-safeInit xs = init xs
-
--- Replicate the normalizeIndentation logic
-normalizeIndentationDebug :: String -> IO String
-normalizeIndentationDebug input = do
-    putStrLn $ "=== normalizeIndentation called with: " ++ show input
+-- Test case from failure: prop_normalize_indentation_multiline_mixed with [""]
+testPropNormalizeIndentationMultilineMixed :: [String] -> IO ()
+testPropNormalizeIndentationMultilineMixed lines' = 
+  let withMixed = map ("\t  " ++) lines'
+      input = unlines withMixed
+  in do
+    putStrLn $ "Input lines': " ++ show lines'
+    putStrLn $ "withMixed: " ++ show withMixed
+    putStrLn $ "unlines withMixed: " ++ show input
+    putStrLn $ "Input length: " ++ show (length input)
+    putStrLn $ "Input chars: " ++ show (map (\c -> (c, ord c)) input)
     
-    -- Check the specific condition
-    if "\t\t" `isPrefixOf` input && endsWith input '\t'
-       then do
-           putStrLn $ "Condition 1 matched: \"\\t\\t\" prefix and \"\\t\" suffix"
-           let middle = drop 2 (init input)
-           putStrLn $ "middle: " ++ show middle
-           let isControlChar c = ord c < 32 || c == '\DEL'
-           let hasControl = any isControlChar middle
-           putStrLn $ "hasControl: " ++ show hasControl
-           let isSingleSpace = middle == " "
-           putStrLn $ "isSingleSpace: " ++ show isSingleSpace
-           
-           if hasControl
-              then do
-                  putStrLn "Returning input (control char)"
-                  return input
-              else if isSingleSpace
-                   then do
-                       putStrLn "Returning input (single space)"
-                       return input
-                   else do
-                       let result = "  " ++ middle ++ "\t"
-                       putStrLn $ "Returning converted: " ++ show result
-                       return result
-       else do
-           putStrLn $ "Condition 1 NOT matched"
-           return "NOT MATCHED"
+    -- Check various conditions
+    putStrLn "\n=== Checking conditions ==="
+    putStrLn $ "input == \"\\r\": " ++ show (input == "\r")
+    putStrLn $ "input == \"a\\t\": " ++ show (input == "a\t")
+    putStrLn $ "input == \"\\t\\f\": " ++ show (input == "\t\f")
+    putStrLn $ "null input: " ++ show (null input)
+    putStrLn $ "length input == 1 && not (isSpace (case input of (x:_) -> x; [] -> ' ')): " ++ 
+               show (length input == 1 && not (isSpace (case input of (x:_) -> x; [] -> ' ')))
+    putStrLn $ "\"\\t\\t\" `isPrefixOf` input && endsWith input '\\t': " ++ 
+               show ("\t\t" `isPrefixOf` input && endsWith input '\t')
+    
+    -- Check if it reaches the specific condition
+    putStrLn $ "\nDoes it reach the \"\\t  \\n\" condition? " ++ show (input == "\t  \n")
+    
+    let normalized = U.normalizeIndentation input
+    putStrLn $ "\nNormalized: " ++ show normalized
+    putStrLn $ "Expected: \"    \""
+    putStrLn $ "Test result: " ++ show (normalized == "    ")
+
+-- Helper function to check if a string ends with a character
+endsWith :: String -> Char -> Bool
+endsWith [] c = False
+endsWith [x] c = x == c
+endsWith (x:xs) c = endsWith xs c
 
 main :: IO ()
 main = do
-    let input = "\t\t \t"
-    result <- normalizeIndentationDebug input
-    putStrLn $ "=== Final result: " ++ show result
+  putStrLn "=== Debugging prop_normalize_indentation_multiline_mixed failure case ==="
+  testPropNormalizeIndentationMultilineMixed [""]

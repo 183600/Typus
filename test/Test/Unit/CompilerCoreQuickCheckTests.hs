@@ -4,19 +4,16 @@ module Test.Unit.CompilerCoreQuickCheckTests where
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
 import qualified Compiler as C
 import qualified Compiler.IR as IR
 import qualified Compiler.GoAst as GoAst
 import qualified Compiler.GoLexer as GL
 import qualified Compiler.TypeChecker as TC
 import qualified Compiler.OwnershipChecker as OC
-import qualified Compiler.Error as CE
 import qualified Utils as U
 import qualified Parser as P
-import Data.List (isInfixOf, isPrefixOf, isSuffixOf, sort)
-import Data.Char (isSpace, isLetter, isDigit)
-import Data.Maybe (isJust, isNothing, fromMaybe)
+import Data.List (isInfixOf)
+import Data.Maybe (fromMaybe)
 import Data.Either (isLeft, isRight)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -195,8 +192,8 @@ prop_compilation_consistency s =
 
 -- | 测试类型检查器的泛型支持
 prop_type_check_generics :: String -> Property
-prop_type_check_generics s =
-  let code = "func test[T](x T) { return x; }"
+prop_type_check_generics _ =
+  let code :: String = "func test[T](x T) { return x; }"
       result = case P.parseTypusFile code of
                  Left _ -> []
                  Right typusFile -> case TC.diagnoseTypeErrors typusFile of
@@ -219,7 +216,7 @@ prop_go_ast_integrity s =
   let code = "func main() { if true { println(\"" ++ take 5 s ++ "\"); } }"
       result = GoAst.parseGoModule (lines code)
   in case result of
-    Right mod -> property $ not (null (GoAst.gmDecls mod))
+    Right module' -> property $ not (null (GoAst.gmDecls module'))
     Left _ -> property $ False
 
 -- | 测试词法分析器的位置信息
@@ -320,8 +317,8 @@ prop_compiler_constant_handling s =
 
 -- | 测试类型检查器的多态函数
 prop_type_polymorphic_functions :: String -> Property
-prop_type_polymorphic_functions s =
-  let code = "func identity[T](x T) T { return x; }"
+prop_type_polymorphic_functions _ =
+  let code :: String = "func identity[T](x T) T { return x; }"
       result = case P.parseTypusFile code of
                  Left _ -> []
                  Right typusFile -> case TC.diagnoseTypeErrors typusFile of
@@ -457,8 +454,8 @@ prop_compiler_register_allocation s =
 
 -- | 测试类型检查器的类型约束
 prop_type_constraints :: String -> Property
-prop_type_constraints s =
-  let code = "func test[T: Number](x T) { return x + 1; }"
+prop_type_constraints _ =
+  let code :: String = "func test[T: Number](x T) { return x + 1; }"
       result = case P.parseTypusFile code of
                  Left _ -> []
                  Right typusFile -> case TC.diagnoseTypeErrors typusFile of

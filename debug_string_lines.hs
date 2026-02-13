@@ -1,17 +1,12 @@
-#!/usr/bin/env runhaskell
-
-import Data.List (intercalate)
+import Data.List (lines)
 
 main :: IO ()
 main = do
-  -- Test prop_string_lines failure case: "1\n"
-  putStrLn "Testing prop_string_lines with \"1\\n\":"
-  let s = "1\n"
-  let ls = lines s
-  let rejoined = intercalate "\n" ls
-  putStrLn $ "s: " ++ show s
-  putStrLn $ "ls: " ++ show ls
-  putStrLn $ "rejoined: " ++ show rejoined
-  putStrLn $ "Expected: \"1\" (according to test)"
-  putStrLn $ "Test passes: " ++ show (rejoined == "1")
-  putStrLn ""
+  let s = "\r\n"
+  putStrLn $ "Input s: " ++ show s
+  putStrLn $ "Length of s: " ++ show (length s)
+  putStrLn $ "Chars in s: " ++ show (zip [0..] s)
+  putStrLn $ "lines s: " ++ show (lines s)
+  
+  -- 测试期望
+  putStrLn $ "\nTest expects lines s to return [\"\"]"

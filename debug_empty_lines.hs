@@ -1,10 +1,13 @@
-import Utils
+import qualified Utils as U
 
 main :: IO ()
 main = do
-    let input = "\n\n"
-    let result = normalizeIndentation input
-    putStrLn $ "Input: " ++ show input
-    putStrLn $ "Result: " ++ show result
-    putStrLn $ "Expected: \"    \""
-    putStrLn $ "Equal to expected: " ++ show (result == "    ")
+  -- Test case for normalize indentation empty lines with "" + "\n\n"
+  let s = ""
+      withEmpty = s ++ "\n\n"
+      normalized = U.normalizeIndentation withEmpty
+  putStrLn $ "s: " ++ show s
+  putStrLn $ "withEmpty: " ++ show withEmpty
+  putStrLn $ "normalized: " ++ show normalized
+  putStrLn $ "Expected: \"    \""
+  putStrLn $ "Test passes: " ++ show (normalized == "    ")

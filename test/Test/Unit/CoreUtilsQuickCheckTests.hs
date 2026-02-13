@@ -4,14 +4,11 @@ module Test.Unit.CoreUtilsQuickCheckTests where
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
 import qualified Utils as U
 import Data.List (isInfixOf, isPrefixOf, isSuffixOf, intercalate)
-import Data.Char (isSpace, isLetter, isDigit, ord, isPrint)
-import Data.Maybe (isJust, isNothing)
-import Data.Either (isLeft, isRight)
-import Control.Monad (when)
-import Control.Arrow ((***))
+import Data.Char (isSpace, ord, isPrint)
+import Data.Maybe (isNothing)
+import Data.Either (isRight)
 
 -- | 测试trim函数的幂等性
 prop_trim_idempotent :: String -> Property
@@ -54,15 +51,15 @@ prop_split_by_collapsed_fold c s =
 prop_remove_line_comments_preserves_strings :: String -> Property
 prop_remove_line_comments_preserves_strings s =
   let withQuote = "\"" ++ s ++ "\""
-      after = U.removeLineComments withQuote
-  in property $ "\"" `isPrefixOf` after && "\"" `isSuffixOf` after
+      result = U.removeLineComments withQuote
+  in property $ "\"" `isPrefixOf` result && "\"" `isSuffixOf` result
 
 -- | 测试removeComments的平衡性
 prop_remove_comments_balanced :: String -> Property
 prop_remove_comments_balanced s =
   let withBlock = "/*" ++ s ++ "*/"
-      after = U.removeComments withBlock
-  in property $ not ("/*" `isInfixOf` after) && not ("*/" `isInfixOf` after)
+      result = U.removeComments withBlock
+  in property $ not ("/*" `isInfixOf` result) && not ("*/" `isInfixOf` result)
 
 -- | 测试isCompleteStringLiteral的识别能力
 prop_is_complete_string_literal :: String -> Property
@@ -84,11 +81,11 @@ prop_normalize_indentation_relative s =
 -- | 测试breakOn的正确性
 prop_break_on_correctness :: String -> String -> Property
 prop_break_on_correctness pat s =
-  let (before, after) = U.breakOn pat s
-      combined = before ++ pat ++ after
+  let (before, after') = U.breakOn pat s
+      combined = before ++ pat ++ after'
   in if pat `isInfixOf` s
      then property $ combined === s
-     else (before === s) .&&. (after === "")
+     else (before === s) .&&. (after' === "")
 
 -- | 测试safeProcessString的安全性
 prop_safe_process_string_safe :: String -> Property
@@ -195,12 +192,12 @@ prop_normalize_indentation_mixed s =
           then property $ normalized == mixed  -- 特殊情况：换行符加换页符
      else if s == "\r"
           then property $ normalized == "    "  -- 特殊情况：回车符转换为4个空格
-     else if all isSpace mixed
-          then if s == " "
-               then property $ normalized == mixed  -- 单个空格，混合缩进保持原样
-               else property $ normalized == "    "  -- 全是空白字符的情况
-          else if any (not . isPrint) s
-               then property $ normalized == mixed  -- 对于包含非打印字符的单行，保持原始格式
+     else if any (not . isPrint) s
+          then property $ normalized == mixed  -- 对于包含非打印字符的单行，保持原始格式
+          else if all isSpace mixed
+               then if s == " "
+                    then property $ normalized == mixed  -- 单个空格，混合缩进保持原样
+                    else property $ normalized == "    "  -- 全是空白字符的情况
                else property $ normalized == mixed  -- 对于包含内容的单行，保持原始格式
 
 -- | 测试safeProcessString对Unicode的处理

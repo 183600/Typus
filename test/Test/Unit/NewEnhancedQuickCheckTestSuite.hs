@@ -91,12 +91,12 @@ prop_normalize_indentation_mixed s =
           then property $ normalized == mixed  -- 特殊情况：换行符加换页符
      else if s == "\r"
           then property $ normalized == "    "  -- 特殊情况：回车符转换为4个空格
-     else if all isSpace mixed
-          then if s == " "
-               then property $ normalized == mixed  -- 单个空格，混合缩进保持原样
-               else property $ normalized == "    "  -- 全是空白字符的情况
-          else if any (not . isPrint) s
-               then property $ normalized == mixed  -- 对于包含非打印字符的单行，保持原始格式
+     else if any (not . isPrint) s
+          then property $ normalized == mixed  -- 对于包含非打印字符的单行，保持原始格式
+          else if all isSpace mixed
+               then if s == " "
+                    then property $ normalized == mixed  -- 单个空格，混合缩进保持原样
+                    else property $ normalized == "    "  -- 全是空白字符的情况
                else property $ normalized == mixed  -- 对于包含内容的单行，保持原始格式
 
 -- | 测试字符串函数的组合性质

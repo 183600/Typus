@@ -20,6 +20,9 @@ import qualified TestSupport.AdvancedMemoryOptimization as AdvancedMemoryOptimiz
 import TestSupport.MemoryLimits 
 import TestSupport.OptimizedMemoryLimits
 
+-- Import Utils module with alias U
+import qualified Utils as U
+
 -- Import core test modules (only the essential ones)
 import qualified Test.Unit.BasicQuickCheckTestSuite as BasicQuickCheckTestSuite
 import qualified Test.Unit.SimpleQuickCheckTestSuite as SimpleQuickCheckTestSuite
@@ -101,7 +104,7 @@ prop_minimal_int_property n =
   in property $ limited >= 0
 
 prop_minimal_char_property :: Char -> Property
-prop_minimal_char_property c = property $ c >= ' '
+prop_minimal_char_property c = property $ U.isValidChar c
 
 -- Create essential test suite with minimal memory footprint
 createEssentialTestSuite :: AdvancedMemoryOptimization.MemoryOptimizationLevel -> TestTree

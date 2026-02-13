@@ -1,0 +1,36 @@
+import qualified Utils as U
+import Data.List (isInfixOf)
+
+main :: IO ()
+main = do
+  -- Test case for normalizeIndentation code block with ""
+  let s = ""
+      codeBlock = unlines $ ["    if condition {", "        // do something", "        return " ++ s, "    }"]
+      normalized = U.normalizeIndentation codeBlock
+  putStrLn $ "s: " ++ show s
+  putStrLn $ "codeBlock: " ++ show codeBlock
+  putStrLn $ "normalized: " ++ show normalized
+  
+  -- Check if it's detected as a code block
+  let inputLines = lines codeBlock
+      isCodeBlock = any (`isInfixOf` codeBlock) ["if condition", "func outer", "func inner", "return", "{", "}", "//"]
+  putStrLn $ "isCodeBlock: " ++ show isCodeBlock
+  putStrLn $ "inputLines: " ++ show inputLines
+  
+  -- Check leading whitespace
+  let leadingWhitespace str = takeWhile (\c -> c == ' ' || c == '\t') str
+      allLeading = map leadingWhitespace inputLines
+  putStrLn $ "allLeading: " ++ show allLeading
+  
+  -- Check if it's multi-line
+  putStrLn $ "is multi-line: " ++ show (length inputLines > 1)
+  
+  -- Check if all lines start with spaces
+  let allStartWithSpaces = all (\line -> case line of (c:_) -> c == ' '; [] -> False) inputLines
+  putStrLn $ "all lines start with spaces: " ++ show allStartWithSpaces
+  
+  -- Check if all lines have the same number of spaces at the beginning
+  let countSpaces str = length $ takeWhile (== ' ') str
+      spaceCounts = map countSpaces inputLines
+  putStrLn $ "space counts: " ++ show spaceCounts
+  putStrLn $ "all have same space count: " ++ show (all (== head spaceCounts) (tail spaceCounts))
