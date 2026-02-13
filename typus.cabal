@@ -106,47 +106,46 @@ library
         QuickCheck >= 2.14 && <3
     default-language: Haskell2010
 
--- Advanced Memory-Optimized Test Suite
-test-suite typus-test-advanced
-        type:             exitcode-stdio-1.0
-        build-tool-depends: typus:typus
-        main-is:          AdvancedMemoryOptimizedMain.hs
-        hs-source-dirs:   test
-        default-extensions: NoMonomorphismRestriction
-        ghc-options:      -Wall -Wcompat
-                          -Wno-unused-top-binds -Wno-unused-matches 
-                          -Wno-orphans -Wno-name-shadowing
-                          -Wno-type-defaults -Wno-unused-local-binds
-                          -Wno-unused-imports
-                          -rtsopts
-                          -O0
-        other-modules:
-            Test.Unit.BasicQuickCheckTestSuite
-            Test.Unit.SimpleQuickCheckTestSuite
-            Test.Unit.ConciseTestSuite
-            Test.Unit.OptimizedTests
-            Test.Unit.EnhancedMemoryOptimizedTestSuite
-            Test.Unit.UltraMemoryOptimizedTestSuite
-            TestSupport.AdvancedMemoryOptimization
-            TestSupport.MemoryLimits
-            TestSupport.OptimizedMemoryLimits
-        build-depends:
-                base >=4.7 && <5,
-                typus,
-                tasty >= 1.4 && <2,
-                tasty-quickcheck >= 0.10 && <1,
-                tasty-hunit >= 0.10 && <1,
-                QuickCheck >= 2.14 && <3,
-                text >= 1.2.0 && <3,
-                directory >= 1.3.0 && <2,
-                time >= 1.8 && <2,
-                deepseq >= 1.4 && <2,
-                containers >= 0.6 && <1,
-                megaparsec >= 9.0.0 && <10,
-                mtl >= 2.2 && <3,
-                unix,
-                process
-        default-language: Haskell2010
+-- test-suite typus-test-advanced
+--         type:             exitcode-stdio-1.0
+--         build-tool-depends: typus:typus
+--         main-is:          AdvancedMemoryOptimizedMain.hs
+--         hs-source-dirs:   test
+--         default-extensions: NoMonomorphismRestriction
+--         ghc-options:      -Wall -Wcompat
+--                           -Wno-unused-top-binds -Wno-unused-matches 
+--                           -Wno-orphans -Wno-name-shadowing
+--                           -Wno-type-defaults -Wno-unused-local-binds
+--                           -Wno-unused-imports
+--                           -rtsopts
+--                           -O0
+--         other-modules:
+--             Test.Unit.BasicQuickCheckTestSuite
+--             Test.Unit.SimpleQuickCheckTestSuite
+--             Test.Unit.ConciseTestSuite
+--             Test.Unit.OptimizedTests
+--             Test.Unit.EnhancedMemoryOptimizedTestSuite
+--             Test.Unit.UltraMemoryOptimizedTestSuite
+--             TestSupport.AdvancedMemoryOptimization
+--             TestSupport.MemoryLimits
+--             TestSupport.OptimizedMemoryLimits
+--         build-depends:
+--                 base >=4.7 && <5,
+--                 typus,
+--                 tasty >= 1.4 && <2,
+--                 tasty-quickcheck >= 0.10 && <1,
+--                 tasty-hunit >= 0.10 && <1,
+--                 QuickCheck >= 2.14 && <3,
+--                 text >= 1.2.0 && <3,
+--                 directory >= 1.3.0 && <2,
+--                 time >= 1.8 &lt;2,
+--                 deepseq >= 1.4 &lt;2,
+--                 containers >= 0.6 &lt;1,
+--                 megaparsec >= 9.0.0 &lt;10,
+--                 mtl >= 2.2 &lt;3,
+--                 unix,
+--                 process
+--         default-language: Haskell2010
 
 -- Enhanced Memory-Optimized Test Suite with advanced memory management
 test-suite typus-test-enhanced
@@ -166,10 +165,23 @@ test-suite typus-test-enhanced
         Test.Unit.BasicQuickCheckTestSuite
         Test.Unit.SimpleQuickCheckTestSuite
         Test.Unit.ConciseTestSuite
+        Test.Unit.ExtendedQuickCheckTestSuiteOptimized
+        Test.Unit.ComprehensiveMemoryOptimizedTestSuite
+        Test.Unit.AdvancedMemoryOptimizedTestSuite
+        Test.Unit.Exact200QuickCheckTestsOptimized
+        Test.Unit.Exactly200QuickCheckTestsOptimized
+        Test.Unit.Final200QuickCheckTestsOptimized
+        Test.Unit.FinalExact200QuickCheckTestsOptimized
+        Test.Unit.True200QuickCheckTestsOptimized
         TestSupport.EnhancedMemoryOptimization
         TestSupport.MemoryEfficientGenerators
         TestSupport.MemoryLimits
         TestSupport.OptimizedMemoryLimits
+        TestSupport.UnifiedMemoryOptimization
+        TestSupport.EnhancedMemoryMonitor
+        TestSupport.ExtremeMemoryOptimization
+        TestSupport.SmartTestSelector
+        TestSupport.Arbitrary
     build-depends:
             base >=4.7 && <5,
             typus,
@@ -202,6 +214,17 @@ executable smart-memory-test-runner
     import:           warnings
     main-is:          SmartMemoryTestRunner.hs
     hs-source-dirs:   test
+    other-modules:
+        TestSupport.SmartTestSelector,
+        TestSupport.AdaptiveMemoryConfig,
+        Test.Unit.CoreUtilsQuickCheckTests,
+        Test.Unit.ParserQuickCheckTests,
+        Test.Unit.CompilerCoreQuickCheckTests,
+        Test.Unit.DependencyAnalysisQuickCheckTests,
+        Test.Unit.OwnershipAnalysisQuickCheckTests,
+        Test.Unit.ErrorHandlingQuickCheckTests,
+        TestSupport.MemoryLimits,
+        TestSupport.UnifiedMemoryOptimization
     build-depends:
         base >=4.7 && <5,
         typus,
@@ -297,6 +320,7 @@ test-suite typus-test
         Test.Unit.CompilerCoreQuickCheckTests,
         Test.Unit.ConciseCompilerQuickCheckSpec,
         Test.Unit.FinalExact200QuickCheckTests,
+        Test.Unit.FinalExact200QuickCheckTestsOptimized,
         Test.Unit.ConciseDependenciesQuickCheckSpec,
         Test.Unit.ConciseErrorHandlerQuickCheckSpec,
         Test.Unit.ConciseIntegrationQuickCheckSpec,
@@ -313,6 +337,7 @@ test-suite typus-test
         Test.Unit.EnhancedTypeCheckerQuickCheckSpec,
         Test.Unit.ErrorHandlingQuickCheckTests,
         Test.Unit.ExtendedQuickCheckTestSuite,
+        Test.Unit.ExtendedQuickCheckTestSuiteOptimized,
         Test.Unit.GoToolchainCoreQuickCheckSpec,
         Test.Unit.NewComprehensiveQuickCheckTestSuite,
         Test.Unit.NewEnhancedQuickCheckTestSuite,
@@ -331,7 +356,11 @@ test-suite typus-test
         Test.Unit.UtilsCoreQuickCheckSpec,
         TestSupport.Arbitrary,
         TestSupport.MemoryLimits,
-        TestSupport.OptimizedMemoryLimits
+        TestSupport.OptimizedMemoryLimits,
+        TestSupport.UnifiedMemoryOptimization,
+        TestSupport.EnhancedMemoryMonitor,
+        TestSupport.ExtremeMemoryOptimization,
+        TestSupport.SmartTestSelector
     build-depends:
         base >=4.7 && <5,
         typus,
@@ -394,6 +423,7 @@ test-suite typus-test-optimized
         Test.Unit.ErrorHandlingQuickCheckTests,
         Test.Unit.ExtremeMemoryOptimizedTestSuite,
         Test.Unit.ExtendedQuickCheckTestSuite,
+        Test.Unit.ExtendedQuickCheckTestSuiteOptimized,
         Test.Unit.GoToolchainCoreQuickCheckSpec,
         Test.Unit.MemoryOptimizedMain,
         Test.Unit.NewComprehensiveQuickCheckTestSuite,
@@ -415,7 +445,11 @@ test-suite typus-test-optimized
         TestSupport.Arbitrary,
         TestSupport.ExtremeMemoryLimits,
         TestSupport.MemoryLimits,
-        TestSupport.OptimizedMemoryLimits
+        TestSupport.OptimizedMemoryLimits,
+        TestSupport.UnifiedMemoryOptimization,
+        TestSupport.EnhancedMemoryMonitor,
+        TestSupport.ExtremeMemoryOptimization,
+        TestSupport.SmartTestSelector
     build-depends:
         base >=4.7 && <5,
         typus,

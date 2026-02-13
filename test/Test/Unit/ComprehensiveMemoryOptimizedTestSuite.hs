@@ -11,12 +11,12 @@ import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 
 -- 导入所有优化版本的测试套件
-import Test.Unit.ExtendedQuickCheckTestSuiteOptimized (tests, ultraOptimizedTests)
-import Test.Unit.Exact200QuickCheckTestsOptimized (tests as exact200Tests, ultraOptimizedTests as exact200UltraTests)
-import Test.Unit.Exactly200QuickCheckTestsOptimized (tests as exactly200Tests, ultraOptimizedTests as exactly200UltraTests)
-import Test.Unit.Final200QuickCheckTestsOptimized (tests as final200Tests, ultraOptimizedTests as final200UltraTests)
-import Test.Unit.FinalExact200QuickCheckTestsOptimized (tests as finalExact200Tests, ultraOptimizedTests as finalExact200UltraTests)
-import Test.Unit.True200QuickCheckTestsOptimized (tests as true200Tests, ultraOptimizedTests as true200UltraTests)
+import qualified Test.Unit.ExtendedQuickCheckTestSuiteOptimized as Extended (tests, ultraOptimizedTests)
+import qualified Test.Unit.Exact200QuickCheckTestsOptimized as Exact200 (tests, ultraOptimizedTests)
+import qualified Test.Unit.Exactly200QuickCheckTestsOptimized as Exactly200 (tests, ultraOptimizedTests)
+import qualified Test.Unit.Final200QuickCheckTestsOptimized as Final200 (tests, ultraOptimizedTests)
+import qualified Test.Unit.FinalExact200QuickCheckTestsOptimized as FinalExact200 (tests, ultraOptimizedTests)
+import qualified Test.Unit.True200QuickCheckTestsOptimized as True200 (tests, ultraOptimizedTests)
 
 -- 导入内存优化支持
 import TestSupport.UnifiedMemoryOptimization 
@@ -43,31 +43,31 @@ comprehensiveOptimizedTests :: TestTree
 comprehensiveOptimizedTests = createUnifiedMemorySuite standardMemoryConfig "Comprehensive Memory-Optimized Test Suite"
   [ -- 扩展测试套件 (最重要的核心测试)
     testGroup "Extended Core Tests"
-      [ withMemoryLimits tests
-      , withMinimalMemoryLimits ultraOptimizedTests
+      [ withMemoryLimits Extended.tests
+      , withMinimalMemoryLimits Extended.ultraOptimizedTests
       ]
     
     -- 200测试系列 - 选择最重要的测试
   , testGroup "200-Test Series - Optimized"
       [ testGroup "Exact200 Tests"
-          [ withMemoryLimits exact200Tests
-          , withMinimalMemoryLimits exact200UltraTests
+          [ withMemoryLimits Exact200.tests
+          , withMinimalMemoryLimits Exact200.ultraOptimizedTests
           ]
       , testGroup "Exactly200 Tests"
-          [ withMemoryLimits exactly200Tests
-          , withMinimalMemoryLimits exactly200UltraTests
+          [ withMemoryLimits Exactly200.tests
+          , withMinimalMemoryLimits Exactly200.ultraOptimizedTests
           ]
       , testGroup "Final200 Tests"
-          [ withMemoryLimits final200Tests
-          , withMinimalMemoryLimits final200UltraTests
+          [ withMemoryLimits Final200.tests
+          , withMinimalMemoryLimits Final200.ultraOptimizedTests
           ]
       , testGroup "FinalExact200 Tests"
-          [ withMemoryLimits finalExact200Tests
-          , withMinimalMemoryLimits finalExact200UltraTests
+          [ withMemoryLimits FinalExact200.tests
+          , withMinimalMemoryLimits FinalExact200.ultraOptimizedTests
           ]
       , testGroup "True200 Tests"
-          [ withMemoryLimits true200Tests
-          , withMinimalMemoryLimits true200UltraTests
+          [ withMemoryLimits True200.tests
+          , withMinimalMemoryLimits True200.ultraOptimizedTests
           ]
       ]
   ]
@@ -78,24 +78,24 @@ minimalComprehensiveTests :: TestTree
 minimalComprehensiveTests = createUnifiedMemorySuite extremeMemoryConfig "Minimal Comprehensive Test Suite"
   [ -- 只选择每个套件的最核心测试
     testGroup "Core Essential Tests"
-      [ withMinimalMemoryLimits ultraOptimizedTests
-      , withMinimalMemoryLimits exact200UltraTests
-      , withMinimalMemoryLimits exactly200UltraTests
-      , withMinimalMemoryLimits final200UltraTests
-      , withMinimalMemoryLimits finalExact200UltraTests
-      , withMinimalMemoryLimits true200UltraTests
+      [ withMinimalMemoryLimits Extended.ultraOptimizedTests
+      , withMinimalMemoryLimits Exact200.ultraOptimizedTests
+      , withMinimalMemoryLimits Exactly200.ultraOptimizedTests
+      , withMinimalMemoryLimits Final200.ultraOptimizedTests
+      , withMinimalMemoryLimits FinalExact200.ultraOptimizedTests
+      , withMinimalMemoryLimits True200.ultraOptimizedTests
       ]
   ]
 
--- | CI/CD环境专用测试套件
+-- CI/CD环境专用测试套件
 ciOptimizedTests :: TestTree
 ciOptimizedTests = createUnifiedMemorySuite ciMemoryConfig "CI/CD Optimized Test Suite"
   [ -- CI环境的平衡测试选择
     testGroup "CI Balanced Tests"
-      [ withMinimalMemoryLimits ultraOptimizedTests
-      , withMinimalMemoryLimits exact200UltraTests
-      , withMinimalMemoryLimits exactly200UltraTests
-      , withMinimalMemoryLimits final200UltraTests
+      [ withMinimalMemoryLimits Extended.ultraOptimizedTests
+      , withMinimalMemoryLimits Exact200.ultraOptimizedTests
+      , withMinimalMemoryLimits Exactly200.ultraOptimizedTests
+      , withMinimalMemoryLimits Final200.ultraOptimizedTests
       ]
   ]
 
@@ -104,12 +104,12 @@ developmentOptimizedTests :: TestTree
 developmentOptimizedTests = createUnifiedMemorySuite standardMemoryConfig "Development Optimized Test Suite"
   [ -- 开发环境的完整测试选择
     testGroup "Development Full Tests"
-      [ withMemoryLimits tests
-      , withMemoryLimits exact200Tests
-      , withMemoryLimits exactly200Tests
-      , withMemoryLimits final200Tests
-      , withMemoryLimits finalExact200Tests
-      , withMemoryLimits true200Tests
+      [ withMemoryLimits Extended.tests
+      , withMemoryLimits Exact200.tests
+      , withMemoryLimits Exactly200.tests
+      , withMemoryLimits Final200.tests
+      , withMemoryLimits FinalExact200.tests
+      , withMemoryLimits True200.tests
       ]
   ]
 

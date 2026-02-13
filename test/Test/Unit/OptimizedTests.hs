@@ -22,6 +22,7 @@ import Test.Unit.TestListPropertiesSpec (testListProperties)
 -- Import basic QuickCheck test suites
 import qualified Test.Unit.BasicQuickCheckTestSuite as BasicQuickCheckTestSuite
 import qualified Test.Unit.SimpleQuickCheckTestSuite as SimpleQuickCheckTestSuite
+import qualified Test.Unit.ExtendedQuickCheckTestSuiteOptimized as ExtendedQuickCheckTestSuiteOptimized
 
 -- Core test properties with controlled generator sizes - 进一步优化内存使用
 prop_optimized_string_property :: String -> Property
@@ -91,6 +92,7 @@ tests = testGroup "Memory-Optimized Test Suites"
   , createOptimizedTestSuite Ultra
   , createOptimizedTestSuite Aggressive
   , coreOptimizedTests
+  , withMemoryLevel Moderate ExtendedQuickCheckTestSuiteOptimized.tests
   ]
 
 -- Test suite for CI/CD environments with strict memory limits

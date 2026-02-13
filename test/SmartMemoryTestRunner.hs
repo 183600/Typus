@@ -142,11 +142,11 @@ collectAllTests = do
 createCoreTests :: [(TestTree, TestMetadata)]
 createCoreTests = 
   [ (testProperty "trim_idempotent" prop_trim_idempotent,
-     TestMetadata "trim_idempotent" Critical CoreUtils 2 3 True)
+     TestMetadata { metaTestName = "trim_idempotent", metaTestCategory = CoreUtils, metaTestPriority = Critical, metaTestComplexity = Simple, metaEstimatedMemoryMB = 2, metaIsQuickCheckTest = True, metaMaxQuickCheckSize = 3 })
   , (testProperty "trim_never_increases" prop_trim_never_increases,
-     TestMetadata "trim_never_increases" Critical CoreUtils 2 3 True)
+     TestMetadata { metaTestName = "trim_never_increases", metaTestCategory = CoreUtils, metaTestPriority = Critical, metaTestComplexity = Simple, metaEstimatedMemoryMB = 2, metaIsQuickCheckTest = True, metaMaxQuickCheckSize = 3 })
   , (testProperty "split_by_length" prop_split_by_length,
-     TestMetadata "split_by_length" High CoreUtils 3 5 True)
+     TestMetadata { metaTestName = "split_by_length", metaTestCategory = CoreUtils, metaTestPriority = High, metaTestComplexity = TestSupport.SmartTestSelector.Moderate, metaEstimatedMemoryMB = 3, metaIsQuickCheckTest = True, metaMaxQuickCheckSize = 5 })
   -- Add more core tests as needed
   ]
 
@@ -154,9 +154,9 @@ createCoreTests =
 createParserTests :: [(TestTree, TestMetadata)]
 createParserTests = 
   [ (testProperty "parse_basic" prop_parse_basic,
-     TestMetadata "parse_basic" Critical CoreParser 5 7 True)
+     TestMetadata { metaTestName = "parse_basic", metaTestCategory = CoreParser, metaTestPriority = Critical, metaTestComplexity = TestSupport.SmartTestSelector.Moderate, metaEstimatedMemoryMB = 5, metaIsQuickCheckTest = True, metaMaxQuickCheckSize = 7 })
   , (testProperty "parse_complex" prop_parse_complex,
-     TestMetadata "parse_complex" High CoreParser 8 10 False)
+     TestMetadata { metaTestName = "parse_complex", metaTestCategory = CoreParser, metaTestPriority = High, metaTestComplexity = TestSupport.SmartTestSelector.Complex, metaEstimatedMemoryMB = 8, metaIsQuickCheckTest = False, metaMaxQuickCheckSize = 10 })
   -- Add more parser tests as needed
   ]
 
@@ -164,9 +164,9 @@ createParserTests =
 createCompilerTests :: [(TestTree, TestMetadata)]
 createCompilerTests = 
   [ (testProperty "compile_basic" prop_compile_basic,
-     TestMetadata "compile_basic" Critical CoreCompiler 10 15 True)
+     TestMetadata { metaTestName = "compile_basic", metaTestCategory = CoreCompiler, metaTestPriority = Critical, metaTestComplexity = TestSupport.SmartTestSelector.Complex, metaEstimatedMemoryMB = 10, metaIsQuickCheckTest = True, metaMaxQuickCheckSize = 15 })
   , (testProperty "compile_optimized" prop_compile_optimized,
-     TestMetadata "compile_optimized" Medium CoreCompiler 15 20 False)
+     TestMetadata { metaTestName = "compile_optimized", metaTestCategory = CoreCompiler, metaTestPriority = Medium, metaTestComplexity = TestSupport.SmartTestSelector.VeryComplex, metaEstimatedMemoryMB = 15, metaIsQuickCheckTest = False, metaMaxQuickCheckSize = 20 })
   -- Add more compiler tests as needed
   ]
 
@@ -174,7 +174,7 @@ createCompilerTests =
 createDependencyTests :: [(TestTree, TestMetadata)]
 createDependencyTests = 
   [ (testProperty "dependency_basic" prop_dependency_basic,
-     TestMetadata "dependency_basic" High DependencyAnalysis 8 12 True)
+     TestMetadata { metaTestName = "dependency_basic", metaTestCategory = DependencyAnalysis, metaTestPriority = High, metaTestComplexity = TestSupport.SmartTestSelector.Complex, metaEstimatedMemoryMB = 8, metaIsQuickCheckTest = True, metaMaxQuickCheckSize = 12 })
   -- Add more dependency tests as needed
   ]
 
@@ -182,7 +182,7 @@ createDependencyTests =
 createOwnershipTests :: [(TestTree, TestMetadata)]
 createOwnershipTests = 
   [ (testProperty "ownership_transfer" prop_ownership_transfer,
-     TestMetadata "ownership_transfer" Critical OwnershipSystem 6 8 True)
+     TestMetadata { metaTestName = "ownership_transfer", metaTestCategory = Ownership, metaTestPriority = Critical, metaTestComplexity = TestSupport.SmartTestSelector.Moderate, metaEstimatedMemoryMB = 6, metaIsQuickCheckTest = True, metaMaxQuickCheckSize = 8 })
   -- Add more ownership tests as needed
   ]
 
@@ -190,7 +190,7 @@ createOwnershipTests =
 createErrorTests :: [(TestTree, TestMetadata)]
 createErrorTests = 
   [ (testProperty "error_recovery" prop_error_recovery,
-     TestMetadata "error_recovery" High ErrorHandling 4 6 True)
+     TestMetadata { metaTestName = "error_recovery", metaTestCategory = ErrorHandler, metaTestPriority = High, metaTestComplexity = TestSupport.SmartTestSelector.Moderate, metaEstimatedMemoryMB = 4, metaIsQuickCheckTest = True, metaMaxQuickCheckSize = 6 })
   -- Add more error tests as needed
   ]
 

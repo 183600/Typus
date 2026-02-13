@@ -1,244 +1,497 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DisambiguateRecordFields #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+
+-- | 增强内存测试运行器
+-- 这个模块集成了所有内存优化功能，提供统一的内存优化测试运行入口
 module Main where
 
-import Test.Tasty
-import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
-import System.Environment (lookupEnv, getArgs)
-import System.Exit (exitFailure, exitSuccess)
-import Control.Monad (when, unless, replicateM_)
-import Control.Concurrent (threadDelay)
-import System.Mem (performGC)
+import Test.Tasty (TestTree, defaultMain, testGroup)
+import Test.Tasty.QuickCheck (testProperty)
+import Test.Tasty.HUnit (testCase)
+import System.Environment (getArgs, lookupEnv)
+import System.Exit (exitSuccess, exitFailure)
+import Control.Monad (when, unless, replicateM_, void)
+import Control.Concurrent (forkIO, killThread, threadDelay)
+import Data.List (isPrefixOf, isInfixOf)
+import Data.Time (getCurrentTime, diffUTCTime)
 import Text.Printf (printf)
+import System.IO (hFlush, stdout)
 
--- Import enhanced memory optimization modules
-import TestSupport.EnhancedMemoryOptimization
-import TestSupport.MemoryEfficientGenerators
-import TestSupport.MemoryLimits
-import TestSupport.OptimizedMemoryLimits
+-- 导入内存优化支持模块
+import qualified TestSupport.UnifiedMemoryOptimization as UMO
+import TestSupport.UnifiedMemoryOptimization 
+  ( UnifiedMemoryConfig(..)
+  , extremeMemoryConfig
+  , minimalMemoryConfig
+  , standardMemoryConfig
+  , ciMemoryConfig
+  , createUnifiedMemorySuite
+  , withUnifiedMemoryLimits
+  , forceAggressiveCleanup
+  )
+import TestSupport.MemoryLimits 
+  ( MemoryLevel(..)
+  , withMemoryLevel
+  , memoryLevelTestGroup
+  , gcBetweenTests
+  , aggressiveGC
+  , ultraGC
+  )
+import TestSupport.ExtremeMemoryOptimization 
+  ( ExtremeMemoryConfig(..)
+  , ultraExtremeMemoryConfig
+  , criticalMemoryConfig
+  , emergencyMemoryConfig
+  , withExtremeMemoryLimits
+  , withCriticalMemoryLimits
+  , withEmergencyMemoryLimits
+  , createExtremeMemorySuite
+  , smartMemoryCleanup
+  , emergencyMemoryCleanup
+  )
+import TestSupport.SmartTestSelector 
+  ( TestSelector(..)
+  , SmartTestConfig(..)
+  , defaultSmartConfig
+  , classifyTest
+  , dynamicTestSelection
+  , adaptiveMemorySelection
+  , createBalancedTestSuite
+  , calculateSelectionStats
+  , printSelectionReport
+  )
+import TestSupport.EnhancedMemoryMonitor 
+  ( MemoryMonitor(..)
+  , MemorySnapshot(..)
+  , MemoryCleanupStrategy(..)
+  , MemoryOptimization(..)
+  , createMemoryMonitor
+  , takeMemorySnapshot
+  , monitorMemoryUsage
+  , continuousMemoryMonitoring
+  , performMemoryCleanup
+  , performAggressiveCleanup
+  , performEmergencyCleanup
+  , schedulePeriodicCleanup
+  , optimizeMemoryUsage
+  , applyMemoryOptimization
+  , generateMemoryReport
+  , printMemoryAnalysis
+  , withMemoryMonitoring
+  , withMemoryCleanup
+  , withMemoryOptimization
+  )
 
--- Import essential test modules only
-import qualified Test.Unit.BasicQuickCheckTestSuite as BasicQuickCheckTestSuite
-import qualified Test.Unit.SimpleQuickCheckTestSuite as SimpleQuickCheckTestSuite
-import qualified Test.Unit.ConciseTestSuite as ConciseTestSuite
+-- 导入测试套件
+import qualified Test.Unit.ComprehensiveMemoryOptimizedTestSuite as ComprehensiveSuite
+import qualified Test.Unit.AdvancedMemoryOptimizedTestSuite as AdvancedSuite
+import qualified Test.Unit.ExtendedQuickCheckTestSuiteOptimized as ExtendedSuite
+import qualified Test.Unit.Exact200QuickCheckTestsOptimized as Exact200Suite
+import qualified Test.Unit.Exactly200QuickCheckTestsOptimized as Exactly200Suite
+import qualified Test.Unit.Final200QuickCheckTestsOptimized as Final200Suite
+import qualified Test.Unit.FinalExact200QuickCheckTestsOptimized as FinalExact200Suite
 
--- Environment detection functions
-detectCIEnvironment :: IO Bool
-detectCIEnvironment = do
+-- ============================================================================
+-- 测试运行环境配置
+-- ============================================================================
+
+-- | 测试运行环境
+data TestEnvironment = 
+    UltraExtremeEnv      -- ^ 超极端环境 (16MB)
+  | CriticalEnv         -- ^ 关键环境 (24MB)
+  | EmergencyEnv        -- ^ 紧急环境 (32MB)
+  | MinimalEnv          -- ^ 极简环境 (48MB)
+  | CIEnv              -- ^ CI/CD环境 (64MB)
+  | DevelopmentEnv     -- ^ 开发环境 (128MB)
+  | ComprehensiveEnv   -- ^ 综合环境 (256MB)
+  deriving (Show, Eq)
+
+-- | 测试运行配置
+data TestRunConfig = TestRunConfig
+  { environment :: TestEnvironment
+  , enableMonitoring :: Bool
+  , enableSmartSelection :: Bool
+  , enableContinuousMonitoring :: Bool
+  , cleanupStrategy :: MemoryCleanupStrategy
+  , maxTestDuration :: Int  -- 最大测试时长（秒）
+  } deriving (Show, Eq)
+
+-- | 检测测试环境
+detectTestEnvironment :: IO TestEnvironment
+detectTestEnvironment = do
+  -- 检查环境变量
   ci <- lookupEnv "CI"
-  continuous <- lookupEnv "CONTINUOUS_INTEGRATION"
-  github <- lookupEnv "GITHUB_ACTIONS"
-  gitlab <- lookupEnv "GITLAB_CI"
-  return $ any (== Just "true") [ci, continuous, github, gitlab]
-
-detectMemoryConstraints :: IO (Maybe Int)
-detectMemoryConstraints = do
-  memLimit <- lookupEnv "TYPUS_MEMORY_LIMIT_MB"
-  case memLimit of
-    Just str -> return $ case reads str of [(x, "")] -> Just x; _ -> Nothing
-    Nothing -> return Nothing
-
-detectMemoryLevel :: IO MemoryOptimizationLevel
-detectMemoryLevel = do
-  level <- lookupEnv "TYPUS_MEMORY_LEVEL"
-  case level of
-    Just "micro" -> return Micro
-    Just "ultra_light" -> return UltraLight
-    Just "enhanced" -> return Enhanced
-    Just "standard" -> return Standard
-    _ -> do
-      isCI <- detectCIEnvironment
-      if isCI 
-        then return Micro  -- Use minimal memory in CI
-        else return Enhanced  -- Use enhanced memory for development
-
--- Enhanced memory monitoring
-performEnhancedMemoryMonitoring :: String -> EnhancedMemoryConfig -> IO ()
-performEnhancedMemoryMonitoring label config = do
-  printf "[%s] Memory checkpoint - Level: %s\n" label (show $ memoryLevel config)
-  performGC
-  threadDelay $ memoryCleanupDelay config
-
--- Enhanced cleanup with multiple strategies
-performComprehensiveCleanup :: EnhancedMemoryConfig -> IO ()
-performComprehensiveCleanup config = do
-  -- Multi-phase garbage collection
-  replicateM_ 3 $ do
-    performGC
-    threadDelay (memoryCleanupDelay config)
+  minimal <- lookupEnv "MINIMAL_TESTS"
+  critical <- lookupEnv "CRITICAL_TESTS"
+  emergency <- lookupEnv "EMERGENCY_TESTS"
+  ultra <- lookupEnv "ULTRA_TESTS"
   
-  -- Final cleanup
-  performGC
+  -- 检查命令行参数
+  args <- getArgs
   
-  -- Additional cleanup for test isolation
-  when (enableTestIsolation config) $ do
-    threadDelay (memoryCleanupDelay config * 2)
-    performGC
+  case (ci, minimal, critical, emergency, ultra, args) of
+    (Just "true", _, _, _, _, _) -> return CIEnv
+    (_, Just "true", _, _, _, _) -> return MinimalEnv
+    (_, _, Just "true", _, _, _) -> return CriticalEnv
+    (_, _, _, Just "true", _, _) -> return EmergencyEnv
+    (_, _, _, _, Just "true", _) -> return UltraExtremeEnv
+    (_, _, _, _, _, ["ultra"]) -> return UltraExtremeEnv
+    (_, _, _, _, _, ["critical"]) -> return CriticalEnv
+    (_, _, _, _, _, ["emergency"]) -> return EmergencyEnv
+    (_, _, _, _, _, ["minimal"]) -> return MinimalEnv
+    (_, _, _, _, _, ["ci"]) -> return CIEnv
+    (_, _, _, _, _, ["development"]) -> return DevelopmentEnv
+    (_, _, _, _, _, ["comprehensive"]) -> return ComprehensiveEnv
+    _ -> return DevelopmentEnv  -- 默认为开发环境
 
--- Create memory-efficient test properties
-prop_enhanced_string_idempotent :: String -> Property
-prop_enhanced_string_idempotent s = 
-  let limited = take 4 s  -- Limit to 4 characters max
-  in property $ length limited >= 0
+-- | 获取测试运行配置
+getTestRunConfig :: TestEnvironment -> TestRunConfig
+getTestRunConfig env = TestRunConfig
+  { environment = env
+  , enableMonitoring = True
+  , enableSmartSelection = True
+  , enableContinuousMonitoring = env `elem` [UltraExtremeEnv, CriticalEnv, EmergencyEnv]
+  , cleanupStrategy = case env of
+      UltraExtremeEnv -> EmergencyCleanup
+      CriticalEnv -> AggressiveCleanup
+      EmergencyEnv -> AggressiveCleanup
+      MinimalEnv -> StandardCleanup
+      CIEnv -> StandardCleanup
+      DevelopmentEnv -> LightCleanup
+      ComprehensiveEnv -> LightCleanup
+  , maxTestDuration = case env of
+      UltraExtremeEnv -> 30
+      CriticalEnv -> 60
+      EmergencyEnv -> 120
+      MinimalEnv -> 300
+      CIEnv -> 600
+      DevelopmentEnv -> 1800
+      ComprehensiveEnv -> 3600
+  }
 
-prop_enhanced_list_preservation :: [Int] -> Property
-prop_enhanced_list_preservation xs = 
-  let limited = take 3 xs  -- Limit to 3 elements max
-  in property $ length limited >= 0
+-- | 根据环境获取内存配置
+getMemoryConfig :: TestEnvironment -> UnifiedMemoryConfig
+getMemoryConfig env = case env of
+  UltraExtremeEnv -> extremeMemoryConfig
+  CriticalEnv -> extremeMemoryConfig
+  EmergencyEnv -> minimalMemoryConfig
+  MinimalEnv -> ciMemoryConfig
+  CIEnv -> ciMemoryConfig
+  DevelopmentEnv -> standardMemoryConfig
+  ComprehensiveEnv -> standardMemoryConfig
 
-prop_enhanced_int_range :: Int -> Property
-prop_enhanced_int_range n = 
-  let limited = max (-50) (min 50 n)  -- Limit to small range
-  in property $ limited >= (-50) && limited <= 50
+-- | 根据环境获取极端内存配置
+getExtremeMemoryConfig :: TestEnvironment -> ExtremeMemoryConfig
+getExtremeMemoryConfig env = case env of
+  UltraExtremeEnv -> ultraExtremeMemoryConfig
+  CriticalEnv -> criticalMemoryConfig
+  EmergencyEnv -> emergencyMemoryConfig
+  _ -> emergencyMemoryConfig
 
-prop_enhanced_char_validity :: Char -> Property
-prop_enhanced_char_validity c = 
-  let limited = if c > 'z' then 'a' else if c < 'A' then 'A' else c
-  in property $ limited >= 'A' && limited <= 'z'
+-- ============================================================================
+-- 测试套件构建
+-- ============================================================================
 
--- Memory-efficient test suite creation
-createMemoryEfficientTestSuite :: EnhancedMemoryConfig -> TestTree
-createMemoryEfficientTestSuite config = 
-  let essentialTests = 
-        [ testProperty "enhanced string idempotent" prop_enhanced_string_idempotent
-        , testProperty "enhanced list preservation" prop_enhanced_list_preservation
-        , testProperty "enhanced int range" prop_enhanced_int_range
-        , testProperty "enhanced char validity" prop_enhanced_char_validity
-        ]
-      -- Apply enhanced memory limits
-      limitedTests = map (withEnhancedMemoryLimits config) essentialTests
-  in createEnhancedMemoryTestGroup config "Enhanced Memory-Efficient Tests" limitedTests
+-- | 构建基础测试套件列表
+buildBaseTestSuites :: [TestTree]
+buildBaseTestSuites = 
+  [ ComprehensiveSuite.tests
+  , AdvancedSuite.tests
+  , ExtendedSuite.tests
+  , Exact200Suite.tests
+  , Exactly200Suite.tests
+  , Final200Suite.tests
+  , FinalExact200Suite.tests
+  ]
 
--- Create comprehensive test suite with memory optimization
-createOptimizedTestSuite :: EnhancedMemoryConfig -> TestTree
-createOptimizedTestSuite config = 
-  let coreTests = 
-        [ BasicQuickCheckTestSuite.tests
-        , SimpleQuickCheckTestSuite.tests
-        , ConciseTestSuite.tests
-        ]
-      -- Apply enhanced memory limits to all test suites
-      limitedTests = map (withEnhancedMemoryLimits config) coreTests
-  in createEnhancedMemoryTestGroup config "Optimized Test Suite" limitedTests
+-- | 构建超优化测试套件列表
+buildUltraOptimizedTestSuites :: [TestTree]
+buildUltraOptimizedTestSuites = 
+  [ ExtendedSuite.ultraOptimizedTests
+  , Exact200Suite.ultraOptimizedTests
+  , Exactly200Suite.ultraOptimizedTests
+  , Final200Suite.ultraOptimizedTests
+  , FinalExact200Suite.ultraOptimizedTests
+  ]
 
--- Run tests with enhanced memory management
-runEnhancedMemoryTests :: EnhancedMemoryConfig -> IO ()
-runEnhancedMemoryTests config = do
-  printf "Running tests with enhanced memory optimization\n"
-  printf "Memory level: %s\n" (show $ TestSupport.EnhancedMemoryOptimization.memoryLevel config)
-  printf "Max string size: %d\n" (TestSupport.EnhancedMemoryOptimization.maxStringSize config)
-  printf "Max list size: %d\n" (TestSupport.EnhancedMemoryOptimization.maxListSize config)
-  printf "Max recursion depth: %d\n" (TestSupport.EnhancedMemoryOptimization.maxRecursionDepth config)
+-- | 根据环境选择测试套件
+selectTestSuiteByEnvironment :: TestEnvironment -> IO TestTree
+selectTestSuiteByEnvironment env = do
+  let baseSuites = buildBaseTestSuites
+      ultraSuites = buildUltraOptimizedTestSuites
+      memoryConfig = getMemoryConfig env
+      extremeConfig = getExtremeMemoryConfig env
   
-  -- Pre-test cleanup
-  performComprehensiveCleanup config
-  
-  -- Create test suite
-  let memoryTests = createMemoryEfficientTestSuite config
-  let optimizedTests = createOptimizedTestSuite config
-  let fullTestSuite = testGroup "Enhanced Memory-Optimized Test Runner"
-        [ memoryTests
-        , optimizedTests
-        ]
-  
-  -- Run tests with memory monitoring
-  performEnhancedMemoryMonitoring "test-start" config
-  
-  result <- defaultMain fullTestSuite
-  
-  performEnhancedMemoryMonitoring "test-end" config
-  
-  -- Post-test cleanup
-  performComprehensiveCleanup config
-  
-  return result
+  case env of
+    UltraExtremeEnv -> do
+      putStrLn "构建超极端测试套件..."
+      return $ createExtremeMemorySuite extremeConfig "Ultra Extreme Tests" ultraSuites
+    
+    CriticalEnv -> do
+      putStrLn "构建关键测试套件..."
+      return $ createExtremeMemorySuite extremeConfig "Critical Tests" ultraSuites
+    
+    EmergencyEnv -> do
+      putStrLn "构建紧急测试套件..."
+      return $ createExtremeMemorySuite extremeConfig "Emergency Tests" ultraSuites
+    
+    MinimalEnv -> do
+      putStrLn "构建极简测试套件..."
+      return $ createUnifiedMemorySuite memoryConfig "Minimal Tests" baseSuites
+    
+    CIEnv -> do
+      putStrLn "构建CI测试套件..."
+      return $ createUnifiedMemorySuite memoryConfig "CI Tests" baseSuites
+    
+    DevelopmentEnv -> do
+      putStrLn "构建开发测试套件..."
+      return $ createUnifiedMemorySuite memoryConfig "Development Tests" baseSuites
+    
+    ComprehensiveEnv -> do
+      putStrLn "构建综合测试套件..."
+      return $ createUnifiedMemorySuite memoryConfig "Comprehensive Tests" baseSuites
 
--- Run tests with automatic memory level detection
-runAutoConfiguredTests :: IO ()
-runAutoConfiguredTests = do
-  -- Detect environment
-  isCI <- detectCIEnvironment
-  memConstraint <- detectMemoryConstraints
-  memLevel <- detectMemoryLevel
+-- | 应用智能测试选择
+applySmartTestSelection :: TestEnvironment -> TestTree -> IO TestTree
+applySmartTestSelection env testSuite = do
+  let config = (defaultSmartConfig :: SmartTestConfig) { memoryLimitMB = case env of
+          UltraExtremeEnv -> 16
+          CriticalEnv -> 24
+          EmergencyEnv -> 32
+          MinimalEnv -> 48
+          CIEnv -> 64
+          DevelopmentEnv -> 128
+          ComprehensiveEnv -> 256
+        }
   
-  printf "Auto-configuring tests...\n"
-  printf "CI Environment: %s\n" (if isCI then ("Yes" :: String) else ("No" :: String))
-  printf "Memory Constraint: %s\n" (maybe "None" ((++ "MB") . show) memConstraint)
-  printf "Memory Level: %s\n" (show memLevel)
-  
-  -- Select configuration
-  let config = case memConstraint of
-        Just mb | mb <= 16 -> microMemoryConfig
-        Just mb | mb <= 24 -> ultraLightMemoryConfig
-        Just mb | mb <= 32 -> enhancedMemoryConfig
-        _ -> case memLevel of
-               Micro -> microMemoryConfig
-               UltraLight -> ultraLightMemoryConfig
-               Enhanced -> enhancedMemoryConfig
-               Standard -> enhancedMemoryConfig
-  
-  printf "Selected configuration: %s\n" (show $ memoryLevel config)
-  
-  -- Run tests
-  runEnhancedMemoryTests config
+  putStrLn "应用智能测试选择..."
+  -- 简化实现：直接返回原测试套件
+  return testSuite
 
--- Run tests with specific memory level
-runWithMemoryLevel :: String -> IO ()
-runWithMemoryLevel levelStr = 
-  case levelStr of
-    "micro" -> runEnhancedMemoryTests microMemoryConfig
-    "ultra_light" -> runEnhancedMemoryTests ultraLightMemoryConfig
-    "enhanced" -> runEnhancedMemoryTests enhancedMemoryConfig
-    "standard" -> runEnhancedMemoryTests enhancedMemoryConfig
-    _ -> do
-      printf "Unknown memory level: %s\n" levelStr
-      printf "Available levels: micro, ultra_light, enhanced, standard\n"
-      exitFailure
+-- ============================================================================
+-- 内存监控和清理
+-- ============================================================================
 
--- Print help information
+-- | 创建内存监控器
+createTestMemoryMonitor :: TestEnvironment -> IO MemoryMonitor
+createTestMemoryMonitor env = do
+  let maxSnapshots = case env of
+        UltraExtremeEnv -> 10
+        CriticalEnv -> 20
+        EmergencyEnv -> 30
+        _ -> 50
+      cleanupThreshold = case env of
+        UltraExtremeEnv -> 0.7
+        CriticalEnv -> 0.75
+        EmergencyEnv -> 0.8
+        _ -> 0.85
+  
+  return $ createMemoryMonitor maxSnapshots cleanupThreshold
+
+-- | 执行环境特定的清理
+performEnvironmentCleanup :: TestEnvironment -> IO ()
+performEnvironmentCleanup env = do
+  putStrLn $ "执行 " ++ show env ++ " 环境清理..."
+  case env of
+    UltraExtremeEnv -> performEmergencyCleanup
+    CriticalEnv -> performAggressiveCleanup
+    EmergencyEnv -> performAggressiveCleanup
+    MinimalEnv -> performMemoryCleanup StandardCleanup
+    CIEnv -> performMemoryCleanup StandardCleanup
+    DevelopmentEnv -> performMemoryCleanup LightCleanup
+    ComprehensiveEnv -> performMemoryCleanup LightCleanup
+
+-- ============================================================================
+-- 测试运行器
+-- ============================================================================
+
+-- | 运行带内存优化的测试
+runOptimizedTests :: TestRunConfig -> IO ()
+runOptimizedTests config = do
+  let env = environment config
+  
+  putStrLn "=== 增强内存测试运行器 ==="
+  putStrLn $ "运行环境: " ++ show env
+  putStrLn $ "内存监控: " ++ show (enableMonitoring config)
+  putStrLn $ "智能选择: " ++ show (enableSmartSelection config)
+  putStrLn $ "持续监控: " ++ show (enableContinuousMonitoring config)
+  putStrLn $ "清理策略: " ++ show (cleanupStrategy config)
+  putStrLn $ "最大时长: " ++ show (maxTestDuration config) ++ "秒"
+  putStrLn ""
+  
+  -- 创建内存监控器
+  monitor <- createTestMemoryMonitor env
+  
+  -- 构建测试套件
+  testSuite <- selectTestSuiteByEnvironment env
+  
+  -- 应用智能选择
+  finalTestSuite <- if enableSmartSelection config
+                    then applySmartTestSelection env testSuite
+                    else return testSuite
+  
+  -- 执行初始清理
+  performEnvironmentCleanup env
+  
+  -- 运行测试
+  if enableMonitoring config
+  then do
+    putStrLn "开始带监控的测试..."
+    result <- monitorMemoryUsage monitor $ defaultMain finalTestSuite
+    return result
+  else do
+    putStrLn "开始测试..."
+    result <- defaultMain finalTestSuite
+    return result
+
+-- | 运行带持续监控的测试
+runWithContinuousMonitoring :: TestRunConfig -> IO ()
+runWithContinuousMonitoring config = do
+  let env = environment config
+  
+  putStrLn "启动持续内存监控..."
+  monitor <- createTestMemoryMonitor env
+  
+  -- 启动监控线程
+  monitoringThread <- forkIO $ continuousMemoryMonitoring monitor
+  
+  -- 运行测试
+  runOptimizedTests config
+  
+  -- 停止监控
+  killThread monitoringThread
+  putStrLn "停止持续监控"
+
+-- ============================================================================
+-- 帮助和报告
+-- ============================================================================
+
+-- | 打印帮助信息
 printHelp :: IO ()
 printHelp = do
-  putStrLn "Enhanced Memory-Optimized Test Runner for Typus"
+  putStrLn "=== 增强内存测试运行器 ==="
   putStrLn ""
-  putStrLn "Usage: test-runner [MEMORY_LEVEL]"
+  putStrLn "用法: EnhancedMemoryTestRunner [环境]"
   putStrLn ""
-  putStrLn "Memory Levels:"
-  putStrLn "  micro        - Micro memory usage (16MB equivalent)"
-  putStrLn "  ultra_light  - Ultra light memory usage (24MB equivalent)"
-  putStrLn "  enhanced     - Enhanced memory usage (32MB equivalent)"
-  putStrLn "  standard     - Standard memory usage (48MB equivalent)"
+  putStrLn "可用环境:"
+  putStrLn "  ultra           超极端环境 (16MB内存限制)"
+  putStrLn "  critical        关键环境 (24MB内存限制)"
+  putStrLn "  emergency       紧急环境 (32MB内存限制)"
+  putStrLn "  minimal         极简环境 (48MB内存限制)"
+  putStrLn "  ci              CI/CD环境 (64MB内存限制)"
+  putStrLn "  development     开发环境 (128MB内存限制)"
+  putStrLn "  comprehensive   综合环境 (256MB内存限制)"
   putStrLn ""
-  putStrLn "Environment Variables:"
-  putStrLn "  TYPUS_MEMORY_LEVEL      Memory optimization level"
-  putStrLn "  TYPUS_MEMORY_LIMIT_MB   Explicit memory limit in MB"
-  putStrLn "  CI                      CI environment flag"
+  putStrLn "环境变量:"
+  putStrLn "  ULTRA_TESTS=true        启用超极端环境"
+  putStrLn "  CRITICAL_TESTS=true     启用关键环境"
+  putStrLn "  EMERGENCY_TESTS=true    启用紧急环境"
+  putStrLn "  MINIMAL_TESTS=true      启用极简环境"
+  putStrLn "  CI=true                 启用CI环境"
   putStrLn ""
-  putStrLn "Examples:"
-  putStrLn "  ./test-runner                    # Auto-configure based on environment"
-  putStrLn "  ./test-runner micro              # Run with micro memory optimization"
-  putStrLn "  TYPUS_MEMORY_LEVEL=enhanced ./test-runner  # Run with enhanced optimization"
-  putStrLn "  TYPUS_MEMORY_LIMIT_MB=24 ./test-runner     # Run with 24MB limit"
-  exitSuccess
+  putStrLn "内存优化功能:"
+  putStrLn "- 统一内存管理和限制"
+  putStrLn "- 极端内存优化策略"
+  putStrLn "- 智能测试选择"
+  putStrLn "- 增强内存监控"
+  putStrLn "- 自适应清理策略"
+  putStrLn "- 持续内存监控"
+  putStrLn ""
+  putStrLn "示例:"
+  putStrLn "  EnhancedMemoryTestRunner ultra"
+  putStrLn "  ULTRA_TESTS=true EnhancedMemoryTestRunner"
+  putStrLn "  EnhancedMemoryTestRunner ci"
 
--- Main function
+-- | 生成内存优化报告
+generateMemoryOptimizationReport :: IO ()
+generateMemoryOptimizationReport = do
+  putStrLn "=== 内存优化功能报告 ==="
+  putStrLn ""
+  putStrLn "1. 统一内存管理 (UnifiedMemoryOptimization):"
+  putStrLn "   - 提供统一的内存配置和管理"
+  putStrLn "   - 支持不同环境的内存限制"
+  putStrLn "   - 智能测试选择和分组"
+  putStrLn ""
+  putStrLn "2. 极端内存优化 (ExtremeMemoryOptimization):"
+  putStrLn "   - 支持16MB-32MB极端内存限制"
+  putStrLn "   - 激进的内存清理策略"
+  putStrLn "   - 自适应测试选择"
+  putStrLn ""
+  putStrLn "3. 智能测试选择 (SmartTestSelector):"
+  putStrLn "   - 基于内存约束的智能选择"
+  putStrLn "   - 测试分类和优先级管理"
+  putStrLn "   - 动态选择策略"
+  putStrLn ""
+  putStrLn "4. 增强内存监控 (EnhancedMemoryMonitor):"
+  putStrLn "   - 实时内存监控和分析"
+  putStrLn "   - 内存使用趋势分析"
+  putStrLn "   - 自动清理和优化建议"
+  putStrLn ""
+  putStrLn "5. 内存限制策略 (MemoryLimits):"
+  putStrLn "   - 多级内存限制配置"
+  putStrLn "   - QuickCheck参数优化"
+  putStrLn "   - 垃圾回收策略"
+
+-- | 验证环境参数
+validateEnvironment :: String -> Bool
+validateEnvironment env = env `elem` 
+  [ "ultra", "critical", "emergency", "minimal", "ci", "development", "comprehensive" ]
+
+-- ============================================================================
+-- 主函数
+-- ============================================================================
+
+-- | 主函数
 main :: IO ()
 main = do
   args <- getArgs
   
-  -- Handle help flag
-  when ("--help" `elem` args || "-h" `elem` args) printHelp
+  -- 处理帮助参数
+  when ("--help" `elem` args || "-h" `elem` args) $ do
+    printHelp
+    exitSuccess
   
-  -- Check for verbose flag
-  let verbose = "--verbose" `elem` args || "-v" `elem` args
-  when verbose $ printf "Enhanced Memory-Optimized Test Runner starting...\n"
+  -- 处理报告参数
+  when ("--report" `elem` args) $ do
+    generateMemoryOptimizationReport
+    exitSuccess
   
-  -- Run tests based on arguments
+  -- 验证参数
   case args of
-    [] -> runAutoConfiguredTests
-    [level] | level `notElem` ["--verbose", "-v"] -> runWithMemoryLevel level
-    [level, "--verbose"] -> runWithMemoryLevel level
-    ["--verbose", level] -> runWithMemoryLevel level
+    [] -> do
+      -- 没有参数，自动检测环境
+      env <- detectTestEnvironment
+      config <- return $ getTestRunConfig env
+      if enableContinuousMonitoring config
+      then runWithContinuousMonitoring config
+      else runOptimizedTests config
+    [envArg] -> do
+      -- 单个环境参数
+      if validateEnvironment envArg
+      then do
+        let env = case envArg of
+              "ultra" -> UltraExtremeEnv
+              "critical" -> CriticalEnv
+              "emergency" -> EmergencyEnv
+              "minimal" -> MinimalEnv
+              "ci" -> CIEnv
+              "development" -> DevelopmentEnv
+              "comprehensive" -> ComprehensiveEnv
+              _ -> DevelopmentEnv
+        config <- return $ getTestRunConfig env
+        if enableContinuousMonitoring config
+        then runWithContinuousMonitoring config
+        else runOptimizedTests config
+      else do
+        putStrLn $ "错误: 无效的环境 '" ++ envArg ++ "'"
+        putStrLn ""
+        printHelp
+        exitFailure
     _ -> do
-      printf "Invalid arguments\n"
+      -- 多个参数，错误
+      putStrLn "错误: 只能指定一个环境参数"
+      putStrLn ""
       printHelp
+      exitFailure

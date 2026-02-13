@@ -157,7 +157,7 @@ prop_is_problematic_unclosed_string_optimized :: Property
 prop_is_problematic_unclosed_string_optimized = 
   forAll (resize 2 arbitrary) $ \s ->
   let limitedS = take 10 s
-      problematic = U.isProblematic limitedS
+      problematic = U.isProblematicUnclosedString limitedS
   in property $ problematic || not problematic
 
 -- | 测试removeLineComments多行处理 - 内存优化

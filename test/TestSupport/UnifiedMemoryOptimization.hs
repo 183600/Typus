@@ -64,7 +64,7 @@ extremeMemoryConfig = UnifiedMemoryConfig
   , enableProfiling = False
   , adaptiveCleanup = True
   , maxConcurrentTests = 1
-  , testSelectionRatio = 0.05  -- 只运行5%的测试
+  , testSelectionRatio = 1.0  -- 运行所有测试
   , memoryThreshold = 16
   }
 

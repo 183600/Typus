@@ -134,7 +134,7 @@ prop_utils_string_processing_optimized =
 -- | 测试列表操作
 prop_utils_list_operations_optimized :: Property
 prop_utils_list_operations_optimized = 
-  forAll (resize 2 arbitrary) $ \xs ->
+  forAll (resize 2 arbitrary) $ \(xs :: [String]) ->
   let limitedXs = take 5 xs
       uniqueXs = nub limitedXs
   in property $ length uniqueXs <= length limitedXs
@@ -146,14 +146,14 @@ prop_utils_list_operations_optimized =
 -- | 测试类型变量的相等性 - 内存优化
 prop_typevar_equality_optimized :: Property
 prop_typevar_equality_optimized = 
-  forAll (resize 2 arbitrary) $ \tv1 ->
-  forAll (resize 2 arbitrary) $ \tv2 ->
+  forAll (resize 2 arbitrary) $ \(tv1 :: String) ->
+  forAll (resize 2 arbitrary) $ \(tv2 :: String) ->
   property $ (tv1 == tv2) === (show tv1 == show tv2)
 
 -- | 测试类型环境的基本操作 - 内存优化
 prop_type_environment_basic_optimized :: Property
 prop_type_environment_basic_optimized = 
-  forAll (resize 2 arbitrary) $ \bindings ->
+  forAll (resize 2 arbitrary) $ \(bindings :: [(String, String)]) ->
   let limitedBindings = take 3 bindings
       env = Map.fromList limitedBindings
   in property $ Map.size env <= 3
@@ -171,15 +171,15 @@ prop_type_constraints_optimized =
 -- | 测试类型表达式
 prop_type_expressions_optimized :: Property
 prop_type_expressions_optimized = 
-  forAll (resize 1 arbitrary) $ \typeName ->
-  let limitedTypeName = take 6 typeName
+  forAll (resize 1 arbitrary) $ \(typeName :: String) ->
+  let limitedTypeName = take 6 typeName :: String
   in property $ length limitedTypeName <= 6
 
 -- | 测试类型替换
 prop_type_substitution_optimized :: Property
 prop_type_substitution_optimized = 
-  forAll (resize 1 arbitrary) $ \mappings ->
-  forAll (resize 1 arbitrary) $ \typeName ->
+  forAll (resize 1 arbitrary) $ \(mappings :: [(String, String)]) ->
+  forAll (resize 1 arbitrary) $ \(typeName :: String) ->
   let limitedMappings = take 2 mappings
       limitedTypeName = take 5 typeName
   in property $ length limitedMappings <= 2 && length limitedTypeName <= 5
@@ -196,7 +196,7 @@ prop_ownership_basic_optimized =
       validVar = not (null limitedVarName) && all isAlpha limitedVarName
   in if not validVar
      then property True
-     else property $ length limitedVarName <= 8
+     else property $ (length limitedVarName :: Int) <= 8
 
 -- | 测试所有权转移 - 内存优化
 prop_ownership_transfer_optimized :: Property
@@ -209,28 +209,28 @@ prop_ownership_transfer_optimized =
       validTo = not (null limitedTo) && all isAlpha limitedTo
   in if not (validFrom && validTo)
      then property True
-     else property $ length limitedFrom + length limitedTo <= 12
+     else property $ (length limitedFrom + length limitedTo :: Int) <= 12
 
 -- | 测试借用检查
 prop_borrowing_check_optimized :: Property
 prop_borrowing_check_optimized = 
-  forAll (resize 1 arbitrary) $ \varName ->
+  forAll (resize 1 arbitrary) $ \(varName :: String) ->
   let limitedVarName = take 5 varName
-  in property $ length limitedVarName <= 5
+  in property $ (length limitedVarName :: Int) <= 5
 
 -- | 测试生命周期
 prop_lifetime_optimized :: Property
 prop_lifetime_optimized = 
-  forAll (resize 1 arbitrary) $ \lifetime ->
+  forAll (resize 1 arbitrary) $ \(lifetime :: String) ->
   let limitedLifetime = take 4 lifetime
-  in property $ length limitedLifetime <= 4
+  in property $ (length limitedLifetime :: Int) <= 4
 
 -- | 测试所有权规则
 prop_ownership_rules_optimized :: Property
 prop_ownership_rules_optimized = 
-  forAll (resize 1 arbitrary) $ \varName ->
+  forAll (resize 1 arbitrary) $ \(varName :: String) ->
   let limitedVarName = take 7 varName
-  in property $ length limitedVarName <= 7
+  in property $ (length limitedVarName :: Int) <= 7
 
 -- ============================================================================
 -- 编译器核心测试 (选择最重要的5个测试)
@@ -239,35 +239,35 @@ prop_ownership_rules_optimized =
 -- | 测试编译器基本功能 - 内存优化
 prop_compiler_basic_optimized :: Property
 prop_compiler_basic_optimized = 
-  forAll (resize 1 arbitrary) $ \code ->
+  forAll (resize 1 arbitrary) $ \(code :: String) ->
   let limitedCode = take 25 code
-  in property $ length limitedCode <= 25
+  in property $ (length limitedCode :: Int) <= 25
 
 -- | 测试编译器错误处理
 prop_compiler_error_handling_optimized :: Property
 prop_compiler_error_handling_optimized = 
-  forAll (resize 1 arbitrary) $ \invalidCode ->
+  forAll (resize 1 arbitrary) $ \(invalidCode :: String) ->
   let limitedCode = take 20 invalidCode
   in property $ length limitedCode <= 20
 
 -- | 测试代码生成
 prop_code_generation_optimized :: Property
 prop_code_generation_optimized = 
-  forAll (resize 1 arbitrary) $ \ast ->
+  forAll (resize 1 arbitrary) $ \(ast :: String) ->
   let limitedAst = take 15 $ show ast
   in property $ length limitedAst <= 15
 
 -- | 测试优化器
 prop_optimizer_optimized :: Property
 prop_optimizer_optimized = 
-  forAll (resize 1 arbitrary) $ \code ->
+  forAll (resize 1 arbitrary) $ \(code :: String) ->
   let limitedCode = take 18 code
   in property $ length limitedCode <= 18
 
 -- | 测试符号表操作
 prop_symbol_table_optimized :: Property
 prop_symbol_table_optimized = 
-  forAll (resize 1 arbitrary) $ \symbols ->
+  forAll (resize 1 arbitrary) $ \(symbols :: [(String, String)]) ->
   let limitedSymbols = take 3 symbols
       symbolTable = Map.fromList limitedSymbols
   in property $ Map.size symbolTable <= 3
