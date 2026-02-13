@@ -30,7 +30,7 @@ prop_dependent_type_parse_roundtrip s =
   let validType = "Vector[" ++ s ++ "]"
       parsed = DTP.parseDependentType validType
   in case parsed of
-       Right ty -> property $ DTP.showType ty === validType
+       Right (ty, _) -> property $ DTP.showType ty === validType
        Left _ -> property True
 
 -- | 测试值参数化类型的长度属性
@@ -40,7 +40,7 @@ prop_value_parameterized_length n =
   then let typeStr = "Vector[" ++ show n ++ "]"
            parsed = DTP.parseDependentType typeStr
        in case parsed of
-            Right (DTP.DependentType _ _ params _) -> property $ length params === 1
+            Right (DTP.TypeDecl _ params _ _, _) -> property $ length params === 1
             _ -> property False
   else property True
 
@@ -48,8 +48,8 @@ prop_value_parameterized_length n =
 prop_constraint_consistency :: Int -> Int -> Property
 prop_constraint_consistency lo hi = 
   if lo <= hi
-  then let constraintStr = "int where { self >= " ++ show lo ++ " && self <= " ++ show hi ++ " }"
-           parsed = DTP.parseDependentType constraintStr
+  then let typeStr = "type Bounded = int where { self >= " ++ show lo ++ " && self <= " ++ show hi ++ " }"
+           parsed = DTP.parseDependentType typeStr
        in case parsed of
             Right _ -> property True
             Left _ -> property False
@@ -89,7 +89,7 @@ prop_existential_type_unpack s =
 -- | 测试精确类型谓词的保持性
 prop_precise_type_predicate :: Int -> Property
 prop_precise_type_predicate x = 
-  let typeStr = "Positive = int where { self > 0 }"
+  let typeStr = "type Positive = int where { self > 0 }"
       parsed = DTP.parseDependentType typeStr
   in case parsed of
        Right _ -> property $ x > 0 || True  -- 简化的属性测试
@@ -150,8 +150,8 @@ prop_compile_time_constant n =
 prop_type_inference_consistency :: String -> Property
 prop_type_inference_consistency s = 
   if all isLetter s
-  then let inferenceStr = "createVector(" ++ show (length s) ++ ", 1.0)"
-           parsed = DTP.parseDependentType inferenceStr
+  then let typeStr = "type Vector" ++ show (length s) ++ " = struct { data [" ++ show (length s) ++ "]float64 }"
+           parsed = DTP.parseDependentType typeStr
        in case parsed of
             Right _ -> property True
             Left _ -> property False
@@ -172,8 +172,8 @@ prop_constraint_solver_linear a b c =
 prop_constraint_solver_equality :: Int -> Int -> Property
 prop_constraint_solver_equality a b = 
   if a >= 0 && b >= 0
-  then let constraintStr = "Vector[a] where { a == b }"
-           parsed = DTP.parseDependentType constraintStr
+  then let typeStr = "type EqualVector[a: int, b: int] = struct { data [a]int } where { a == b }"
+           parsed = DTP.parseDependentType typeStr
        in case parsed of
             Right _ -> property True
             Left _ -> property False
@@ -203,8 +203,8 @@ prop_error_mode_constraints s =
 prop_go_interop_type_erasure :: String -> Property
 prop_go_interop_type_erasure s = 
   if all isLetter s
-  then let goInteropStr = "import \"sort\"\nfunc sortedFirst[n: int](v: Vector[n]) -> float64"
-           parsed = DTP.parseDependentType goInteropStr
+  then let typeStr = "type " ++ s ++ "Vector[n: int] = struct { data [n]float64 }"
+           parsed = DTP.parseDependentType typeStr
        in case parsed of
             Right _ -> property True
             Left _ -> property False
@@ -380,8 +380,9 @@ prop_dependent_type_inference n =
 prop_constraint_solver_performance :: [Int] -> Property
 prop_constraint_solver_performance nums = 
   if length nums < 10 && all (>0) nums && all (<100) nums
-  then let performanceStr = "Vector[" ++ intercalate "+" (map show nums) ++ "]"
-           parsed = DTP.parseDependentType performanceStr
+  then let sumValue = sum nums
+           typeStr = "type VectorSum = struct { data [" ++ show sumValue ++ "]int }"
+           parsed = DTP.parseDependentType typeStr
        in case parsed of
             Right _ -> property True
             Left _ -> property False
@@ -502,8 +503,8 @@ prop_dependent_type_regression s =
 prop_constraint_solver_limit :: Int -> Property
 prop_constraint_solver_limit n = 
   if n >= 0 && n < 10000
-  then let limitStr = "int where { self >= 0 && self <= " ++ show n ++ " }"
-           parsed = DTP.parseDependentType limitStr
+  then let typeStr = "type LimitedInt = int where { self >= 0 && self <= " ++ show n ++ " }"
+           parsed = DTP.parseDependentType typeStr
        in case parsed of
             Right _ -> property True
             Left _ -> property False

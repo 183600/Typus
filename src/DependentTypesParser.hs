@@ -30,12 +30,17 @@ module DependentTypesParser (
   runDependentTypesParser,       -- 解析整个输入，返回所有定义与最终状态
   parseDependentType,            -- 解析并返回第一个顶层定义（若存在）
   parseTypeDeclaration,          -- 单独解析一个 type 定义
-  validateDependentTypeSyntax    -- 校验输入，返回收集到的错误（不抛异常）
+  validateDependentTypeSyntax,   -- 校验输入，返回收集到的错误（不抛异常）
+  showType                       -- 显示依赖类型的字符串表示
 ) where
 
 import Control.Monad (void)
+
 import Data.Char (isAlphaNum)
+
 import qualified Data.List as List
+
+import Data.List (intercalate)
 
 import qualified Data.Map.Strict as Map
 import Data.Map.Strict (Map)
@@ -185,6 +190,61 @@ data DependentType
     | DependentFunction String [(String, TypeRef)] TypeRef [TypeConstraint]
     | TypeAlias String TypeRef [TypeConstraint]
     deriving (Show, Eq)
+
+-- 显示依赖类型的字符串表示
+showType :: DependentType -> String
+showType = \case
+  TypeDecl name params body constraints ->
+    let paramsStr = if null params then "" else "<" ++ intercalate ", " (map showTypeParam params) ++ ">"
+        bodyStr = showTypeBody body
+        constraintsStr = if null constraints then "" else " where " ++ intercalate " & " (map showConstraint constraints)
+    in "type " ++ name ++ paramsStr ++ " " ++ bodyStr ++ constraintsStr
+  
+  DependentFunction name params retType constraints ->
+    let paramsStr = "(" ++ intercalate ", " (map showParam params) ++ ")"
+        retStr = " -> " ++ showTypeRef retType
+        constraintsStr = if null constraints then "" else " where " ++ intercalate " & " (map showConstraint constraints)
+    in "func " ++ name ++ paramsStr ++ retStr ++ constraintsStr
+  
+  TypeAlias name target constraints ->
+    let constraintsStr = if null constraints then "" else " where " ++ intercalate " & " (map showConstraint constraints)
+    in "alias " ++ name ++ " = " ++ showTypeRef target ++ constraintsStr
+
+-- 显示类型参数
+showTypeParam :: TypeParameter -> String
+showTypeParam param =
+  let constraintsStr = if null (paramConstraints param) then "" else " | " ++ intercalate " & " (map showConstraint (paramConstraints param))
+  in paramName param ++ ":" ++ showTypeRef (paramType param) ++ constraintsStr
+
+-- 显示函数参数
+showParam :: (String, TypeRef) -> String
+showParam (name, ty) = name ++ ":" ++ showTypeRef ty
+
+-- 显示类型体
+showTypeBody :: TypeBody -> String
+showTypeBody (StructBody fields) =
+  "struct { " ++ intercalate ", " (map showField fields) ++ " }"
+
+-- 显示字段
+showField :: Field -> String
+showField field = fieldName field ++ ":" ++ showTypeRef (fieldType field)
+
+-- 显示类型引用
+showTypeRef :: TypeRef -> String
+showTypeRef (TypeRef name args) =
+  if null args then name else name ++ "<" ++ intercalate ", " (map showTypeRef args) ++ ">"
+
+-- 显示约束
+showConstraint :: TypeConstraint -> String
+showConstraint = \case
+  EqualityConstraint left right -> left ++ " == " ++ right
+  InequalityConstraint left right -> left ++ " != " ++ right
+  RangeConstraint var lo hi -> var ++ " >= " ++ show lo ++ " && " ++ var ++ " <= " ++ show hi
+  SizeConstraint var size -> "len " ++ var ++ " == " ++ show size
+  NonEmptyConstraint var -> "nonempty " ++ var
+  PredicateConstraint name args -> name ++ "(" ++ intercalate ", " args ++ ")"
+  TypeClassConstraint var cls -> var ++ ":" ++ showTypeRef cls
+  CustomConstraint expr _ -> expr
 
 -- 辅助函数用于访问记录字段
 
