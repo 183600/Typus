@@ -1,7 +1,41 @@
+//! ownership: on
+
 package main
 
 import "fmt"
 
+// 示例结构体
+type MyString struct {
+    data string
+}
+
+func NewMyString(s string) -> MyString {
+    return MyString{data: s}
+}
+
 func main() {
-	fmt.Println("Hello, Typus!")
+    fmt.Println("Hello, Typus!")
+    
+    // 所有权机制演示
+    {//! ownership: on
+        s := NewMyString("hello")
+        t := s                    // 移动：s 的所有权转移给 t
+        fmt.Println(t.data)       // ✓ 可以使用 t
+        // fmt.Println(s.data)    // ✗ 编译错误：s 已被移动
+    }
+    
+    // 借用演示
+    {//! ownership: on
+        s := NewMyString("world")
+        
+        // 不可变借用
+        r := &s                   // 不可变借用
+        fmt.Println(r.data)       // ✓ 通过借用读取
+        fmt.Println(s.data)       // ✓ 原值仍可读
+        
+        // 可变借用
+        m := &mut s               // 可变借用
+        m.data = "universe"       // ✓ 通过可变借用修改
+        fmt.Println(s.data)       // ✓ 原值已被修改
+    }
 }

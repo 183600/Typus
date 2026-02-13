@@ -17,6 +17,108 @@ import Dependencies
 import qualified Data.Text as T
 import TestSupport.Arbitrary ()
 
+-- Helper functions - moved to top to ensure they're available before use
+isOrdered :: Ord a => [a] -> Bool
+isOrdered [] = True
+isOrdered [_] = True
+isOrdered (x:y:xs) = x <= y && isOrdered (y:xs)
+
+preservesOrder :: Eq a => [a] -> [a] -> Bool
+preservesOrder [] _ = True
+preservesOrder _ [] = False
+preservesOrder (y:ys) (x:xs) 
+  | y == x = preservesOrder ys xs
+  | otherwise = preservesOrder (y:ys) xs
+
+isPrefix :: Eq a => [a] -> [a] -> Bool
+isPrefix [] _ = True
+isPrefix _ [] = False
+isPrefix (x:xs) (y:ys) = x == y && isPrefix xs ys
+
+isSuffix :: Eq a => [a] -> [a] -> Bool
+isSuffix [] _ = True
+isSuffix _ [] = False
+isSuffix xs ys = reverse xs `isPrefixOf` reverse ys
+
+isInfixOf :: Eq a => [a] -> [a] -> Bool
+isInfixOf needle haystack = 
+  let nlen = length needle
+      hlen = length haystack
+  in if nlen > hlen
+     then False
+     else any (\i -> take nlen (drop i haystack) == needle) [0..hlen-nlen]
+
+iterate' :: Int -> (a -> a) -> a -> [a]
+iterate' 0 _ x = [x]
+iterate' n f x = x : iterate' (n-1) f (f x)
+
+repeat' :: a -> [a]
+repeat' x = x : repeat' x
+
+cycle' :: [a] -> [a]
+cycle' [] = error "empty list"
+cycle' xs = xs ++ cycle' xs
+
+inits :: [a] -> [[a]]
+inits [] = [[]]
+inits xs = inits (init xs) ++ [xs]
+
+tails :: [a] -> [[a]]
+tails [] = [[]]
+tails xs@(x:xs') = xs : tails xs'
+
+isPrefixOf :: Eq a => [a] -> [a] -> Bool
+isPrefixOf = isPrefix
+
+isSuffixOf :: Eq a => [a] -> [a] -> Bool
+isSuffixOf = isSuffix
+
+elem' :: Eq a => a -> [a] -> Bool
+elem' _ [] = False
+elem' x (y:ys) = x == y || elem' x ys
+
+notElem :: Eq a => a -> [a] -> Bool
+notElem x = not . elem' x
+
+lookup' :: Eq a => a -> [(a, b)] -> Maybe b
+lookup' _ [] = Nothing
+lookup' k ((k',v):xs) = if k == k' then Just v else lookup' k xs
+
+span' :: (a -> Bool) -> [a] -> ([a], [a])
+span' _ [] = ([], [])
+span' p xs@(x:xs') = 
+  if p x
+    then let (ys, zs) = span' p xs'
+         in (x:ys, zs)
+    else ([], xs)
+
+break' :: (a -> Bool) -> [a] -> ([a], [a])
+break' _ [] = ([], [])
+break' p xs@(x:xs') = 
+  if p x
+    then ([], xs)
+    else let (ys, zs) = break' p xs'
+         in (x:ys, zs)
+
+takeWhile' :: (a -> Bool) -> [a] -> [a]
+takeWhile' _ [] = []
+takeWhile' p (x:xs) = 
+  if p x
+    then x : takeWhile' p xs
+    else []
+
+dropWhile' :: (a -> Bool) -> [a] -> [a]
+dropWhile' _ [] = []
+dropWhile' p (x:xs) = 
+  if p x
+    then dropWhile' p xs
+    else x:xs
+
+group :: Eq a => [a] -> [[a]]
+group [] = []
+group (x:xs) = (x:ys) : group zs
+  where (ys, zs) = span' (== x) xs
+
 -- | Test suite for List Properties
 testListProperties :: TestTree
 testListProperties = testGroup "List Properties Tests"
@@ -303,106 +405,3 @@ testListProperties = testGroup "List Properties Tests"
                                   ((_,v):_) -> Just v
                                   [] -> Nothing
   ]
-
--- Helper functions
-isOrdered :: Ord a => [a] -> Bool
-isOrdered [] = True
-isOrdered [_] = True
-isOrdered (x:y:xs) = x <= y && isOrdered (y:xs)
-
-preservesOrder :: Eq a => [a] -> [a] -> Bool
-preservesOrder [] _ = True
-preservesOrder _ [] = False
-preservesOrder (y:ys) (x:xs) 
-  | y == x = preservesOrder ys xs
-  | otherwise = preservesOrder (y:ys) xs
-
-isPrefix :: Eq a => [a] -> [a] -> Bool
-isPrefix [] _ = True
-isPrefix _ [] = False
-isPrefix (x:xs) (y:ys) = x == y && isPrefix xs ys
-
-isSuffix :: Eq a => [a] -> [a] -> Bool
-isSuffix [] _ = True
-isSuffix _ [] = False
-isSuffix xs ys = reverse xs `isPrefixOf` reverse ys
-
-isInfixOf :: Eq a => [a] -> [a] -> Bool
-isInfixOf needle haystack = 
-  let nlen = length needle
-      hlen = length haystack
-  in if nlen > hlen
-     then False
-     else any (\i -> take nlen (drop i haystack) == needle) [0..hlen-nlen]
-
-iterate' :: Int -> (a -> a) -> a -> [a]
-iterate' 0 _ x = [x]
-iterate' n f x = x : iterate' (n-1) f (f x)
-
-repeat' :: a -> [a]
-repeat' x = x : repeat' x
-
-cycle' :: [a] -> [a]
-cycle' [] = error "empty list"
-cycle' xs = xs ++ cycle' xs
-
-
-inits :: [a] -> [[a]]
-inits [] = [[]]
-inits xs = inits (init xs) ++ [xs]
-
-tails :: [a] -> [[a]]
-tails [] = [[]]
-tails xs@(x:xs') = xs : tails xs'
-
-isPrefixOf :: Eq a => [a] -> [a] -> Bool
-isPrefixOf = isPrefix
-
-isSuffixOf :: Eq a => [a] -> [a] -> Bool
-isSuffixOf = isSuffix
-
-elem' :: Eq a => a -> [a] -> Bool
-elem' _ [] = False
-elem' x (y:ys) = x == y || elem' x ys
-
-notElem :: Eq a => a -> [a] -> Bool
-notElem x = not . elem' x
-
-lookup' :: Eq a => a -> [(a, b)] -> Maybe b
-lookup' _ [] = Nothing
-lookup' k ((k',v):xs) = if k == k' then Just v else lookup' k xs
-
-span' :: (a -> Bool) -> [a] -> ([a], [a])
-span' _ [] = ([], [])
-span' p xs@(x:xs') = 
-  if p x
-    then let (ys, zs) = span' p xs'
-         in (x:ys, zs)
-    else ([], xs)
-
-break' :: (a -> Bool) -> [a] -> ([a], [a])
-break' _ [] = ([], [])
-break' p xs@(x:xs') = 
-  if p x
-    then ([], xs)
-    else let (ys, zs) = break' p xs'
-         in (x:ys, zs)
-
-takeWhile' :: (a -> Bool) -> [a] -> [a]
-takeWhile' _ [] = []
-takeWhile' p (x:xs) = 
-  if p x
-    then x : takeWhile' p xs
-    else []
-
-dropWhile' :: (a -> Bool) -> [a] -> [a]
-dropWhile' _ [] = []
-dropWhile' p (x:xs) = 
-  if p x
-    then dropWhile' p xs
-    else x:xs
-
-group :: Eq a => [a] -> [[a]]
-group [] = []
-group (x:xs) = (x:ys) : group zs
-  where (ys, zs) = span' (== x) xs
