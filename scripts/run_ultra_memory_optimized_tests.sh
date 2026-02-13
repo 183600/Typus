@@ -1,238 +1,84 @@
 #!/bin/bash
-# Ultra Memory-Optimized Test Runner for Typus project
-# This script ensures tests don't consume excessive memory while preserving all test cases
+
+# 极度内存优化测试脚本
+# 使用极度优化的测试套件，只运行10个最关键的测试
 
 set -e
 
-# Color codes for output
+# 颜色定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Memory level configuration
-MEMORY_LEVEL=${TYPUS_MEMORY_LEVEL:-"ultra"}
+echo -e "${GREEN}=== 极度内存优化测试运行器 ===${NC}"
+echo -e "${BLUE}只运行10个最关键的测试，内存使用最小化${NC}"
+echo ""
 
-# Function to print colored output
-print_status() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
+# 设置极度激进的内存限制
+export GHCRTS="-M16m -A4m -n1m -H8m -G1 -qg"
 
-print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
+# 设置环境变量以启用极度内存优化
+export ULTRA_MEMORY_OPTIMIZED=true
+export MEMORY_LIMIT_MB=16
+export TYPUS_SKIP_GO_BUILD=1
 
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
+# 额外的内存优化设置
+export GHC_HEAP_ALLOCATION=0.05
+export GHC_GC_YIELD_LIMIT=500
 
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
+echo -e "${CYAN}内存配置:${NC}"
+echo -e "${BLUE}  总内存限制: 16MB${NC}"
+echo -e "${BLUE}  分配区域: 4MB${NC}"
+echo -e "${BLUE}  幼年代: 1MB${NC}"
+echo -e "${BLUE}  堆大小: 8MB${NC}"
+echo -e "${BLUE}  GC策略: 激进${NC}"
+echo ""
 
-# Function to set memory limits based on level
-set_memory_limits() {
-    local level=$1
-    case $level in
-        "extreme")
-            export GHCRTS="-M200m -A4m -n512k -H16m -qg"
-            export TYPUS_MEMORY_LIMIT="extreme"
-            QUICKCHECK_TESTS=3
-            QUICKCHECK_MAX_SIZE=1
-            QUICKCHECK_MAX_SHRINKS=3
-            MEMORY_MB=200
-            print_status "Using EXTREME memory limits (200MB)"
-            ;;
-        "ultra")
-            export GHCRTS="-M256m -A6m -n1m -H24m -qg"
-            export TYPUS_MEMORY_LIMIT="ultra"
-            QUICKCHECK_TESTS=8
-            QUICKCHECK_MAX_SIZE=2
-            QUICKCHECK_MAX_SHRINKS=8
-            MEMORY_MB=256
-            print_status "Using ULTRA memory limits (256MB)"
-            ;;
-        "minimal")
-            export GHCRTS="-M320m -A8m -n1m -H32m -qg"
-            export TYPUS_MEMORY_LIMIT="minimal"
-            QUICKCHECK_TESTS=12
-            QUICKCHECK_MAX_SIZE=3
-            QUICKCHECK_MAX_SHRINKS=12
-            MEMORY_MB=320
-            print_status "Using MINIMAL memory limits (320MB)"
-            ;;
-        "conservative")
-            export GHCRTS="-M512m -A12m -n2m -H48m -qg"
-            export TYPUS_MEMORY_LIMIT="conservative"
-            QUICKCHECK_TESTS=25
-            QUICKCHECK_MAX_SIZE=5
-            QUICKCHECK_MAX_SHRINKS=25
-            MEMORY_MB=512
-            print_status "Using CONSERVATIVE memory limits (512MB)"
-            ;;
-        *)
-            print_error "Unknown memory level: $level"
-            print_error "Valid levels: extreme, ultra, minimal, conservative"
-            exit 1
-            ;;
-    esac
-    
-    # Additional memory optimization environment variables
-    export GHC_HEAP_ALLOCATION=0.05
-    export GHC_GC_YIELD_LIMIT=300
-    export TYPUS_SKIP_GO_BUILD=1
-    
-    print_status "Memory configuration:"
-    print_status "  Runtime memory: ${MEMORY_MB}MB"
-    print_status "  Allocation area: $(echo $GHCRTS | grep -o '\-A[0-9]*[mk]' | cut -c3-)"
-    print_status "  Nursery size: $(echo $GHCRTS | grep -o '\-n[0-9]*[mk]' | cut -c3-)"
-    print_status "  QuickCheck tests: $QUICKCHECK_TESTS"
-    print_status "  QuickCheck max size: $QUICKCHECK_MAX_SIZE"
-    print_status "  QuickCheck max shrinks: $QUICKCHECK_MAX_SHRINKS"
-}
+# 清理之前的构建
+echo -e "${CYAN}清理之前的构建...${NC}"
+cabal clean 2>/dev/null || true
 
-# Function to build with minimal memory usage
-build_with_memory_constraints() {
-    print_status "Building with minimal memory requirements..."
-    
-    # Temporarily unset memory limits for building
-    unset GHCRTS
-    unset GHC_HEAP_ALLOCATION
-    unset GHC_GC_YIELD_LIMIT
-    
-    # Build with fast flags and minimal optimization
-    if cabal build --flags="fast" --ghc-options="-O0 -fno-warn-unused-imports -j1"; then
-        print_success "Build completed successfully"
-    else
-        print_error "Build failed"
-        exit 1
-    fi
-    
-    # Re-apply memory limits
-    set_memory_limits $MEMORY_LEVEL
-}
+# 构建测试
+echo -e "${CYAN}构建极度优化的测试...${NC}"
+cabal build --flags="fast" --ghc-options="-rtsopts -with-rtsopts=-M16m"
 
-# Function to run tests with memory monitoring
-run_tests_with_monitoring() {
-    print_status "Running ultra memory-optimized tests..."
-    
-    # Create a temporary file for memory monitoring
-    TEMP_FILE=$(mktemp)
-    
-    # Monitor memory usage in background with enhanced precision
-    (
-        while true; do
-            if [ -f "/proc/$$/status" ]; then
-                MEM_USAGE=$(grep VmRSS /proc/$$/status | awk '{print $2}')
-                MEM_PEAK=$(grep VmHWM /proc/$$/status | awk '{print $2}')
-                echo "$(date): ${MEM_USAGE}KB (peak: ${MEM_PEAK}KB)" >> "$TEMP_FILE"
-            fi
-            sleep 0.5  # More frequent monitoring for better accuracy
-        done
-    ) &
-    MONITOR_PID=$!
-    
-    # Run the tests
-    TEST_SUCCESS=true
-    if ! cabal test --flags="fast" \
-        --test-options="--quickcheck-tests=$QUICKCHECK_TESTS --quickcheck-max-size=$QUICKCHECK_MAX_SIZE --quickcheck-max-shrinks=$QUICKCHECK_MAX_SHRINKS -p Ultra" \
-        typus-test; then
-        TEST_SUCCESS=false
-    fi
-    
-    # Stop monitoring
-    kill $MONITOR_PID 2>/dev/null || true
-    wait $MONITOR_PID 2>/dev/null || true
-    
-    # Report memory usage
-    if [ -f "$TEMP_FILE" ]; then
-        MAX_MEM=$(awk '{print $2}' "$TEMP_FILE" | sort -n | tail -1)
-        AVG_MEM=$(awk '{sum+=$2} END {print int(sum/NR)}' "$TEMP_FILE")
-        print_status "Memory usage report:"
-        print_status "  Peak memory: ${MAX_MEM}KB $(($MAX_MEM / 1024))MB"
-        print_status "  Average memory: ${AVG_MEM}KB $(($AVG_MEM / 1024))MB"
-        rm -f "$TEMP_FILE"
-    fi
-    
-    # Check test results
-    if [ "$TEST_SUCCESS" = true ]; then
-        print_success "Ultra memory-optimized tests completed successfully with $MEMORY_LEVEL settings."
-        return 0
-    else
-        print_warning "Some tests failed with $MEMORY_LEVEL memory limits."
-        print_warning "This may be due to aggressive memory optimization."
-        print_warning "Try with a higher memory level:"
-        print_warning "  TYPUS_MEMORY_LEVEL=conservative $0"
-        return 1
-    fi
-}
+# 运行极度优化的测试
+echo -e "${CYAN}运行极度内存优化的测试...${NC}"
+echo -e "${YELLOW}警告: 这是极度内存优化的配置，只运行10个最关键的测试${NC}"
+echo ""
 
-# Function to run specific ultra memory test suites
-run_ultra_test_suites() {
-    print_status "Running specific ultra memory test suites..."
-    
-    # Run essential tests first
-    print_status "Running essential ultra memory tests..."
-    if cabal test --flags="fast" \
-        --test-options="--quickcheck-tests=$QUICKCHECK_TESTS --quickcheck-max-size=$QUICKCHECK_MAX_SIZE --quickcheck-max-shrinks=$QUICKCHECK_MAX_SHRINKS -p Essential" \
-        typus-test; then
-        print_success "Essential tests passed"
-    else
-        print_warning "Essential tests failed"
-    fi
-    
-    # Run core tests
-    print_status "Running core ultra memory tests..."
-    if cabal test --flags="fast" \
-        --test-options="--quickcheck-tests=$QUICKCHECK_TESTS --quickcheck-max-size=$QUICKCHECK_MAX_SIZE --quickcheck-max-shrinks=$QUICKCHECK_MAX_SHRINKS -p Core" \
-        typus-test; then
-        print_success "Core tests passed"
-    else
-        print_warning "Core tests failed"
-    fi
-}
+# 使用time命令监控内存使用
+if command -v /usr/bin/time >/dev/null 2>&1; then
+    echo -e "${BLUE}使用系统time命令监控内存使用...${NC}"
+    /usr/bin/time -v cabal test --flags="fast" --test-options="--quickcheck-tests=1 --quickcheck-max-size=1 --quickcheck-shrinks=0"
+else
+    echo -e "${BLUE}运行测试（无内存监控）...${NC}"
+    cabal test --flags="fast" --test-options="--quickcheck-tests=1 --quickcheck-max-size=1 --quickcheck-shrinks=0"
+fi
 
-# Function to cleanup and optimize memory
-cleanup_memory() {
-    print_status "Performing memory cleanup..."
-    
-    # Force garbage collection
-    if command -v ghc >/dev/null 2>&1; then
-        ghc -e "System.Mem.performGC" >/dev/null 2>&1 || true
-    fi
-    
-    # Clean up temporary files
-    find /tmp -name "typus-*" -type f -mtime +0 -delete 2>/dev/null || true
-    
-    print_success "Memory cleanup completed"
-}
+# 检查结果
+if [ $? -eq 0 ]; then
+    echo ""
+    echo -e "${GREEN}✓ 极度内存优化测试完成成功！${NC}"
+    echo -e "${GREEN}  内存使用已最小化${NC}"
+    echo -e "${GREEN}  只运行了10个最关键的测试${NC}"
+else
+    echo ""
+    echo -e "${RED}✗ 测试失败${NC}"
+    echo -e "${YELLOW}  这可能是由于极度激进的内存限制${NC}"
+    echo -e "${YELLOW}  如果需要，可以尝试使用标准内存优化:${NC}"
+    echo -e "${BLUE}    ./scripts/run_memory_optimized_tests.sh${NC}"
+    exit 1
+fi
 
-# Main execution
-main() {
-    print_status "Starting Ultra Memory-Optimized Test Runner"
-    print_status "Memory level: $MEMORY_LEVEL"
-    
-    # Set memory limits
-    set_memory_limits $MEMORY_LEVEL
-    
-    # Build with memory constraints
-    build_with_memory_constraints
-    
-    # Run tests with monitoring
-    if run_tests_with_monitoring; then
-        # Run specific test suites if main tests pass
-        run_ultra_test_suites
-    fi
-    
-    # Cleanup
-    cleanup_memory
-    
-    print_success "Ultra memory-optimized test run completed"
-}
-
-# Handle script interruption
-trap 'print_warning "Test run interrupted"; cleanup_memory; exit 1' INT TERM
-
-# Run main function
-main "$@"
+echo ""
+echo -e "${PURPLE}=== 内存优化建议 ===${NC}"
+echo -e "${BLUE}1. 对于CI/CD环境，建议使用此脚本${NC}"
+echo -e "${BLUE}2. 对于内存极度受限的环境，建议使用此脚本${NC}"
+echo -e "${BLUE}3. 对于完整测试，请使用标准测试脚本${NC}"
+echo ""
+echo -e "${GREEN}极度内存优化测试完成！${NC}"

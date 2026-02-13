@@ -1,24 +1,19 @@
-import qualified Utils as U
+import qualified Src.Utils as U
 
 main :: IO ()
 main = do
-  let s = "a\\"
-  putStrLn $ "Input s: " ++ show s
-  
-  let closed = "\"" ++ s ++ "\""
-  putStrLn $ "closed: " ++ show closed
-  putStrLn $ "isProblematicUnclosedString closed: " ++ show (U.isProblematicUnclosedString closed)
-  
-  let unclosed = "\"" ++ s
-  putStrLn $ "unclosed: " ++ show unclosed
-  putStrLn $ "isProblematicUnclosedString unclosed: " ++ show (U.isProblematicUnclosedString unclosed)
-  
-  -- 测试期望
-  putStrLn $ "\nTest expects:"
-  putStrLn $ "  closed should be False (not problematic)"
-  putStrLn $ "  unclosed should be True (problematic)"
-  
-  -- 检查isCompleteStringLiteral
-  putStrLn $ "\nChecking isCompleteStringLiteral:"
-  putStrLn $ "  isCompleteStringLiteral closed: " ++ show (U.isCompleteStringLiteral closed)
-  putStrLn $ "  isCompleteStringLiteral unclosed: " ++ show (U.isCompleteStringLiteral unclosed)
+    let testInput = "A\\"
+    let closed = "\"" ++ testInput ++ "\""
+    let unclosed = "\"" ++ testInput
+    
+    putStrLn $ "Test input: " ++ show testInput
+    putStrLn $ "Closed string: " ++ show closed
+    putStrLn $ "Unclosed string: " ++ show unclosed
+    putStrLn $ "isProblematicUnclosedString closed: " ++ show (U.isProblematicUnclosedString closed)
+    putStrLn $ "isProblematicUnclosedString unclosed: " ++ show (U.isProblematicUnclosedString unclosed)
+    
+    -- 检查测试期望
+    let expectedClosed = U.isProblematicUnclosedString closed
+    let expectedUnclosed = U.isProblematicUnclosedString unclosed
+    
+    putStrLn $ "Test expects both to be True: closed=" ++ show expectedClosed ++ ", unclosed=" ++ show expectedUnclosed

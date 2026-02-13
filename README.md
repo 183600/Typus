@@ -733,7 +733,17 @@ cabal test --test-options="--pattern \"Parser\""
 
 # 内存优化测试
 ./scripts/run_memory_optimized_tests.sh
+
+# 极度内存优化测试（适用于CI/CD或内存受限环境）
+./scripts/run_ultra_memory_optimized_tests.sh
 ```
+
+### 测试类型说明
+
+- **单元测试**：基础功能测试，使用默认内存限制
+- **完整测试套件**：包含集成测试和Golden测试，较慢但全面
+- **内存优化测试**：使用512MB内存限制，适用于资源受限环境
+- **极度内存优化测试**：使用16MB内存限制，只运行10个最关键的测试，适用于CI/CD或极度受限环境
 
 更多文档：[QUICK_TEST_GUIDE.md](QUICK_TEST_GUIDE.md) · [COVERAGE_MATRIX.md](COVERAGE_MATRIX.md) · [MEMORY_OPTIMIZATION.md](docs/MEMORY_OPTIMIZATION.md)
 

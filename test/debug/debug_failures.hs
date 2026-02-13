@@ -1,70 +1,40 @@
 #!/usr/bin/env runhaskell
+{-# LANGUAGE OverloadedStrings #-}
 
-import qualified Utils as U
+import qualified Src.Utils as U
 
--- Test case 1: prop_is_complete_string_literal with "a"
+-- Test case 1: prop_remove_line_comments_multiline failure
 test1 :: IO ()
 test1 = do
-  putStrLn "=== Test case 1: prop_is_complete_string_literal with \"a\" ==="
-  let s = "a"
-  let quoted = "\"" ++ s ++ "\""
-  let incomplete = "\"" ++ s
-  putStrLn $ "s = " ++ show s
-  putStrLn $ "quoted = " ++ show quoted
-  putStrLn $ "incomplete = " ++ show incomplete
-  putStrLn $ "U.isCompleteStringLiteral quoted = " ++ show (U.isCompleteStringLiteral quoted)
-  putStrLn $ "U.isCompleteStringLiteral incomplete = " ++ show (U.isCompleteStringLiteral incomplete)
+  let lines' = ["\n0"]
+  let normalizedLines = map (reverse . dropWhile (== '\n') . reverse) lines'
+  let code = unlines normalizedLines
+  let processed = U.removeLineComments code
+  let procLines = lines processed
+  putStrLn "=== Test case 1: prop_remove_line_comments_multiline ==="
+  putStrLn $ "Input lines': " ++ show lines'
+  putStrLn $ "Normalized lines': " ++ show normalizedLines
+  putStrLn $ "Code (unlines): " ++ show code
+  putStrLn $ "Processed: " ++ show processed
+  putStrLn $ "Processed lines: " ++ show procLines
+  putStrLn $ "Length of processed lines: " ++ show (length procLines)
+  putStrLn $ "Expected: 1, Actual: " ++ show (length procLines)
   putStrLn ""
 
--- Test case 2: prop_is_problematic_unclosed_string with "a"
+-- Test case 2: prop_remove_line_comments_end failure
 test2 :: IO ()
 test2 = do
-  putStrLn "=== Test case 2: prop_is_problematic_unclosed_string with \"a\" ==="
-  let s = "a"
-  let closed = "\"" ++ s ++ "\""
-  let unclosed = "\"" ++ s
-  putStrLn $ "s = " ++ show s
-  putStrLn $ "closed = " ++ show closed
-  putStrLn $ "unclosed = " ++ show unclosed
-  putStrLn $ "U.isProblematicUnclosedString closed = " ++ show (U.isProblematicUnclosedString closed)
-  putStrLn $ "U.isProblematicUnclosedString unclosed = " ++ show (U.isProblematicUnclosedString unclosed)
-  putStrLn ""
-
--- Test case 3: prop_normalize_indentation_multiline_mixed with ["\n","\199129\f"]
-test3 :: IO ()
-test3 = do
-  putStrLn "=== Test case 3: prop_normalize_indentation_multiline_mixed with [\"\\n\",\"\\199129\\f\"] ==="
-  let lines' = ["\n", "\199129\f"]
-  let withMixed = map ("\t  " ++) lines'
-  let normalized = U.normalizeIndentation (unlines withMixed)
-  let normLines = lines normalized
-  putStrLn $ "lines' = " ++ show lines'
-  putStrLn $ "withMixed = " ++ show withMixed
-  putStrLn $ "normalized = " ++ show normalized
-  putStrLn $ "normLines = " ++ show normLines
-  putStrLn $ "length normLines = " ++ show (length normLines)
-  putStrLn $ "length lines' = " ++ show (length lines')
-  putStrLn ""
-
--- Test case 4: prop_normalize_indentation_multiline_mixed with ["\n^"]
-test4 :: IO ()
-test4 = do
-  putStrLn "=== Test case 4: prop_normalize_indentation_multiline_mixed with [\"\\n^\"] ==="
-  let lines' = ["\n^"]
-  let withMixed = map ("\t  " ++) lines'
-  let normalized = U.normalizeIndentation (unlines withMixed)
-  let normLines = lines normalized
-  putStrLn $ "lines' = " ++ show lines'
-  putStrLn $ "withMixed = " ++ show withMixed
-  putStrLn $ "normalized = " ++ show normalized
-  putStrLn $ "normLines = " ++ show normLines
-  putStrLn $ "length normLines = " ++ show (length normLines)
-  putStrLn $ "length lines' = " ++ show (length lines')
+  let s = "'a"
+  let withComment = s ++ "// comment"
+  let processed = U.removeLineComments withComment
+  putStrLn "=== Test case 2: prop_remove_line_comments_end ==="
+  putStrLn $ "Input s: " ++ show s
+  putStrLn $ "With comment: " ++ show withComment
+  putStrLn $ "Processed: " ++ show processed
+  putStrLn $ "Expected: \"'a\", Actual: " ++ show processed
   putStrLn ""
 
 main :: IO ()
 main = do
   test1
   test2
-  test3
-  test4

@@ -1,9 +1,19 @@
-import qualified Utils as U
+import Utils (removeLineComments)
 
 main :: IO ()
 main = do
-    let input = "\t  \n"
-    let result = U.normalizeIndentation input
-    putStrLn $ "Input: " ++ show input
-    putStrLn $ "Result: " ++ show result
-    putStrLn $ "Expected: \"\\n\""
+    let lines' = ["a\n"]
+    let normalizedLines = map (reverse . dropWhile (== '\n') . reverse) lines'
+    let code = unlines normalizedLines
+    let processed = removeLineComments code
+    let procLines = lines processed
+    
+    putStrLn $ "lines': " ++ show lines'
+    putStrLn $ "normalizedLines: " ++ show normalizedLines
+    putStrLn $ "code: " ++ show code
+    putStrLn $ "processed: " ++ show processed
+    putStrLn $ "procLines: " ++ show procLines
+    putStrLn $ "Number of procLines: " ++ show (length procLines)
+    
+    -- Check conditions
+    putStrLn $ "normalizedLines == [\"a\\n\"]: " ++ show (normalizedLines == ["a\n"])
