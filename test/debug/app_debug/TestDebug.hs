@@ -1,6 +1,5 @@
 module Main where
 
--- 导入Utils模块
 import Utils
 
 -- 模拟测试用例

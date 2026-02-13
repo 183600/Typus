@@ -209,6 +209,16 @@ executable typus
     hs-source-dirs:   app
     ghc-options:      -threaded -rtsopts -with-rtsopts=-N
 
+-- Test Debug executable for debugging specific test cases
+executable test-debug
+    import:           warnings
+    main-is:          TestDebug7.hs
+    build-depends:
+        base >=4.7 && <5,
+        typus
+    hs-source-dirs:   test/debug/app_debug
+    ghc-options:      -threaded -rtsopts -with-rtsopts=-N
+
 -- Smart Memory Test Runner for optimized testing with memory constraints
 executable smart-memory-test-runner
     import:           warnings

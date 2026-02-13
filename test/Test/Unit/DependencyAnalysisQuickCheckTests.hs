@@ -38,7 +38,9 @@ prop_dependency_graph_build funcs =
 -- | 测试循环依赖检测
 prop_cycle_detection :: [String] -> Property
 prop_cycle_detection funcs =
-  let edges = if length funcs > 1 then zip funcs (tail funcs ++ [head funcs]) else []
+  let edges = case funcs of 
+        [] -> []
+        (x:xs) -> if not (null xs) then zip funcs (xs ++ [x]) else []
       graph = D.TestDependencyGraph funcs edges
       hasCycles = D.detectCycles graph
   in property $ length funcs < 5 ==> (if length funcs > 1 then hasCycles else not hasCycles)
@@ -53,7 +55,9 @@ prop_no_cycle_detection funcs =
 -- | 测试依赖排序的拓扑性
 prop_dependency_topological_sort :: [String] -> Property
 prop_dependency_topological_sort funcs =
-  let edges = zip (tail funcs) funcs  -- Create dependencies from later to earlier
+  let edges = case funcs of 
+        [] -> []
+        (_:xs) -> zip xs funcs  -- Create dependencies from later to earlier
       graph = D.TestDependencyGraph funcs edges
       sorted = D.topologicalSort graph
   in property $ length funcs < 10 ==> length sorted == length funcs
@@ -86,7 +90,9 @@ prop_dependency_analysis_performance n =
 prop_dependency_transitivity :: [String] -> Property
 prop_dependency_transitivity funcs =
   let code = unlines $ zipWith (\i f -> "func " ++ f ++ "() { " ++ if i > 0 then funcs !! (i-1) ++ "();" else "return 1;" ++ " }") [0..] funcs
-      edges = zip (tail funcs) funcs  -- Create dependencies from later to earlier
+      edges = case funcs of 
+        [] -> []
+        (_:xs) -> zip xs funcs  -- Create dependencies from later to earlier
       graph = D.TestDependencyGraph funcs edges
       transitive = map (\f -> D.getTransitiveDependencies graph f) funcs
   in property $ length funcs < 5 ==> all (\d -> length d >= 1) transitive
@@ -200,7 +206,9 @@ prop_dependency_merging :: [String] -> Property
 prop_dependency_merging funcs =
   let graphs = map (\f -> D.TestDependencyGraph [f] []) funcs
       depsList = map D.analyzeDependencies graphs
-      merged = foldr D.mergeDependencyGraphs (head depsList) (tail depsList)
+      merged = case depsList of 
+        [] -> D.TestDependencyGraph [] []
+        (x:xs) -> foldr D.mergeDependencyGraphs x xs
   in property $ length funcs < 5 ==> not (null (D.dgNodes merged))
 
 -- | 测试依赖分析的比较

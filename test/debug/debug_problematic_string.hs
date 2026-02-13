@@ -1,21 +1,13 @@
-import Utils (isProblematicUnclosedString)
+import qualified Utils as U
 
 main :: IO ()
 main = do
-    let s = "c\\"
-    let closed = "\"" ++ s ++ "\""
-    let unclosed = "\"" ++ s
+    let testCases = ["\"", "%", "\SYN", "\SUB", "]", "#", "\1073968", " ", "+"]
     
-    putStrLn $ "s: " ++ show s
-    putStrLn $ "closed: " ++ show closed
-    putStrLn $ "unclosed: " ++ show unclosed
-    putStrLn $ "closed == unclosed: " ++ show (closed == unclosed)
-    putStrLn $ "isProblematicUnclosedString closed: " ++ show (isProblematicUnclosedString closed)
-    putStrLn $ "isProblematicUnclosedString unclosed: " ++ show (isProblematicUnclosedString unclosed)
-    
-    -- Check if s matches any of the special cases
-    putStrLn $ "s == \"\": " ++ show (s == "")
-    putStrLn $ "s == \"\\\"\": " ++ show (s == "\"")
-    putStrLn $ "s == \"\\\\\": " ++ show (s == "\\")
-    putStrLn $ "s == \"a\\\\\": " ++ show (s == "a\\")
-    putStrLn $ "s == \"b\\\\\": " ++ show (s == "b\\")
+    putStrLn "Testing isProblematicUnclosedString with escaped quotes:"
+    mapM_ runTest testCases
+  where
+    runTest s = do
+        let withEscape = "\"" ++ s ++ "\\\""
+        let result = U.isProblematicUnclosedString withEscape
+        putStrLn $ "Input: " ++ show s ++ ", WithEscape: " ++ show withEscape ++ ", Result: " ++ show result

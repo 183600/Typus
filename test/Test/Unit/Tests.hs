@@ -46,6 +46,8 @@ import qualified Test.Unit.NewEnhancedQuickCheckTestSuite as NewEnhancedQuickChe
 import qualified Test.Unit.ExtendedQuickCheckTestSuiteOptimized as ExtendedQuickCheckTestSuiteOptimized
 -- 添加AdditionalQuickCheckTests测试套件
 import qualified Test.Unit.AdditionalQuickCheckTests as AdditionalQuickCheckTests
+-- 添加新的综合QuickCheck测试套件
+import qualified Test.Unit.NewComprehensiveQuickCheckTests as NewComprehensiveQuickCheckTests
 
 -- 极简的内存优化测试属性 - 进一步优化内存使用
 prop_minimal_basic_property :: String -> Property
@@ -96,6 +98,9 @@ tests =
            
            -- 添加AdditionalQuickCheckTests测试套件
            withMinimalMemoryLimits AdditionalQuickCheckTests.additionalQuickCheckTests,
+           
+           -- 添加新的综合QuickCheck测试套件
+           withMinimalMemoryLimits NewComprehensiveQuickCheckTests.testSuite,
            
            -- 创建最小内存配置的额外测试
            createOptimizedMemorySuite minimalOptimizedConfig "Critical Tests"

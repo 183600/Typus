@@ -731,6 +731,9 @@ cabal test --flags="-fast full"
 # 运行特定模块
 cabal test --test-options="--pattern \"Parser\""
 
+# 生产环境测试
+./scripts/run_production_tests.sh
+
 # 内存优化测试
 ./scripts/run_memory_optimized_tests.sh
 
@@ -745,7 +748,7 @@ cabal test --test-options="--pattern \"Parser\""
 - **内存优化测试**：使用512MB内存限制，适用于资源受限环境
 - **极度内存优化测试**：使用16MB内存限制，只运行10个最关键的测试，适用于CI/CD或极度受限环境
 
-更多文档：[QUICK_TEST_GUIDE.md](QUICK_TEST_GUIDE.md) · [COVERAGE_MATRIX.md](COVERAGE_MATRIX.md) · [MEMORY_OPTIMIZATION.md](docs/MEMORY_OPTIMIZATION.md)
+更多文档请参考项目源码和测试用例
 
 ---
 

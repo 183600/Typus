@@ -1,14 +1,17 @@
+-- 简单的调试脚本
+module Main where
+
+-- 导入Utils模块
 import Utils
 
 main :: IO ()
 main = do
-  let input = "    if condition {\n        // do something\n        return \n    }\n"
-  let result = Utils.normalizeIndentation input
-  
-  putStrLn $ "Input: " ++ show input
-  putStrLn $ "Result: " ++ show result
-  
-  -- Check if it's a single line according to the function
-  let inputLines = lines input
-  putStrLn $ "Number of lines: " ++ show (length inputLines)
-  putStrLn $ "Should go to multi-line section: " ++ show (length inputLines > 1)
+    let testCases = ["\"", "%", "\SYN", "\SUB", "]", "#", "\1073968", " ", "+"]
+    
+    putStrLn "Testing isProblematicUnclosedString with escaped quotes:"
+    mapM_ runTest testCases
+  where
+    runTest s = do
+        let withEscape = "\"" ++ s ++ "\\\""
+        let result = isProblematicUnclosedString withEscape
+        putStrLn $ "Input: " ++ show s ++ ", WithEscape: " ++ show withEscape ++ ", Result: " ++ show result
