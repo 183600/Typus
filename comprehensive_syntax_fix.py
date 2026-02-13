@@ -1,24 +1,31 @@
 #!/usr/bin/env python3
-"""
-全面修复所有函数中的语法错误
-"""
 
 import re
 
-# 读取文件内容
-with open('/home/runner/work/Typus/Typus/test/Test/Unit/ComprehensiveTypusTestSuite.hs', 'r') as f:
-    content = f.read()
+def comprehensive_syntax_fix(file_path):
+    with open(file_path, 'r') as f:
+        content = f.read()
+    
+    # Fix all patterns of double else statements
+    pattern = r'Left _ -> property False\s+else property True\s+else property True'
+    replacement = 'Left _ -> property False\n  else property True'
+    content = re.sub(pattern, replacement, content, flags=re.MULTILINE | re.DOTALL)
+    
+    # Fix patterns with incorrect indentation
+    pattern2 = r'Left _ -> property False\n(\s+)else property True\n(\s+)else property True'
+    replacement2 = r'Left _ -> property False\n\1else property True'
+    content = re.sub(pattern2, replacement2, content, flags=re.MULTILINE)
+    
+    # Fix standalone else lines
+    pattern3 = r'(\n\s+else property True\n\s+else property True\n)'
+    replacement3 = '\n  else property True\n'
+    content = re.sub(pattern3, replacement3, content)
+    
+    # Write back the fixed content
+    with open(file_path, 'w') as f:
+        f.write(content)
+    
+    print("Applied comprehensive syntax fixes")
 
-# 修复所有编译器测试函数的结构
-# 查找所有 "in case compiled of" 模式，并确保它们有正确的结构
-pattern1 = r'(\s+)in case compiled of\n(\s+)Right goCode -> property \$ s `isInfixOf` goCode\n(\s+)Left _ -> property False'
-replacement1 = r'\1in case compiled of\n\2     Right goCode -> property $ s `isInfixOf` goCode\n\3     Left _ -> property False\n\1Left _ -> property True\n  else property True'
-
-# 应用修复
-content = re.sub(pattern1, replacement1, content, flags=re.MULTILINE)
-
-# 写回文件
-with open('/home/runner/work/Typus/Typus/test/Test/Unit/ComprehensiveTypusTestSuite.hs', 'w') as f:
-    f.write(content)
-
-print("全面修复语法错误完成")
+if __name__ == "__main__":
+    comprehensive_syntax_fix("/home/runner/work/Typus/Typus/test/Test/Unit/ComprehensiveTypusTestSuite.hs")

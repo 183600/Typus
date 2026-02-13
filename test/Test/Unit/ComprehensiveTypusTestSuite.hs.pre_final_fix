@@ -594,7 +594,6 @@ prop_array_compilation nums =
                    Left _ -> property False
   else property True
 -- | 测试切片编译
-prop_slice_compilation :: [Int] -> Property
 prop_slice_compilation nums = 
   if length nums < 10
   then let sliceCode = "package main\n\nfunc main() {\n  slice := []int{" ++ intercalate ", " (map show nums) ++ "}\n}"
@@ -794,9 +793,7 @@ prop_compiler_error_recovery s =
               in case compiled of
               Right _ -> property True
               Left _ -> property False
-            Left _ -> property True
-
-prop_compiler_performance :: String -> Property
+            prop_compiler_performance :: String -> Property
 prop_compiler_performance s = 
   let perfCode = "package main\n\nfunc main() {\n" ++ 
                 concat (replicate 100 ("  " ++ s ++ "\n")) ++ 
@@ -808,9 +805,7 @@ prop_compiler_performance s =
               in case compiled of
                   Right _ -> property True
                   Left _ -> property False
-            Left _ -> property True
-
-prop_compiler_unicode :: String -> Property
+            prop_compiler_unicode :: String -> Property
 prop_compiler_unicode s = 
   if length s < 20
   then let unicodeCode = "package main\n\nfunc main() {\n  测试 := \"" ++ s ++ "\"\n}"
@@ -877,7 +872,6 @@ prop_dependent_type_parsing s =
             Left _ -> property False
   else property True
 -- | 测试值参数化类型
-prop_value_parameterized_type :: Int -> Property
 prop_value_parameterized_type n = 
   if n > 0 && n < 100
   then let valParamTypeStr = "type Vector[" ++ show n ++ "] struct { data [" ++ show n ++ "]int }"
@@ -894,10 +888,10 @@ prop_precise_type n =
        in case parsed of
             Right _ -> property True
             Left _ -> property False
+    else property True
 
 
 -- | 测试参数化精确类型
-prop_parameterized_precise_type :: Int -> Int -> Property
 prop_parameterized_precise_type lo hi = 
   if lo < hi
   then let paramPreciseTypeStr = "type Bounded[" ++ show lo ++ ": int, " ++ show hi ++ ": int] = int where { self >= lo && self <= hi }"
@@ -919,7 +913,6 @@ prop_dependent_function_signature n =
 
 
 -- | 测试函数前置条件
-prop_function_precondition :: Int -> Property
 prop_function_precondition n = 
   if n > 0
   then let precondStr = "func average(n: int) -> float64 where { n > " ++ show n ++ " }"
@@ -941,7 +934,6 @@ prop_assert_narrowing s =
             Left _ -> property False
   else property True
 -- | 测试条件窄化
-prop_conditional_narrowing :: String -> Property
 prop_conditional_narrowing s = 
   if length s < 30
   then let condStr = "if " ++ s ++ " != nil { safeDiv(10, " ++ s ++ ") }"
@@ -962,7 +954,6 @@ prop_compile_time_constant n =
   else property True
 
 -- | 测试存在类型
-prop_existential_type :: String -> Property
 prop_existential_type s = 
   if length s < 30
   then let existentialStr = "Vector[some n: int] where { n == len(" ++ s ++ ") }"
@@ -983,7 +974,6 @@ prop_existential_unpack s =
             Left _ -> property False
   else property True
 -- | 测试类型推导
-prop_type_inference :: String -> Property
 prop_type_inference s = 
   if length s < 30
   then let inferenceStr = "func createVector(n: Positive, value: float64) -> Vector[n]"
@@ -1007,7 +997,6 @@ prop_constraint_linear_arithmetic a b =
 
 
 -- | 测试约束求解器等式传播
-prop_constraint_equality_propagation :: Int -> Int -> Property
 prop_constraint_equality_propagation a b = 
   if a >= 0 && b >= 0
   then let equalityStr = "type EqualVector[a: int, b: int] struct { data [a]int } where { a == b }"
@@ -1031,7 +1020,6 @@ prop_constraint_inequality_chain a b =
 
 
 -- | 测试错误模式约束
-prop_error_mode_constraints :: String -> Property
 prop_error_mode_constraints s = 
   if length s < 30
   then let errorModeStr = "//! constraint_mode: error\nfunc safeDiv(a: int, b: NonZero) -> (int, error)"
@@ -1053,7 +1041,6 @@ prop_go_interop_type_erasure s =
             Left _ -> property False
   else property True
 -- | 测试边界标注
-prop_boundary_annotation :: String -> Property
 prop_boundary_annotation s = 
   if length s < 30
   then let boundaryStr = "assert len(" ++ s ++ ") > 0\nv := readVector(" ++ s ++ ")"
@@ -1073,7 +1060,6 @@ prop_matrix_multiplication_alignment m n p =
             Left _ -> property False
   else property True
 -- | 测试向量运算维度匹配
-prop_vector_operations_dimension_match :: Int -> Property
 prop_vector_operations_dimension_match n = 
   if n > 0 && n < 100
   then let vectorStr = "func add[n: int](a: Vector[n], b: Vector[n]) -> Vector[n]"
@@ -1093,7 +1079,6 @@ prop_ownership_dependent_types_interaction s =
             Left _ -> property False
   else property True
 -- | 测试指令系统块级启用
-prop_directive_system_block :: String -> Property
 prop_directive_system_block s = 
   if length s < 30
   then let blockStr = "func main() {\n  {//! ownership: on\n    " ++ s ++ "\n  }\n  {//! dependent_types: on\n    " ++ s ++ "\n  }\n}"
@@ -1113,7 +1098,6 @@ prop_file_level_directives s =
             Left _ -> property False
   else property True
 -- | 测试递归类型参数化
-prop_recursive_type_parameterization :: Int -> Property
 prop_recursive_type_parameterization n = 
   if n > 0 && n < 10
   then let recursiveStr = "type List[" ++ show n ++ ": int] struct { head int; tail *List[" ++ show n ++ "-1] }"
@@ -1133,7 +1117,6 @@ prop_constraint_combination lo hi =
             Left _ -> property False
   else property True
 -- | 测试类型级函数应用
-prop_type_level_function :: Int -> Property
 prop_type_level_function n = 
   if n > 0 && n < 100
   then let typeFuncStr = "type Len[" ++ show n ++ ": int] = int where { " ++ show n ++ " == len(self) }"
@@ -1153,7 +1136,6 @@ prop_dependent_type_pattern_matching n =
             Left _ -> property False
   else property True
 -- | 测试约束求解器边界情况
-prop_constraint_solver_edge_case :: Int -> Property
 prop_constraint_solver_edge_case n = 
   let edgeCaseStr = "int where { self == " ++ show n ++ " || self != " ++ show n ++ " }"
       parsed = DTP.parseDependentType edgeCaseStr
@@ -1161,7 +1143,7 @@ prop_constraint_solver_edge_case n =
             Right _ -> property True
             Left _ -> property False
 
--- | 测试依赖类型类型检查
+            Left _ -> property True-- | 测试依赖类型类型检查
 prop_dependent_type_type_check :: String -> Property
 prop_dependent_type_type_check s = 
   if length s < 50
@@ -1172,7 +1154,6 @@ prop_dependent_type_type_check s =
             Left _ -> property False
   else property True
 -- | 测试编译期优化约束
-prop_compile_time_optimization :: Int -> Property
 prop_compile_time_optimization n = 
   if n > 0 && n < 10
   then let optimizationStr = "v := zeros(" ++ show n ++ ")\nx := get(v, 0)"
@@ -1192,7 +1173,6 @@ prop_dependent_type_error_handling s =
             Left _ -> property False
   else property True
 -- | 测试类型约束传递性
-prop_type_constraint_transitivity :: Int -> Int -> Int -> Property
 prop_type_constraint_transitivity a b c = 
   if a > b && b > c
   then let transitivityStr = "int where { self > " ++ show a ++ " && self > " ++ show b ++ " && self > " ++ show c ++ " }"
@@ -1212,7 +1192,6 @@ prop_dependent_type_inference n =
             Left _ -> property False
   else property True
 -- | 测试约束求解器性能
-prop_constraint_solver_performance :: [Int] -> Property
 prop_constraint_solver_performance nums = 
   if length nums < 10 && all (>0) nums && all (<100) nums
   then let sumValue = sum nums
@@ -1233,15 +1212,14 @@ prop_dependent_type_code_generation s =
             Left _ -> property False
   else property True
 -- | 测试类型约束验证
-prop_type_constraint_validation :: Int -> Property
 prop_type_constraint_validation n = 
-  let validationStr = "func validatePositive(x: int) -> Positive {\n  assert x > 0\n  return Positive(x)}"
+  let validationStr = "func validatePositive(x: int) -> Positive {\n  assert x > 0\n  return Positive(x)\n}"
       parsed = DTP.parseDependentType validationStr
        in case parsed of
             Right _ -> property True
             Left _ -> property False
 
--- | 测试依赖类型序列化
+            Left _ -> property True-- | 测试依赖类型序列化
 prop_dependent_type_serialization :: String -> Property
 prop_dependent_type_serialization s = 
   if length s < 30
@@ -1252,7 +1230,6 @@ prop_dependent_type_serialization s =
             Left _ -> property False
   else property True
 -- | 测试约束求解器可扩展性
-prop_constraint_solver_extensibility :: String -> Property
 prop_constraint_solver_extensibility s = 
   if length s < 30
   then let extensibilityStr = "func customConstraint(x: int) -> bool {\n  return x > len(\"" ++ s ++ "\")\n}"
@@ -1283,7 +1260,6 @@ prop_ownership_basic_semantics s =
        in property $ null errors
   else property True
 -- | 测试移动语义
-prop_move_semantics :: String -> Property
 prop_move_semantics s = 
   if length s < 30
   then let moveStr = "{//! ownership: on\ns := NewMyString(\"" ++ s ++ "\")\nt := s\n// s 已被移动}"
@@ -1299,13 +1275,12 @@ prop_immutable_borrow s =
        in property $ null errors
   else property True
 -- | 测试可变借用
-prop_mutable_borrow :: String -> Property
 prop_mutable_borrow s = 
   if length s < 30
-  then let mutableStr = "{//! ownership: on\n" ++
-                       "s := NewMyString(\"" ++ s ++ "\")\n" ++
-                       "m := &mut s\n" ++
-                       "m.data = \"world\"}"
+  then let mutableStr = "{//! ownership: on
+s := NewMyString(\"" ++ s ++ "\")
+m := &mut s
+m.data = \"world\"}"
            errors = O.analyzeOwnership mutableStr
        in property $ null errors
   else property True
@@ -1318,23 +1293,24 @@ prop_borrowing_rules s =
        in property $ null errors
   else property True
 -- | 测试借用冲突
-prop_borrow_conflict :: String -> Property
 prop_borrow_conflict s = 
   if length s < 30
   then let conflictStr = "{//! ownership: on\ns := NewMyString(\"" ++ s ++ "\")\nr := &s\nm := &mut s\n// 借用冲突}"
            errors = O.analyzeOwnership conflictStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试借用生命周期
 prop_borrow_lifetime :: String -> Property
 prop_borrow_lifetime s = 
   if length s < 30
-  then let lifetimeStr = "{//! ownership: on\n" ++
-                       "func test() {\n" ++
-                       "  s := NewMyString(\"" ++ s ++ "\")\n" ++
-                       "  r := &s\n" ++
-                       "  // r 生命周期不超过 s}"
+  then let lifetimeStr = "{//! ownership: on
+func test() {
+  s := NewMyString(\"" ++ s ++ "\")
+  r := &s
+  // r 生命周期不超过 s}"
            errors = O.analyzeOwnership lifetimeStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权与GC关系
@@ -1342,6 +1318,7 @@ prop_ownership_gc_relation s =
   if length s < 30
   then let gcStr = "{//! ownership: on\ns := NewMyString(\"" ++ s ++ "\")\n// 所有权检查是编译期的，GC仍是运行时的}"
            errors = O.analyzeOwnership gcStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试跨goroutine所有权转移
@@ -1350,6 +1327,7 @@ prop_cross_goroutine_ownership s =
   if length s < 30
   then let goroutineStr = "{//! ownership: on\ns := NewMyString(\"" ++ s ++ "\")\ngo func() {\n  // 使用 s\n}()\n// s 不能再使用}"
            errors = O.analyzeOwnership goroutineStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权与接口交互
@@ -1357,6 +1335,7 @@ prop_ownership_interface_interaction s =
   if all isLetter s
   then let interfaceStr = "{//! ownership: on\ntype " ++ s ++ " interface { Method() }\nfunc (r MyString) Method() { /* 实现 */ }"
            errors = O.analyzeOwnership interfaceStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权错误检测
@@ -1365,6 +1344,7 @@ prop_ownership_error_detection s =
   if length s < 30
   then let errorStr = "{//! ownership: on\ns := NewMyString(\"" ++ s ++ "\")\nt := s\nfmt.Println(s.data) // 错误：s 已被移动}"
            errors = O.analyzeOwnership errorStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权零运行时开销
@@ -1372,6 +1352,7 @@ prop_ownership_zero_runtime_overhead s =
   if length s < 30
   then let overheadStr = "{//! ownership: on\ns := NewMyString(\"" ++ s ++ "\")\nt := s\n// 所有权检查在编译期完成}"
            errors = O.analyzeOwnership overheadStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权数据竞争预防
@@ -1380,6 +1361,7 @@ prop_ownership_data_race_prevention s =
   if length s < 30
   then let raceStr = "{//! ownership: on\ns := NewMyString(\"" ++ s ++ "\")\nm := &mut s\n// 同一时刻只能有一个可变借用}"
            errors = O.analyzeOwnership raceStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权逻辑正确性
@@ -1387,6 +1369,7 @@ prop_ownership_logical_correctness s =
   if length s < 30
   then let correctnessStr = "{//! ownership: on\ns := NewMyString(\"" ++ s ++ "\")\n// 所有权确保逻辑正确性}"
            errors = O.analyzeOwnership correctnessStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权作用域推断
@@ -1395,6 +1378,7 @@ prop_ownership_scope_inference s =
   if length s < 30
   then let scopeStr = "{//! ownership: on\nfunc test() {\n  s := NewMyString(\"" ++ s ++ "\")\n  // s 作用域在此函数内\n}"
            errors = O.analyzeOwnership scopeStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权方法签名
@@ -1402,6 +1386,7 @@ prop_ownership_method_signature s =
   if all isLetter s
   then let methodStr = "{//! ownership: on\nfunc (r " ++ s ++ ") Method() " ++ s ++ " { return *r }}"
            errors = O.analyzeOwnership methodStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权函数参数
@@ -1410,6 +1395,7 @@ prop_ownership_function_parameter s =
   if all isLetter s
   then let paramStr = "{//! ownership: on\nfunc process(s " ++ s ++ ") { /* s 被移动 */ }}"
            errors = O.analyzeOwnership paramStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权返回值
@@ -1417,6 +1403,7 @@ prop_ownership_return_value s =
   if all isLetter s
   then let returnStr = "{//! ownership: on\nfunc create" ++ s ++ "() " ++ s ++ " { return " ++ s ++ "{} }}"
            errors = O.analyzeOwnership returnStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权结构体字段
@@ -1425,6 +1412,7 @@ prop_ownership_struct_field s =
   if all isLetter s
   then let fieldStr = "{//! ownership: on\ntype Container struct { data " ++ s ++ " }\nfunc (c Container) getData() " ++ s ++ " { return c.data }}"
            errors = O.analyzeOwnership fieldStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权数组元素
@@ -1432,16 +1420,17 @@ prop_ownership_array_element s =
   if all isLetter s
   then let arrayStr = "{//! ownership: on\narr := [" ++ s ++ "{}]\nx := arr[0] // x 获得 arr[0] 的所有权}"
            errors = O.analyzeOwnership arrayStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权切片元素
 prop_ownership_slice_element :: String -> Property
 prop_ownership_slice_element s = 
   if all isLetter s
-  then let sliceStr = "{//! ownership: on\n" ++
-                     "slice := []" ++ s ++ "{" ++ s ++ "{}\n" ++
-                     "x := slice[0] // x 获得 slice[0] 的所有权}"
+  then let sliceStr = "{//! ownership: on
+slice := []" ++ s ++ "{" ++ s ++ "{}\nx := slice[0] // x 获得 slice[0] 的所有权}"
            errors = O.analyzeOwnership sliceStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权映射值
@@ -1449,6 +1438,7 @@ prop_ownership_map_value s =
   if all isLetter s
   then let mapStr = "{//! ownership: on\nm := map[string]" ++ s ++ "{}\nm[\"key\"] = " ++ s ++ "{}\nx := m[\"key\"] // x 获得 map 值的所有权}"
            errors = O.analyzeOwnership mapStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权通道传输
@@ -1457,6 +1447,7 @@ prop_ownership_channel_transfer s =
   if all isLetter s
   then let channelStr = "{//! ownership: on\nch := make(chan " ++ s ++ ")\ns := " ++ s ++ "{}\nch <- s // s 的所有权转移到通道}"
            errors = O.analyzeOwnership channelStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权闭包捕获
@@ -1464,6 +1455,7 @@ prop_ownership_closure_capture s =
   if length s < 30
   then let closureStr = "{//! ownership: on\ns := NewMyString(\"" ++ s ++ "\")\nf := func() { /* 使用 s */ }\n// s 被闭包捕获}"
            errors = O.analyzeOwnership closureStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权递归结构
@@ -1472,6 +1464,7 @@ prop_ownership_recursive_structure s =
   if all isLetter s
   then let recursiveStr = "{//! ownership: on\ntype " ++ s ++ "Node struct { data int; next *" ++ s ++ "Node }"
            errors = O.analyzeOwnership recursiveStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权循环引用
@@ -1479,6 +1472,7 @@ prop_ownership_circular_reference s =
   if all isLetter s
   then let circularStr = "{//! ownership: on\ntype " ++ s ++ "A struct { b *" ++ s ++ "B }\ntype " ++ s ++ "B struct { a *" ++ s ++ "A }"
            errors = O.analyzeOwnership circularStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权共享引用
@@ -1487,6 +1481,7 @@ prop_ownership_shared_reference s =
   if all isLetter s
   then let sharedStr = "{//! ownership: on\ns := " ++ s ++ "{}\nr1 := &s\nr2 := &s\n// 多个共享引用}"
            errors = O.analyzeOwnership sharedStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权独占引用
@@ -1494,6 +1489,7 @@ prop_ownership_exclusive_reference s =
   if all isLetter s
   then let exclusiveStr = "{//! ownership: on\ns := " ++ s ++ "{}\nr := &mut s\n// 独占可变引用}"
            errors = O.analyzeOwnership exclusiveStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权引用计数
@@ -1502,6 +1498,7 @@ prop_ownership_reference_counting s =
   if all isLetter s
   then let refCountStr = "{//! ownership: on\ns := " ++ s ++ "{}\nr1 := &s\nr2 := &s\n// 引用计数概念（仅概念性）}"
            errors = O.analyzeOwnership refCountStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权内存安全
@@ -1509,6 +1506,7 @@ prop_ownership_memory_safety s =
   if length s < 30
   then let safetyStr = "{//! ownership: on\ns := NewMyString(\"" ++ s ++ "\")\nt := s\n// 所有权确保内存安全}"
            errors = O.analyzeOwnership safetyStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权资源管理
@@ -1517,6 +1515,7 @@ prop_ownership_resource_management s =
   if length s < 30
   then let resourceStr = "{//! ownership: on\ns := NewMyString(\"" ++ s ++ "\")\n// 所有权确保资源正确释放}"
            errors = O.analyzeOwnership resourceStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权并发安全
@@ -1524,6 +1523,7 @@ prop_ownership_concurrent_safety s =
   if length s < 30
   then let concurrentStr = "{//! ownership: on\ns := NewMyString(\"" ++ s ++ "\")\n// 所有权确保并发安全}"
            errors = O.analyzeOwnership concurrentStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权类型系统
@@ -1532,6 +1532,7 @@ prop_ownership_type_system s =
   if all isLetter s
   then let typeSystemStr = "{//! ownership: on\ntype " ++ s ++ " struct { data int }\nfunc (r " ++ s ++ ") Method() { /* 方法 */ }"
            errors = O.analyzeOwnership typeSystemStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权编译器优化
@@ -1539,6 +1540,7 @@ prop_ownership_compiler_optimization s =
   if length s < 30
   then let optimizationStr = "{//! ownership: on\ns := NewMyString(\"" ++ s ++ "\")\nt := s\n// 编译器可以优化所有权检查}"
            errors = O.analyzeOwnership optimizationStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权调试支持
@@ -1547,17 +1549,19 @@ prop_ownership_debug_support s =
   if length s < 30
   then let debugStr = "{//! ownership: on\n//! debug: ownership\ns := NewMyString(\"" ++ s ++ "\")\n// 调试所有权信息}"
            errors = O.analyzeOwnership debugStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权错误恢复
 prop_ownership_error_recovery s = 
   if length s < 30
-  then let recoveryStr = "{//! ownership: on\n" ++
-                       "s := NewMyString(\"" ++ s ++ "\")\n" ++
-                       "t := s\n" ++
-                       "// 错误：s 已被移动\n" ++
-                       "// 编译器提供错误恢复信息}"
+  then let recoveryStr = "{//! ownership: on
+s := NewMyString(\"" ++ s ++ "\")
+t := s
+// 错误：s 已被移动
+// 编译器提供错误恢复信息}"
            errors = O.analyzeOwnership recoveryStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权性能影响
@@ -1566,6 +1570,7 @@ prop_ownership_performance_impact s =
   if length s < 30
   then let performanceStr = "{//! ownership: on\ns := NewMyString(\"" ++ s ++ "\")\nt := s\n// 所有权检查零运行时开销}"
            errors = O.analyzeOwnership performanceStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权与泛型交互
@@ -1573,6 +1578,7 @@ prop_ownership_generic_interaction s =
   if all isLetter s
   then let genericStr = "{//! ownership: on\ntype Container[" ++ s ++ " any] struct { data " ++ s ++ " }"
            errors = O.analyzeOwnership genericStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权与依赖类型交互
@@ -1581,6 +1587,7 @@ prop_ownership_dependent_type_interaction s =
   if length s < 30
   then let interactionStr = "{//! ownership: on\n//! dependent_types: on\ns := NewMyString(\"" ++ s ++ "\")\n// 所有权与依赖类型交互}"
            errors = O.analyzeOwnership interactionStr
+       in case errors of
        in property $ null errors
   else property True
 -- | 测试所有权最佳实践
@@ -1588,6 +1595,7 @@ prop_ownership_best_practices s =
   if length s < 30
   then let practicesStr = "{//! ownership: on\ns := NewMyString(\"" ++ s ++ "\")\n// 所有权最佳实践示例}"
            errors = O.analyzeOwnership practicesStr
+       in case errors of
        in property $ null errors
   else property True
 -- ============================================================================
@@ -1602,20 +1610,20 @@ prop_string_utils s =
 
 prop_list_utils :: [Int] -> Property
 prop_list_utils nums = 
-  let processed = U.splitBy ',' (intercalate "," (map show nums))
+  let processed = U.splitBy "," (intercalate "," (map show nums))
   in property $ length processed >= 0
 
 prop_map_utils :: [(String, Int)] -> Property
 prop_map_utils pairs = 
   if length pairs < 10
-  then let processed = U.splitBy ',' (intercalate "," (map (\(k, v) -> k ++ ":" ++ show v) pairs))
+  then let processed = U.splitBy "," (intercalate "," (map (\(k, v) -> k ++ ":" ++ show v) pairs))
        in property $ length processed >= 0
   else property True
 
 prop_set_utils :: [Int] -> Property
 prop_set_utils nums = 
   if length nums < 10
-  then let processed = U.splitBy ',' (intercalate "," (map show nums))
+  then let processed = U.splitBy "," (intercalate "," (map show nums))
        in property $ length processed >= 0
   else property True
 
@@ -1629,42 +1637,42 @@ prop_file_utils s =
 prop_path_utils :: String -> Property
 prop_path_utils s = 
   if length s < 50
-  then let processed = U.splitBy '/' s
+  then let processed = U.splitBy "/" s
        in property $ length processed >= 0
   else property True
 
 prop_url_utils :: String -> Property
 prop_url_utils s = 
   if length s < 50
-  then let processed = U.splitBy '/' s
+  then let processed = U.splitBy "/" s
        in property $ length processed >= 0
   else property True
 
 prop_json_utils :: String -> Property
 prop_json_utils s = 
   if length s < 50
-  then let processed = U.splitBy ',' s
+  then let processed = U.splitBy "," s
        in property $ length processed >= 0
   else property True
 
 prop_xml_utils :: String -> Property
 prop_xml_utils s = 
   if length s < 50
-  then let processed = U.splitBy '<' s
+  then let processed = U.splitBy "<" s
        in property $ length processed >= 0
   else property True
 
 prop_regex_utils :: String -> Property
 prop_regex_utils s = 
   if length s < 50
-  then let processed = U.splitBy ' ' s
+  then let processed = U.splitBy " " s
        in property $ length processed >= 0
   else property True
 
 prop_time_utils :: String -> Property
 prop_time_utils s = 
   if length s < 50
-  then let processed = U.splitBy ':' s
+  then let processed = U.splitBy ":" s
        in property $ length processed >= 0
   else property True
 
@@ -1676,7 +1684,7 @@ prop_math_utils n =
 prop_crypto_utils :: String -> Property
 prop_crypto_utils s = 
   if length s < 50
-  then let processed = U.splitBy '.' s
+  then let processed = U.splitBy "." s
        in property $ length processed >= 0
   else property True
 
@@ -1690,14 +1698,14 @@ prop_compression_utils s =
 prop_encoding_utils :: String -> Property
 prop_encoding_utils s = 
   if length s < 50
-  then let processed = U.splitBy '=' s
+  then let processed = U.splitBy "=" s
        in property $ length processed >= 0
   else property True
 
 prop_network_utils :: String -> Property
 prop_network_utils s = 
   if length s < 50
-  then let processed = U.splitBy ':' s
+  then let processed = U.splitBy ":" s
        in property $ length processed >= 0
   else property True
 
@@ -1711,7 +1719,7 @@ prop_logging_utils s =
 prop_config_utils :: String -> Property
 prop_config_utils s = 
   if length s < 50
-  then let processed = U.splitBy '=' s
+  then let processed = U.splitBy "=" s
        in property $ length processed >= 0
   else property True
 
@@ -1725,7 +1733,7 @@ prop_cache_utils s =
 prop_concurrency_utils :: String -> Property
 prop_concurrency_utils s = 
   if length s < 50
-  then let processed = U.splitBy ',' s
+  then let processed = U.splitBy "," s
        in property $ length processed >= 0
   else property True
 

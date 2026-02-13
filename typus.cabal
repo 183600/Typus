@@ -367,6 +367,7 @@ test-suite typus-test
         Test.Unit.UltraMemoryOptimizedTestSuite,
         Test.Unit.UtilsCoreQuickCheckSpec,
         Test.Unit.AdditionalQuickCheckTests,
+        Test.Unit.NewComprehensiveTypusTestSuite,
         TestSupport.Arbitrary,
         TestSupport.MemoryLimits,
         TestSupport.OptimizedMemoryLimits,
@@ -387,7 +388,8 @@ test-suite typus-test
         time >= 1.8 && <2,
         deepseq >= 1.4 && <2,
         containers >= 0.6 && <1,
-        megaparsec >= 9.0.0 && <10
+        megaparsec >= 9.0.0 && <10,
+        process >= 1.6.0 && <2
 
 -- Memory-optimized test suite for CI/CD environments
 test-suite typus-test-optimized
@@ -478,6 +480,7 @@ test-suite typus-test-optimized
         containers >= 0.6 && <1,
         megaparsec >= 9.0.0 && <10,
         unix,
+        process >= 1.6.0 && <2,
         process
     default-language: Haskell2010
 

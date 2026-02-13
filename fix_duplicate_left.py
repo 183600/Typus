@@ -1,33 +1,26 @@
 #!/usr/bin/env python3
-"""
-修复所有重复的 Left _ -> property False
-"""
 
-# 读取文件内容
-with open('/home/runner/work/Typus/Typus/test/Test/Unit/ComprehensiveTypusTestSuite.hs', 'r') as f:
-    lines = f.readlines()
+import re
 
-# 修复后的行
-fixed_lines = []
-i = 0
-while i < len(lines):
-    line = lines[i]
-    fixed_lines.append(line)
+def fix_duplicate_left_patterns(file_path):
+    with open(file_path, 'r') as f:
+        content = f.read()
     
-    # 检查是否是 Left _ -> property False 行
-    if 'Left _ -> property False' in line:
-        i += 1
-        # 检查下一行是否也是 Left _ -> property False
-        if i < len(lines) and 'Left _ -> property False' in lines[i]:
-            # 跳过重复的行
-            while i < len(lines) and 'Left _ -> property False' in lines[i]:
-                i += 1
-            i -= 1  # 调整因为循环会增加
+    # Pattern to find duplicate Left _ -> property True lines
+    pattern = r'(Left _ -> property False\s*\n\s*)Left _ -> property True\s*\n\s*(else property True|-- |)'
     
-    i += 1
+    # Replace with correct structure
+    replacement = r'\1\2'
+    
+    # Apply the fix multiple times
+    while re.search(pattern, content, re.MULTILINE):
+        content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
+    
+    # Write back the fixed content
+    with open(file_path, 'w') as f:
+        f.write(content)
+    
+    print("Fixed duplicate Left _ -> property True patterns")
 
-# 写回文件
-with open('/home/runner/work/Typus/Typus/test/Test/Unit/ComprehensiveTypusTestSuite.hs', 'w') as f:
-    f.writelines(fixed_lines)
-
-print("修复重复的 Left _ -> property False 完成")
+if __name__ == "__main__":
+    fix_duplicate_left_patterns("/home/runner/work/Typus/Typus/test/Test/Unit/ComprehensiveTypusTestSuite.hs")

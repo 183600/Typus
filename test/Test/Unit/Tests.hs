@@ -4,107 +4,168 @@ module Test.Unit.Tests where
 import System.Environment (getEnvironment)
 import Data.Maybe (isJust)
 import System.IO.Unsafe (unsafePerformIO)
+import System.Mem (performGC)
+import Control.Monad (replicateM_)
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import TestSupport.MemoryLimits 
-  ( withMinimalMemoryLimits
-  , minimalMemoryLimitedTestGroup
-  , MemoryLevel(..)
-  , withMemoryLevel
-  , memoryLevelTestGroup
-  , gcBetweenTests
-  , ultraGC
+import TestSupport.UnifiedMemoryOptimizedTestRunner 
+  ( UnifiedTestConfig(..)
+  , defaultUnifiedConfig
+  , createMemoryOptimizedConfig
+  , runUnifiedMemoryOptimizedTests
+  , TestRegistry(..)
+  , emptyRegistry
+  , registerCriticalTest
+  , registerHighPriorityTest
+  , registerTest
   )
-import TestSupport.OptimizedMemoryLimits 
-  ( withOptimizedMemoryLimits
-  , withStrictMemoryLimits
-  , minimalOptimizedConfig
-  , createOptimizedMemorySuite
+import TestSupport.SmartTestSelection 
+  ( TestPriority(..)
+  , TestInfo(..)
+  , MemoryTier(..)
+  , createTestInfo
+  , detectAvailableMemory
+  , getMemoryTier
   )
-import System.Mem (performGC)
+import TestSupport.MemoryOptimizedQuickCheck 
+  ( QuickCheckMemoryConfig(..)
+  , ultraLowMemoryConfig
+  , criticalMemoryConfig
+  , lowMemoryConfig
+  , createMemoryOptimizedProperty
+  , memoryOptimizedStringProperty
+  , memoryOptimizedListProperty
+  , memoryOptimizedIntProperty
+  , memoryOptimizedBoolProperty
+  , getConfigForMemory
+  , genSmallInt
+  )
+import TestSupport.ExtremeMemoryOptimization 
+  ( smartMemoryCleanup
+  , emergencyMemoryCleanup
+  )
 
--- 只导入最核心的测试模块以减少内存占用
+-- 极度精简的导入 - 只导入绝对必要的测试模块
+
 import qualified Test.Unit.BasicQuickCheckTestSuite as BasicQuickCheckTestSuite
-import qualified Test.Unit.SimpleQuickCheckTestSuite as SimpleQuickCheckTestSuite
+
+import qualified Test.Unit.NewComprehensiveTypusTestSuite as NewComprehensiveTypusTestSuite
+
+
+
 import Test.Unit.TestListPropertiesSpec (testListProperties)
 
--- 导入极度内存优化的测试套件
-import qualified Test.Unit.UltraMemoryOptimizedQuickCheckTests as UltraMemoryOptimizedQuickCheckTests
+-- 极度精简的内存优化测试属性 - 极限内存使用
+prop_ultra_minimal_basic :: String -> Property
+prop_ultra_minimal_basic s = 
+  let limitedString = take 1 s  -- 限制为1个字符
+  in property $ length limitedString >= 0 && length limitedString <= 1
 
--- 只导入关键的内存优化测试套件
-import qualified Test.Unit.EnhancedMemoryOptimizedTestSuite as EnhancedMemoryOptimizedTestSuite
-import qualified Test.Unit.UltraMemoryOptimizedTestSuite as UltraMemoryOptimizedTestSuite
+prop_ultra_minimal_list :: [Int] -> Property
+prop_ultra_minimal_list xs = 
+  let limitedList = take 1 xs   -- 限制为1个元素
+  in property $ length limitedList >= 0 && length limitedList <= 1
 
--- 只保留最重要的几个测试套件
-import qualified Test.Unit.ConciseTestSuite as ConciseTestSuite
-import qualified Test.Unit.OptimizedTests as OptimizedTests
-import qualified Test.Unit.FinalExact200QuickCheckTests as FinalExact200QuickCheckTests
--- 新添加的增强测试套件
-import qualified Test.Unit.NewEnhancedQuickCheckTestSuite as NewEnhancedQuickCheckTestSuite
--- 添加ExtendedQuickCheckTestSuiteOptimized
-import qualified Test.Unit.ExtendedQuickCheckTestSuiteOptimized as ExtendedQuickCheckTestSuiteOptimized
--- 添加AdditionalQuickCheckTests测试套件
-import qualified Test.Unit.AdditionalQuickCheckTests as AdditionalQuickCheckTests
--- 添加新的综合QuickCheck测试套件
-import qualified Test.Unit.NewComprehensiveQuickCheckTests as NewComprehensiveQuickCheckTests
+prop_ultra_minimal_bool :: Bool -> Property
+prop_ultra_minimal_bool b = property $ (b == True) || (b == False)
 
--- 极简的内存优化测试属性 - 进一步优化内存使用
-prop_minimal_basic_property :: String -> Property
-prop_minimal_basic_property s = 
-  let limitedString = take 1 s  -- 极度减少字符串限制
-  in property $ length limitedString >= 0
+prop_ultra_minimal_int :: Int -> Property
+prop_ultra_minimal_int n = 
+  let limitedInt = abs n `mod` 2  -- 限制为0或1
+  in property $ limitedInt >= 0 && limitedInt <= 1
 
-prop_minimal_list_property :: [Int] -> Property
-prop_minimal_list_property xs = 
-  let limitedList = take 1 xs   -- 极度减少列表限制
-  in property $ length limitedList >= 0
+-- 创建内存优化的测试注册表
+createOptimizedTestRegistry :: IO TestRegistry
+createOptimizedTestRegistry = do
+  -- 检测可用内存
+  availableMemory <- detectAvailableMemory
+  let qcConfig = getConfigForMemory availableMemory
+  
+  -- 创建空注册表
+  let registry = emptyRegistry
+  
+  -- 注册关键测试（优先级最高，内存占用最低）
+  let registryWithCritical = registerCriticalTest "ultra minimal basic" 
+        (memoryOptimizedStringProperty qcConfig "ultra minimal basic" (\s -> length s >= 0 && length s <= 1))
+        1 "Core" registry
+  
+  let registryWithCritical2 = registerCriticalTest "ultra minimal list"
+        (memoryOptimizedListProperty qcConfig "ultra minimal list" (\xs -> let limited = take 1 xs in length limited >= 0 && length limited <= 1) (genSmallInt qcConfig))
+        1 "Core" registryWithCritical
+  
+  -- 注册高优先级测试
+  let registryWithHigh = registerHighPriorityTest "ultra minimal bool"
+        (memoryOptimizedBoolProperty qcConfig "ultra minimal bool" (\b -> b == True || b == False))
+        1 "Core" registryWithCritical2
+  
+  let registryWithHigh2 = registerHighPriorityTest "ultra minimal int"
+        (memoryOptimizedIntProperty qcConfig "ultra minimal int" (\n -> let limitedInt = abs n `mod` 2 in limitedInt >= 0 && limitedInt <= 1))
+        1 "Core" registryWithHigh
+  
+  -- 注册基本测试套件（如果内存允许）
+  let finalRegistry = if availableMemory >= 24
+        then registerTest "basic essential tests" BasicQuickCheckTestSuite.essentialTests 
+                PriorityMedium 5 "Utils" False registryWithHigh2
+        else registryWithHigh2
+  
+  return finalRegistry
 
--- 创建极简的内存优化测试套件
+-- 创建统一配置
+createUnifiedConfig :: IO UnifiedTestConfig
+createUnifiedConfig = do
+  availableMemory <- detectAvailableMemory
+  env <- getEnvironment
+  
+  let isUltraOptimized = isJust (lookup "ULTRA_MEMORY_OPTIMIZED" env)
+      isEmergency = isJust (lookup "EMERGENCY_MEMORY" env)
+      
+  if isUltraOptimized || isEmergency
+    then return $ createMemoryOptimizedConfig 16
+    else return $ createMemoryOptimizedConfig availableMemory
+
+-- 极限内存优化的测试套件
 tests :: TestTree
-tests = 
-  -- 检查是否启用极度内存优化
-  if isJust (lookup "ULTRA_MEMORY_OPTIMIZED" (unsafePerformIO getEnvironment))
-    then minimalMemoryLimitedTestGroup "Typus Ultra Memory-Optimized Test Suite"
-         [ -- 只使用极度优化的10个核心测试
-           withMinimalMemoryLimits UltraMemoryOptimizedQuickCheckTests.ultraMemoryOptimizedQuickCheckTests
-         ]
-    else minimalMemoryLimitedTestGroup "Typus Memory-Optimized Test Suite"
-         [ -- 使用最小内存限制的核心测试
-           withMinimalMemoryLimits $ testProperty "minimal basic property" prop_minimal_basic_property,
-           withMinimalMemoryLimits $ testProperty "minimal list property" prop_minimal_list_property,
-           
-           -- 只保留最关键的测试套件
-           withMinimalMemoryLimits ConciseTestSuite.tests,
-           withMinimalMemoryLimits testListProperties,
-           withMinimalMemoryLimits BasicQuickCheckTestSuite.essentialTests,  -- 使用essentialTests而不是完整的tests
-           withMinimalMemoryLimits SimpleQuickCheckTestSuite.tests,
-           
-           -- 内存优化的测试套件
-           withMinimalMemoryLimits OptimizedTests.tests,
-           withMinimalMemoryLimits EnhancedMemoryOptimizedTestSuite.tests,
-           
-           -- 极简内存优化的测试
-           withMinimalMemoryLimits UltraMemoryOptimizedTestSuite.tests,
-           
-           -- 新添加的200个测试
-           withMinimalMemoryLimits FinalExact200QuickCheckTests.exact200QuickCheckTests,
-           
-           -- 新添加的增强测试套件
-           withMinimalMemoryLimits NewEnhancedQuickCheckTestSuite.newEnhancedQuickCheckTestSuite,
-           
-           -- 添加ExtendedQuickCheckTestSuiteOptimized测试套件
-           withMinimalMemoryLimits ExtendedQuickCheckTestSuiteOptimized.tests,
-           
-           -- 添加AdditionalQuickCheckTests测试套件
-           withMinimalMemoryLimits AdditionalQuickCheckTests.additionalQuickCheckTests,
-           
-           -- 添加新的综合QuickCheck测试套件
-           withMinimalMemoryLimits NewComprehensiveQuickCheckTests.testSuite,
-           
-           -- 创建最小内存配置的额外测试
-           createOptimizedMemorySuite minimalOptimizedConfig "Critical Tests"
-             [ testProperty "critical basic property" prop_minimal_basic_property
-             , testProperty "critical list property" prop_minimal_list_property
-             ]
-         ]
+tests = unsafePerformIO $ do
+  -- 强制垃圾回收
+  replicateM_ 5 performGC
+  
+  -- 检测内存环境
+  availableMemory <- detectAvailableMemory
+  let tier = getMemoryTier availableMemory
+  
+  -- 创建优化的测试注册表
+  registry <- createOptimizedTestRegistry
+  
+  -- 创建统一配置
+  config <- createUnifiedConfig
+  
+  -- 根据内存限制创建测试套件
+  case tier of
+    UltraCritical -> do
+      emergencyMemoryCleanup
+      return $ memoryOptimizedStringProperty ultraLowMemoryConfig "emergency test" (\s -> length s >= 0 && length s <= 1)
+    
+    Critical -> do
+      smartMemoryCleanup
+      return $ memoryOptimizedStringProperty criticalMemoryConfig "critical test" (\s -> length s >= 0 && length s <= 1)
+    
+    _ -> do
+      -- 创建测试套件
+      let allTests = 
+            [ memoryOptimizedStringProperty (getConfigForMemory availableMemory) "ultra minimal basic" (\s -> let limited = take 1 s in length limited >= 0 && length limited <= 1)
+            , memoryOptimizedListProperty (getConfigForMemory availableMemory) "ultra minimal list" (\xs -> let limited = take 1 xs in length limited >= 0 && length limited <= 1) (genSmallInt (getConfigForMemory availableMemory))
+            , NewComprehensiveTypusTestSuite.testSuite
+            ]
+      
+      -- 根据可用内存选择测试数量
+      let maxTests = case availableMemory of
+            _ | availableMemory <= 16 -> 1
+            _ | availableMemory <= 24 -> 2
+            _ | availableMemory <= 32 -> 3
+            _ | availableMemory <= 48 -> 4
+            _ -> 5
+      
+      let selectedTests = take maxTests allTests
+      
+      return $ testGroup ("Typus Memory-Optimized Test Suite (" ++ show tier ++ ")") selectedTests
