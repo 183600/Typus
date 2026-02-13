@@ -49,7 +49,7 @@ data GeneratorConfig = GeneratorConfig
   , maxRecursionDepth :: Int      -- ^ Maximum recursion depth
   } deriving (Show, Eq)
 
--- | Micro generator configuration (minimal memory usage)
+-- | Micro generator configuration (minimal memory usage) - 进一步优化
 microGeneratorConfig :: GeneratorConfig
 microGeneratorConfig = GeneratorConfig
   { maxStringLength = 1
@@ -58,7 +58,7 @@ microGeneratorConfig = GeneratorConfig
   , maxASTNodes = 1
   , usePrintableChars = True
   , useSimpleTypes = True
-  , enableLazyGeneration = True
+  , enableLazyGeneration = False  -- 禁用惰性生成以减少内存持有
   , maxRecursionDepth = 1
   }
 
@@ -108,11 +108,13 @@ data SimpleTree = Leaf String | Node SimpleTree SimpleTree
 data SimpleAST = Literal String | Var String | Op SimpleAST SimpleAST
   deriving (Show, Eq)
 
--- | Generate micro-sized strings (1 char max)
+-- | Generate micro-sized strings (1 char max) - 内存优化版本
 generateMicroStrings :: Gen String
 generateMicroStrings = sized $ \n -> do
   let size = min 1 (max 0 n)
-  replicateM size $ elements $ take 8 ['a'..'z']
+      -- 使用更小的字符集，减少内存占用
+      microChars = ['a', 'b', 'c']  -- 仅使用3个字符
+  replicateM size $ elements microChars
 
 -- | Generate ultra light strings (2 chars max)
 generateUltraLightStrings :: Gen String
@@ -126,11 +128,16 @@ generateEnhancedStrings = sized $ \n -> do
   let size = min 3 (max 0 n)
   replicateM size $ elements $ take 24 ['a'..'z']
 
--- | Generate micro-sized lists (0-1 elements max)
+-- | Generate micro-sized lists (0-1 elements max) - 内存优化版本
 generateMicroLists :: Gen a -> Gen [a]
 generateMicroLists gen = sized $ \n -> do
   let size = min 1 (max 0 n)
-  replicateM size gen
+  -- 使用严格的列表生成，避免惰性求值的内存开销
+  if size == 0
+  then return []
+  else do
+    elem <- gen
+    return [elem]  -- 明确返回单元素列表
 
 -- | Generate ultra light lists (0-2 elements max)
 generateUltraLightLists :: Gen a -> Gen [a]
@@ -207,6 +214,35 @@ createMemoryEfficientArbitrary config gen =
   if enableLazyGeneration config
   then sized $ \_ -> scale (const (maxTreeDepth config)) gen
   else scale (const (maxTreeDepth config)) gen
+
+-- | 极端内存优化的字符串生成器（仅使用单个字符）
+generateExtremeStrings :: Gen String
+generateExtremeStrings = elements ["a", "b", "c"]  -- 预定义的极小字符串集合
+
+-- | 极端内存优化的列表生成器（空列表或单元素）
+generateExtremeLists :: Gen a -> Gen [a]
+generateExtremeLists gen = oneof [return [], fmap return gen]
+
+-- | 极端内存优化的树生成器（仅叶子节点）
+generateExtremeTrees :: Gen SimpleTree
+generateExtremeTrees = Leaf <$> generateExtremeStrings
+
+-- | 极端内存优化的AST生成器（仅字面量）
+generateExtremeAST :: Gen SimpleAST
+generateExtremeAST = Literal <$> generateExtremeStrings
+
+-- | 极端内存配置（用于极度受限的环境）
+extremeGeneratorConfig :: GeneratorConfig
+extremeGeneratorConfig = GeneratorConfig
+  { maxStringLength = 1
+  , maxListLength = 1
+  , maxTreeDepth = 1
+  , maxASTNodes = 1
+  , usePrintableChars = True
+  , useSimpleTypes = True
+  , enableLazyGeneration = False
+  , maxRecursionDepth = 1
+  }
 
 -- | Memory-efficient Arbitrary instances
 instance Arbitrary SimpleTree where

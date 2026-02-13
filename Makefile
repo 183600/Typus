@@ -86,3 +86,47 @@ install:
 test-production:
 	./cabal_test_clean.sh
 	@echo "Production tests completed!"
+
+# Memory-optimized test targets
+test-memory-optimized:
+	@echo "Running memory-optimized tests..."
+	./scripts/enhanced-memory-test-config.sh --environment standard
+	@echo "Memory-optimized tests completed!"
+
+test-memory-minimal:
+	@echo "Running memory-minimal tests (32MB)..."
+	./scripts/enhanced-memory-test-config.sh --memory 32 --conservative --aggressive-gc
+	@echo "Memory-minimal tests completed!"
+
+test-memory-ci:
+	@echo "Running memory-optimized tests for CI..."
+	./scripts/enhanced-memory-test-config.sh --environment ci
+	@echo "CI memory-optimized tests completed!"
+
+test-memory-extreme:
+	@echo "Running extreme memory-optimized tests (16MB)..."
+	./scripts/enhanced-memory-test-config.sh --memory 16 --conservative --aggressive-gc
+	@echo "Extreme memory-optimized tests completed!"
+
+test-memory-docker:
+	@echo "Running memory-optimized tests for Docker..."
+	./scripts/enhanced-memory-test-config.sh --environment docker
+	@echo "Docker memory-optimized tests completed!"
+
+# Verify memory optimization effectiveness
+verify-memory-optimization:
+	@echo "Verifying memory optimization effectiveness..."
+	./scripts/verify-memory-optimization.sh
+	@echo "Memory optimization verification completed!"
+
+# Verify memory optimization with multiple iterations
+verify-memory-optimization-detailed:
+	@echo "Verifying memory optimization effectiveness with detailed analysis..."
+	./scripts/verify-memory-optimization.sh --multiple
+	@echo "Detailed memory optimization verification completed!"
+
+# Build memory-optimized test runners
+build-memory-test-runners:
+	@echo "Building memory-optimized test runners..."
+	cabal build enhanced-memory-test-runner || cabal build smart-memory-test-runner || echo "Test runners already built or not available"
+	@echo "Memory-optimized test runners built!"

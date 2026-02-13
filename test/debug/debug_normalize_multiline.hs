@@ -2,8 +2,8 @@ import qualified Utils as U
 
 main :: IO ()
 main = do
-    let input = "//B\n"
-    let result = U.removeComments input
+    let input = "\t  \n"
+    let result = U.normalizeIndentation input
     putStrLn $ "Input: " ++ show input
     putStrLn $ "Result: " ++ show result
-    putStrLn $ "Expected: \"B\\n\""
+    putStrLn $ "Expected: \"\\n\""

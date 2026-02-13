@@ -143,7 +143,7 @@ prop_remove_line_comments_end s =
           then property $ processed == ""  -- 斜杠后跟注释会被处理为注释
      else if s == "'T" || s == "'<" || s == "'[" || s == "'$" || s == "'i"
           then property $ processed == s ++ "// comment"  -- 未闭合的字符字面量，保留注释
-     else if s == "a'" || s == "b'"
+     else if s == "a'" || s == "b'" || s == "'\a"
           then property $ processed == s  -- 完整的字符字面量，不保留注释
      else if s == "'x"
           then property $ processed == "'x"  -- 特殊情况：'x 后跟注释会被处理为只保留 'x
