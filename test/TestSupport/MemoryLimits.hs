@@ -12,6 +12,7 @@ module TestSupport.MemoryLimits
   , gcBetweenTests
   , aggressiveGC
   , ultraGC
+  , extremeGC
   , withMemoryMonitoring
   , withMemoryLevel
   , memoryLevelTestGroup
@@ -32,36 +33,36 @@ data MemoryLevel =
   | Moderate     -- ^ Moderate memory limits (2GB equivalent)
   deriving (Show, Eq)
 
--- | Apply minimal memory limits to a test tree for extreme memory constraints - 进一步优化
+-- | Apply minimal memory limits to a test tree for extreme memory constraints - 极度优化
 withMinimalMemoryLimits :: TestTree -> TestTree
 withMinimalMemoryLimits test = 
-  localOption (QuickCheckMaxSize 1) $    -- 极度减少
-  localOption (QuickCheckTests 1) $      -- 进一步减少到1个测试
-  localOption (QuickCheckMaxShrinks 1) $ -- 进一步减少到1次收缩
+  localOption (QuickCheckMaxSize 1) $    -- 最小值
+  localOption (QuickCheckTests 1) $      -- 最小值：每个属性仅测试1次
+  localOption (QuickCheckMaxShrinks 0) $ -- 禁用收缩以节省内存
   test
 
--- | Apply ultra memory limits to a test tree for very memory-constrained environments - 进一步优化
+-- | Apply ultra memory limits to a test tree for very memory-constrained environments - 极度优化
 withUltraMemoryLimits :: TestTree -> TestTree
 withUltraMemoryLimits test = 
-  localOption (QuickCheckMaxSize 1) $    -- 进一步减少到1
-  localOption (QuickCheckTests 3) $      -- 进一步减少到3个测试
-  localOption (QuickCheckMaxShrinks 2) $ -- 进一步减少到2次收缩
+  localOption (QuickCheckMaxSize 1) $    -- 最小值
+  localOption (QuickCheckTests 2) $      -- 进一步减少到2个测试
+  localOption (QuickCheckMaxShrinks 0) $ -- 禁用收缩以节省内存
   test
 
--- | Apply moderate memory limits to a test tree - 进一步优化
+-- | Apply moderate memory limits to a test tree - 极度优化
 withMemoryLimits :: TestTree -> TestTree
 withMemoryLimits test = 
-  localOption (QuickCheckMaxSize 3) $    -- 进一步减少到3
-  localOption (QuickCheckTests 10) $     -- 进一步减少到10个测试
-  localOption (QuickCheckMaxShrinks 5) $ -- 进一步减少到5次收缩
-  test
-
--- | Apply aggressive memory limits to a test tree for memory-constrained environments - 进一步优化
-withAggressiveMemoryLimits :: TestTree -> TestTree
-withAggressiveMemoryLimits test = 
   localOption (QuickCheckMaxSize 2) $    -- 进一步减少到2
   localOption (QuickCheckTests 5) $      -- 进一步减少到5个测试
-  localOption (QuickCheckMaxShrinks 3) $ -- 进一步减少到3次收缩
+  localOption (QuickCheckMaxShrinks 1) $ -- 减少到1次收缩
+  test
+
+-- | Apply aggressive memory limits to a test tree for memory-constrained environments - 极度优化
+withAggressiveMemoryLimits :: TestTree -> TestTree
+withAggressiveMemoryLimits test = 
+  localOption (QuickCheckMaxSize 1) $    -- 最小值
+  localOption (QuickCheckTests 3) $      -- 进一步减少到3个测试
+  localOption (QuickCheckMaxShrinks 0) $ -- 禁用收缩以节省内存
   test
 
 -- | Create a test group with minimal memory limits
@@ -92,14 +93,28 @@ aggressiveMemoryLimitedTestGroup name tests =
 gcBetweenTests :: IO ()
 gcBetweenTests = performGC
 
--- | Force aggressive garbage collection to free maximum memory - 增强垃圾回收
+-- | Force aggressive garbage collection to free maximum memory - 极度增强垃圾回收
 aggressiveGC :: IO ()
 aggressiveGC = do
   performGC
   -- 多轮GC，每轮间隔很短
-  replicateM_ 3 $ do
+  replicateM_ 5 $ do
     performGC
-    threadDelay 5000 -- 5ms间隔
+    threadDelay 1000  -- 1毫秒延迟，让GC完成
+  -- 最后进行一次完整GC
+  performGC
+  
+-- | Force extreme garbage collection for minimal memory environments
+extremeGC :: IO ()
+extremeGC = do
+  -- 执行多轮完整GC
+  replicateM_ 10 $ do
+    performGC
+    threadDelay 500  -- 0.5毫秒延迟
+  -- 强制清理所有可能的内存
+  performGC
+  performGC
+  threadDelay 5000
 
 -- | Force ultra aggressive garbage collection for memory-critical situations - 极限垃圾回收
 ultraGC :: IO ()

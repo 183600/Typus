@@ -198,7 +198,7 @@ test_error_handling_edge_cases = do
       case compile ast of
         Right _ -> assertFailure "Empty code compilation should fail"
         Left err -> assertBool "Empty code error message should not be empty" $ not (null err)
-    Left parseErr -> assertBool "Empty code parse error message should not be empty" $ not (null parseErr)
+    Left parseErr -> assertFailure "Empty code should parse successfully"
   
   -- 测试无效语法的错误处理
   case parseTypus "invalid syntax with symbols !@#$%" of

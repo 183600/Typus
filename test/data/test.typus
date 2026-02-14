@@ -1,0 +1,1 @@
+{//! ownership: on\n    s := "hello"\n}

@@ -49,9 +49,10 @@ prop_source_location_basic line col =
 -- | Test that Go token basic properties hold
 prop_go_token_basic :: String -> Property
 prop_go_token_basic s = 
-    not (null s) ==>
-    let token = GoToken TokIdentifier s
-    in tokenKind token == TokIdentifier && tokenText token == s
+    -- Use a non-empty string for identifier tokens, but handle empty strings gracefully
+    let testStr = if null s then "default" else s
+        token = GoToken TokIdentifier testStr
+    in property $ tokenKind token == TokIdentifier && tokenText token == testStr
 
 tests :: TestTree
 tests = testGroup "CodeGeneration QuickCheck Tests"

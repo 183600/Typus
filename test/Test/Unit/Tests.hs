@@ -76,6 +76,10 @@ import qualified Test.Unit.CompilerQuickCheckSpec as CompilerQuickCheckSpec
 import qualified Test.Unit.ErrorHandlingQuickCheckSpec as ErrorHandlingQuickCheckSpec
 import qualified Test.Unit.SourceLocationQuickCheckSpec as SourceLocationQuickCheckSpec
 import qualified Test.Unit.GoToolchainQuickCheckSpec as GoToolchainQuickCheckSpec
+import qualified Test.Unit.TypusCoreFeaturesTestSuite as TypusCoreFeaturesTestSuite
+import qualified Test.Unit.TypusAdvancedPropertiesTestSuite as TypusAdvancedPropertiesTestSuite
+import qualified Test.Unit.TypusEdgeCasesTestSuite as TypusEdgeCasesTestSuite
+import qualified Test.Unit.TypusIntegrationTestSuite as TypusIntegrationTestSuite
 
 
 
@@ -217,6 +221,10 @@ tests = unsafePerformIO $ do
             , ErrorHandlingQuickCheckSpec.tests
             , SourceLocationQuickCheckSpec.tests
             , GoToolchainQuickCheckSpec.tests
+            , TypusCoreFeaturesTestSuite.tests
+            , TypusAdvancedPropertiesTestSuite.tests
+            , TypusEdgeCasesTestSuite.tests
+            , TypusIntegrationTestSuite.tests
             ]
       
       -- 使用优化的测试排序

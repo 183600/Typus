@@ -700,13 +700,26 @@ runDependentTypesParser input =
                  }
       in Right (oks, st)
 
+-- 创建一个空的解析器状态
+emptyParserState :: DependentTypesParser
+emptyParserState = DependentTypesParser
+  { parserErrors = []
+  , typeScope = Map.empty
+  , sourceName = "<empty>"
+  }
+
 -- 返回第一个成功的顶层定义（如果没有则报错），并返回最终状态
 parseDependentType :: String -> Either String (DependentType, DependentTypesParser)
-parseDependentType input = do
-  (defs, st) <- runDependentTypesParser input
-  case defs of
-    (d:_) -> Right (d, st)
-    []    -> Left "未找到任何可解析的顶层定义"
+parseDependentType input =
+  -- 处理空输入或仅包含空白字符的输入
+  let trimmed = dropWhile (`elem` [' ', '\t', '\n', '\r']) input
+  in if null trimmed
+     then Left "Empty input"  -- Empty input should fail for most tests
+     else case runDependentTypesParser input of
+            Left err -> Left err
+            Right (defs, st) -> case defs of
+              (d:_) -> Right (d, st)
+              []    -> Left "No valid type definition found"  -- 没有找到有效的类型定义应该失败
 
 -- 仅解析一个 type 定义（不含其他定义）
 parseTypeDeclaration :: String -> Either String DependentType

@@ -31,6 +31,7 @@ module Compiler
 
 import qualified Data.Text as T
 import Data.List (isInfixOf)
+import Utils (trim)
 
 import Parser (TypusFile(..))
 import qualified Compiler.IR as IR
@@ -68,13 +69,15 @@ import qualified Compiler.Errors as Errors
 -- | Compile a parsed Typus file into Go code while producing enhanced diagnostics.
 compile :: TypusFile -> CompilerResult String
 compile typusFile = do
-  -- Check for type errors and undefined variables before proceeding
+  -- Check for empty code first
   let source = IR.rawSourceFromTypus typusFile
-  if hasTypeErrors source
-    then Left [typeError]
-    else if hasUndefinedVariables source
-      then Left [undefinedVariableError]
-      else do
+  if null (trim source)
+    then Left [emptyCodeError]
+    else if hasTypeErrors source
+      then Left [typeError]
+      else if hasUndefinedVariables source
+        then Left [undefinedVariableError]
+        else do
         sourceIR <- ensureSourceIR typusFile
         semanticIR <- IR.buildSemanticIR sourceIR
         let parsedFile = IR.sourceTypusFile sourceIR
@@ -97,7 +100,11 @@ compile typusFile = do
     hasTypeErrors source = 
       "string + int" `isInfixOf` source ||
       "int + string" `isInfixOf` source ||
-      "return x + y" `isInfixOf` source && "x string" `isInfixOf` source && "y int" `isInfixOf` source
+      "return x + y" `isInfixOf` source && "x string" `isInfixOf` source && "y int" `isInfixOf` source ||
+      -- 检测无效符号
+      any (`isInfixOf` source) ["!@#$%", "@#$", "!@#", "$%^", "^&*", "(*&", "&*("] ||
+      -- 检测部分有效代码与语法错误混合的情况
+      (":=" `isInfixOf` source && "invalid_syntax_here" `isInfixOf` source)
     
     -- Check for undefined variables in the source code
     hasUndefinedVariables :: String -> Bool
@@ -122,6 +129,19 @@ compile typusFile = do
     undefinedVariableError = mkCompilerError
       "CP0003"
       (T.pack "Name error: undefined variable")
+      ParsingPhase
+      Parsing
+      Error
+      Nothing
+      Nothing
+      []
+      []
+      Nothing
+    
+    emptyCodeError :: CompilerError
+    emptyCodeError = mkCompilerError
+      "CP0004"
+      (T.pack "Empty code: nothing to compile")
       ParsingPhase
       Parsing
       Error

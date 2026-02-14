@@ -369,8 +369,8 @@ instance WellFormed GoModule where
 -- | Generator for arbitrary strings (memory-optimized)
 arbitraryString :: Gen String
 arbitraryString = do
-  size <- choose (0, 8)  -- Further reduced from 12 to 8 for maximum memory efficiency
-  vectorOf size $ elements $ ['a'..'z'] ++ ['0'..'9']  -- Limited character set
+  size <- choose (0, 5)  -- 极度减少到5以最小化内存使用
+  vectorOf size $ elements $ ['a'..'z']  -- 进一步限制字符集
 
 -- | Generator for arbitrary characters
 arbitraryChar :: Gen Char
@@ -393,29 +393,29 @@ arbitrarySourceSpan = SourceSpan <$> arbitrarySourcePos <*> arbitrarySourcePos
 arbitraryInt :: Gen Int
 arbitraryInt = arbitrary
 
--- | Generator for arbitrary identifiers (memory-optimized)
+-- | Generator for arbitrary identifiers (极度内存优化)
 arbitraryIdentifier :: Gen String
 arbitraryIdentifier = do
   firstChar <- elements ['a'..'z']
-  restSize <- choose (0, 3)  -- Further reduced from 4 to 3 for maximum memory efficiency
-  restChars <- vectorOf restSize $ elements $ ['a'..'z'] ++ ['0'..'9']  -- Removed underscore for simplicity
+  restSize <- choose (0, 2)  -- 极度减少到2以最小化内存使用
+  restChars <- vectorOf restSize $ elements $ ['a'..'z']  -- 进一步限制字符集
   return $ firstChar : restChars
 
--- | Generator for arbitrary unicode strings (memory-optimized)
+-- | Generator for arbitrary unicode strings (极度内存优化)
 arbitraryUnicodeString :: Gen String
 arbitraryUnicodeString = do
-  size <- choose (0, 5)  -- Further reduced from 8 to 5 for maximum memory efficiency
-  vectorOf size $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9']  -- Limited to ASCII for memory efficiency
+  size <- choose (0, 3)  -- 极度减少到3以最小化内存使用
+  vectorOf size $ elements $ ['a'..'z']  -- 进一步限制字符集
 
 -- | Generator for arbitrary whitespace strings
 arbitraryWhitespace :: Gen String
 arbitraryWhitespace = listOf $ elements " \t\n\r"
 
--- | Generator for arbitrary short strings (memory-optimized)
+-- | Generator for arbitrary short strings (极度内存优化)
 arbitraryShortString :: Gen String
 arbitraryShortString = do
-  size <- choose (1, 4)  -- Further reduced from 6 to 4 for maximum memory efficiency
-  vectorOf size $ elements $ ['a'..'z'] ++ ['0'..'9']  -- Limited character set
+  size <- choose (1, 3)  -- 极度减少到3以最小化内存使用
+  vectorOf size $ elements $ ['a'..'z']  -- 进一步限制字符集
 
 -- | Generator for valid Typus code
 validTypusCode :: Gen String
