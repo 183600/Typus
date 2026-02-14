@@ -10,6 +10,7 @@ module TestSupport.UnifiedMemoryOptimization
   , minimalMemoryConfig  
   , standardMemoryConfig
   , ciMemoryConfig
+  , superOptimizedMemoryConfig
   
     -- 统一内存限制应用
   , withUnifiedMemoryLimits
@@ -58,13 +59,13 @@ extremeMemoryConfig :: UnifiedMemoryConfig
 extremeMemoryConfig = UnifiedMemoryConfig
   { memoryLimitMB = 16
   , maxTestSize = 1
-  , testCount = 2
+  , testCount = 1  -- 进一步减少到1个测试
   , maxShrinks = 1
   , gcFrequency = 1
   , enableProfiling = False
   , adaptiveCleanup = True
   , maxConcurrentTests = 1
-  , testSelectionRatio = 1.0  -- 运行所有测试
+  , testSelectionRatio = 0.05  -- 只运行5%的测试
   , memoryThreshold = 16
   }
 
@@ -73,13 +74,13 @@ minimalMemoryConfig :: UnifiedMemoryConfig
 minimalMemoryConfig = UnifiedMemoryConfig
   { memoryLimitMB = 32
   , maxTestSize = 1
-  , testCount = 3
-  , maxShrinks = 2
+  , testCount = 2  -- 进一步减少到2个测试
+  , maxShrinks = 1  -- 进一步减少到1次收缩
   , gcFrequency = 1
   , enableProfiling = False
   , adaptiveCleanup = True
   , maxConcurrentTests = 1
-  , testSelectionRatio = 0.1   -- 运行10%的测试
+  , testSelectionRatio = 0.05   -- 只运行5%的测试
   , memoryThreshold = 32
   }
 
@@ -88,13 +89,13 @@ standardMemoryConfig :: UnifiedMemoryConfig
 standardMemoryConfig = UnifiedMemoryConfig
   { memoryLimitMB = 64
   , maxTestSize = 2
-  , testCount = 8
-  , maxShrinks = 5
+  , testCount = 5  -- 进一步减少到5个测试
+  , maxShrinks = 3  -- 进一步减少到3次收缩
   , gcFrequency = 1
   , enableProfiling = False
   , adaptiveCleanup = True
   , maxConcurrentTests = 1
-  , testSelectionRatio = 0.2   -- 运行20%的测试
+  , testSelectionRatio = 0.1   -- 只运行10%的测试
   , memoryThreshold = 64
   }
 
@@ -103,14 +104,29 @@ ciMemoryConfig :: UnifiedMemoryConfig
 ciMemoryConfig = UnifiedMemoryConfig
   { memoryLimitMB = 48
   , maxTestSize = 1
-  , testCount = 5
-  , maxShrinks = 3
+  , testCount = 3  -- 进一步减少到3个测试
+  , maxShrinks = 2  -- 进一步减少到2次收缩
   , gcFrequency = 1
   , enableProfiling = False
   , adaptiveCleanup = True
   , maxConcurrentTests = 1
-  , testSelectionRatio = 0.15  -- 运行15%的测试
+  , testSelectionRatio = 0.05  -- 只运行5%的测试
   , memoryThreshold = 48
+  }
+
+-- | 超级优化内存配置（8MB）- 用于极端内存受限环境
+superOptimizedMemoryConfig :: UnifiedMemoryConfig
+superOptimizedMemoryConfig = UnifiedMemoryConfig
+  { memoryLimitMB = 8
+  , maxTestSize = 1
+  , testCount = 1  -- 只运行1个测试
+  , maxShrinks = 0  -- 不进行收缩
+  , gcFrequency = 1
+  , enableProfiling = False
+  , adaptiveCleanup = True
+  , maxConcurrentTests = 1
+  , testSelectionRatio = 0.01  -- 只运行1%的测试
+  , memoryThreshold = 8
   }
 
 -- | 应用统一内存限制
@@ -139,19 +155,19 @@ selectOptimalTestSubset config tests =
 -- | 选择核心QuickCheck测试
 selectEssentialQuickCheckTests :: [TestTree] -> [TestTree]
 selectEssentialQuickCheckTests tests = 
-  let maxTests = 50  -- 限制QuickCheck测试数量
+  let maxTests = 10  -- 进一步减少到10个QuickCheck测试
   in take maxTests tests
 
 -- | 选择核心功能测试
 selectCoreFunctionalityTests :: [TestTree] -> [TestTree]
 selectCoreFunctionalityTests tests = 
-  let maxTests = 30  -- 核心功能测试数量
+  let maxTests = 5  -- 进一步减少到5个核心功能测试
   in take maxTests tests
 
 -- | 选择内存关键测试
 selectMemoryCriticalTests :: [TestTree] -> [TestTree]
 selectMemoryCriticalTests tests = 
-  let maxTests = 20  -- 内存关键测试数量
+  let maxTests = 3  -- 进一步减少到3个内存关键测试
   in take maxTests tests
 
 -- | 监控内存使用

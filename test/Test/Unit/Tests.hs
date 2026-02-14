@@ -55,6 +55,13 @@ import qualified Test.Unit.EnhancedTypusFeaturesTestSuite as EnhancedTypusFeatur
 import qualified Test.Unit.TypusCoreQuickCheckTestSuite as TypusCoreQuickCheckTestSuite
 import qualified Test.Unit.TypusAdvancedQuickCheckTestSuite as TypusAdvancedQuickCheckTestSuite
 
+-- 新添加的测试套件
+import qualified Test.Unit.NewDependentTypesTestSuite as NewDependentTypesTestSuite
+import qualified Test.Unit.NewOwnershipTestSuite as NewOwnershipTestSuite
+import qualified Test.Unit.NewCompilerIntegrationTestSuite as NewCompilerIntegrationTestSuite
+import qualified Test.Unit.NewQuickCheckPropertiesTestSuite as NewQuickCheckPropertiesTestSuite
+import qualified Test.Unit.NewParserTestSuite as NewParserTestSuite
+
 
 
 import Test.Unit.TestListPropertiesSpec (testListProperties)
@@ -107,10 +114,26 @@ createOptimizedTestRegistry = do
         1 "Core" registryWithHigh
   
   -- 注册基本测试套件（如果内存允许）
-  let finalRegistry = if availableMemory >= 24
+  let registryWithBasic = if availableMemory >= 24
         then registerTest "basic essential tests" BasicQuickCheckTestSuite.essentialTests 
                 PriorityMedium 5 "Utils" False registryWithHigh2
         else registryWithHigh2
+  
+  -- 注册新创建的测试套件（如果内存允许）
+  let registryWithNew = if availableMemory >= 32
+        then let reg1 = registerTest "dependent types tests" NewDependentTypesTestSuite.tests 
+                    PriorityMedium 6 "DependentTypes" False registryWithBasic
+                 reg2 = registerTest "ownership tests" NewOwnershipTestSuite.tests 
+                    PriorityMedium 6 "Ownership" False reg1
+                 reg3 = registerTest "compiler integration tests" NewCompilerIntegrationTestSuite.tests 
+                    PriorityMedium 6 "Compiler" False reg2
+                 reg4 = registerTest "quickcheck properties tests" NewQuickCheckPropertiesTestSuite.tests 
+                    PriorityMedium 6 "QuickCheck" False reg3
+             in registerTest "parser tests" NewParserTestSuite.tests 
+                    PriorityMedium 6 "Parser" False reg4
+        else registryWithBasic
+  
+  let finalRegistry = registryWithNew
   
   return finalRegistry
 
@@ -162,15 +185,21 @@ tests = unsafePerformIO $ do
             , EnhancedTypusFeaturesTestSuite.testSuite
             , TypusCoreQuickCheckTestSuite.testSuite
             , TypusAdvancedQuickCheckTestSuite.testSuite
+            -- 新添加的测试套件
+            , NewDependentTypesTestSuite.tests
+            , NewOwnershipTestSuite.tests
+            , NewCompilerIntegrationTestSuite.tests
+            , NewQuickCheckPropertiesTestSuite.tests
+            , NewParserTestSuite.tests
             ]
       
       -- 根据可用内存选择测试数量
       let maxTests = case availableMemory of
-            _ | availableMemory <= 16 -> 1
-            _ | availableMemory <= 24 -> 2
-            _ | availableMemory <= 32 -> 3
-            _ | availableMemory <= 48 -> 4
-            _ -> 5
+            _ | availableMemory <= 16 -> 3
+            _ | availableMemory <= 24 -> 6
+            _ | availableMemory <= 32 -> 9
+            _ | availableMemory <= 48 -> 12
+            _ -> 15
       
       let selectedTests = take maxTests allTests
       
