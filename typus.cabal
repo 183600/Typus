@@ -182,6 +182,11 @@ test-suite typus-test-enhanced
         TestSupport.ExtremeMemoryOptimization
         TestSupport.SmartTestSelector
         TestSupport.Arbitrary
+        TestSupport.MemoryOptimizedQuickCheck
+        TestSupport.OptimizedStringOperations
+        TestSupport.OptimizedTestOrdering
+        TestSupport.TestPropertyMemoryCleanup
+        TestSupport.UltraLightweightTests
     build-depends:
             base >=4.7 && <5,
             typus,
@@ -390,6 +395,13 @@ test-suite typus-test
         Test.Unit.NewQuickCheckPropertiesTestSuite,
         Test.Unit.NewSourceLocationQuickCheckSpec,
         Test.Unit.NewUtilsQuickCheckSpec,
+        Test.Unit.DependentTypesQuickCheckSpec,
+        Test.Unit.OwnershipQuickCheckSpec,
+        Test.Unit.ParserQuickCheckSpec,
+        Test.Unit.CompilerQuickCheckSpec,
+        Test.Unit.ErrorHandlingQuickCheckSpec,
+        Test.Unit.SourceLocationQuickCheckSpec,
+        Test.Unit.GoToolchainQuickCheckSpec,
         Test.Unit.OptimizedTests,
         Test.Unit.OwnershipAnalysisQuickCheckTests,
         Test.Unit.ParserQuickCheckTests,
@@ -411,7 +423,13 @@ test-suite typus-test
         TestSupport.UnifiedMemoryOptimization,
         TestSupport.EnhancedMemoryMonitor,
         TestSupport.ExtremeMemoryOptimization,
-        TestSupport.SmartTestSelector
+        TestSupport.SmartTestSelector,
+        TestSupport.EnhancedMemoryOptimization,
+        TestSupport.MemoryOptimizedQuickCheck,
+        TestSupport.OptimizedStringOperations,
+        TestSupport.OptimizedTestOrdering,
+        TestSupport.TestPropertyMemoryCleanup,
+        TestSupport.UltraLightweightTests
     build-depends:
         base >=4.7 && <5,
         typus,
@@ -504,7 +522,13 @@ test-suite typus-test-optimized
         TestSupport.UnifiedMemoryOptimization,
         TestSupport.EnhancedMemoryMonitor,
         TestSupport.ExtremeMemoryOptimization,
-        TestSupport.SmartTestSelector
+        TestSupport.SmartTestSelector,
+        TestSupport.EnhancedMemoryOptimization,
+        TestSupport.MemoryOptimizedQuickCheck,
+        TestSupport.OptimizedStringOperations,
+        TestSupport.OptimizedTestOrdering,
+        TestSupport.TestPropertyMemoryCleanup,
+        TestSupport.UltraLightweightTests
     build-depends:
         base >=4.7 && <5,
         typus,

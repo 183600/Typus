@@ -45,6 +45,11 @@ import TestSupport.ExtremeMemoryOptimization
   ( smartMemoryCleanup
   , emergencyMemoryCleanup
   )
+import TestSupport.OptimizedTestOrdering 
+  ( optimizeTestExecutionOrder
+  , adaptTestOrderToMemory
+  , createMemoryAwareTestSuite
+  )
 
 -- 极度精简的导入 - 只导入绝对必要的测试模块
 
@@ -63,6 +68,14 @@ import qualified Test.Unit.NewQuickCheckPropertiesTestSuite as NewQuickCheckProp
 import qualified Test.Unit.NewParserTestSuite as NewParserTestSuite
 import qualified Test.Unit.NewEnhancedTestSuite as NewEnhancedTestSuite
 import qualified Test.Unit.NewAdvancedQuickCheckTestSuite as NewAdvancedQuickCheckTestSuite
+import qualified Test.Unit.NewComprehensiveQuickCheckTestSuite as NewComprehensiveQuickCheckTestSuite
+import qualified Test.Unit.DependentTypesQuickCheckSpec as DependentTypesQuickCheckSpec
+import qualified Test.Unit.OwnershipQuickCheckSpec as OwnershipQuickCheckSpec
+import qualified Test.Unit.ParserQuickCheckSpec as ParserQuickCheckSpec
+import qualified Test.Unit.CompilerQuickCheckSpec as CompilerQuickCheckSpec
+import qualified Test.Unit.ErrorHandlingQuickCheckSpec as ErrorHandlingQuickCheckSpec
+import qualified Test.Unit.SourceLocationQuickCheckSpec as SourceLocationQuickCheckSpec
+import qualified Test.Unit.GoToolchainQuickCheckSpec as GoToolchainQuickCheckSpec
 
 
 
@@ -195,7 +208,19 @@ tests = unsafePerformIO $ do
             , NewParserTestSuite.tests
             , NewEnhancedTestSuite.tests
             , NewAdvancedQuickCheckTestSuite.tests
+            -- 新添加的QuickCheck测试套件
+            , NewComprehensiveQuickCheckTestSuite.newComprehensiveQuickCheckTestSuite
+            , DependentTypesQuickCheckSpec.tests
+            , OwnershipQuickCheckSpec.tests
+            , ParserQuickCheckSpec.tests
+            , CompilerQuickCheckSpec.tests
+            , ErrorHandlingQuickCheckSpec.tests
+            , SourceLocationQuickCheckSpec.tests
+            , GoToolchainQuickCheckSpec.tests
             ]
+      
+      -- 使用优化的测试排序
+      orderedTests <- optimizeTestExecutionOrder availableMemory allTests
       
       -- 根据可用内存选择测试数量
       let maxTests = case availableMemory of
@@ -205,6 +230,6 @@ tests = unsafePerformIO $ do
             _ | availableMemory <= 48 -> 12
             _ -> 15
       
-      let selectedTests = take maxTests allTests
+      let selectedTests = take maxTests orderedTests
       
-      return $ testGroup ("Typus Memory-Optimized Test Suite (" ++ show tier ++ ")") selectedTests
+      return $ createMemoryAwareTestSuite ("Typus Memory-Optimized Test Suite (" ++ show tier ++ ")") selectedTests

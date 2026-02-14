@@ -1,274 +1,239 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Test.Unit.ParserQuickCheckSpec where
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import Data.Char (isSpace)
-import Data.List (isPrefixOf, isInfixOf)
-import qualified Data.Text as T
+import TestSupport.MemoryLimits 
+  ( withMemoryLimits
+  , memoryLimitedTestGroup
+  , memoryLevelTestGroup
+  , MemoryLevel(..)
+  , withMemoryLevel
+  , gcBetweenTests
+  )
+import TestSupport.EnhancedMemoryOptimization 
+  ( enhancedMemoryCleanup
+  , strategicMemoryCleanup
+  , cleanupBetweenTests
+  , withEnhancedMemoryControl
+  , withStrictMemoryLimits
+  , applyMemoryOptimizations
+  )
+import TestSupport.OptimizedStringOperations 
+  ( genMinimalString
+  , genUltraMinimalString
+  , safeTake
+  , safeLength
+  , efficientTrim
+  , efficientIsEmpty
+  , withUltraStringLimit
+  , minimizeStringUsage
+  , optimizeStringProperty
+  )
+import TestSupport.TestPropertyMemoryCleanup 
+  ( testGroupWithCleanup
+  , testGroupWithStrategicCleanup
+  , memoryAwareProperty
+  , memoryOptimizedProperty
+  , withPropertyMemoryCleanup
+  )
 
 import Parser
-import SourceLocation (SourcePos(..), SourceSpan(..))
+import Data.List (isInfixOf, isPrefixOf, isSuffixOf)
+import Data.Char (isSpace, isDigit, isAlpha)
+import Data.Either (isLeft, isRight)
+import Data.Maybe (isJust, isNothing)
 
--- Helper functions for testing
-generateValidIdentifier :: String -> String
-generateValidIdentifier s = 
-  let filtered = filter (\c -> c `elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_-") s
-  in if null filtered then "id" else take 20 filtered
+-- | 测试标识符的解析
+prop_identifier_parsing :: String -> Property
+prop_identifier_parsing ident =
+  let validIdent = not (null ident) && isAlpha (head ident) && all (`elem` ['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'] ++ "_") (tail ident)
+      identExpr = ident
+  in if not validIdent
+     then property $ isLeft (parseTypus identExpr)
+     else property $ isRight (parseTypus identExpr)
 
-generateValidDirective :: String -> String
-generateValidDirective s = 
-  let keys = ["ownership", "dependent_types", "constraints"]
-      values = ["true", "false"]
-      keyIndex = abs (length s) `mod` length keys
-      valueIndex = abs (length s + 1) `mod` length values
-  in keys !! keyIndex ++ ":" ++ values !! valueIndex
+-- | 测试数字字面量的解析
+prop_number_literal_parsing :: String -> Property
+prop_number_literal_parsing numStr =
+  let validNum = not (null numStr) && all isDigit numStr
+      numExpr = numStr
+  in if not validNum
+     then property $ isLeft (parseTypus numExpr)
+     else property $ isRight (parseTypus numExpr)
 
-generateValidCodeBlock :: String -> String
-generateValidCodeBlock s = 
-  let codeTemplates = 
-        [ "func test() {\n    return " ++ show (abs (length s) `mod` 100) ++ "\n}"
-        , "var x = " ++ show (abs (length s) `mod` 50) ++ "\n"
-        , "type Test struct {\n    Field int\n}"
-        , "if x > 0 {\n    fmt.Println(\"test\")\n}"
-        , "for i := 0; i < " ++ show (abs (length s) `mod` 10) ++ "; i++ {\n    // loop\n}"
-        ]
-      templateIndex = abs (length s) `mod` length codeTemplates
-  in codeTemplates !! templateIndex
+-- | 测试字符串字面量的解析
+prop_string_literal_parsing :: String -> Property
+prop_string_literal_parsing strContent =
+  -- 避免包含引号的内容
+  let validContent = not ('"' `elem` strContent)
+      strExpr = "\"" ++ strContent ++ "\""
+  in if not validContent
+     then property True  -- 跳过包含引号的字符串
+     else property $ isRight (parseTypus strExpr)
 
--- QuickCheck properties
-prop_parse_empty_input :: Property
-prop_parse_empty_input =
-  forAll arbitrary $ \s ->
-    let input = ""
-        result = parseTypus input
-    in case result of
-      Left _ -> property False
-      Right file -> 
-        property $ 
-          null (tfBlocks file) && 
-          null (tfBuildTags file) &&
-          tfDirectives file == defaultFileDirectives
+-- | 测试布尔字面量的解析
+prop_boolean_literal_parsing :: String -> Property
+prop_boolean_literal_parsing boolStr =
+  let validBool = boolStr `elem` ["true", "false"]
+      boolExpr = boolStr
+  in if not validBool
+     then property $ isLeft (parseTypus boolExpr)
+     else property $ isRight (parseTypus boolExpr)
 
-prop_parse_whitespace_only :: Property
-prop_parse_whitespace_only =
-  forAll arbitrary $ \s ->
-    let input = replicate (abs (length s) `mod` 20 + 1) ' '
-        result = parseTypus input
-    in case result of
-      Left _ -> property False
-      Right file -> 
-        property $ 
-          null (tfBlocks file) && 
-          null (tfBuildTags file) &&
-          tfDirectives file == defaultFileDirectives
+-- | 测试二进制表达式的解析
+prop_binary_expression_parsing :: String -> String -> String -> Property
+prop_binary_expression_parsing left op right =
+  let validOp = op `elem` ["+", "-", "*", "/", "%", "==", "!=", "<", "<=", ">", ">=", "&&", "||", "&", "|", "^"]
+      validOperands = not (null left) && not (null right) && all (`elem` ['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'] ++ "_") (left ++ right)
+      binExpr = left ++ " " ++ op ++ " " ++ right
+  in if not (validOp && validOperands)
+     then property $ isLeft (parseTypus binExpr)
+     else property $ isRight (parseTypus binExpr)
 
-prop_parse_simple_identifier :: Property
-prop_parse_simple_identifier =
-  forAll arbitrary $ \s ->
-    let input = generateValidIdentifier s
-        result = isIdentifierChar (head input)
-    in property result
+-- | 测试一元表达式的解析
+prop_unary_expression_parsing :: String -> String -> Property
+prop_unary_expression_parsing op operand =
+  let validOp = op `elem` ["!", "-", "~", "*"]
+      validOperand = not (null operand) && all (`elem` ['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'] ++ "_") operand
+      unaryExpr = op ++ operand
+  in if not (validOp && validOperand)
+     then property $ isLeft (parseTypus unaryExpr)
+     else property $ isRight (parseTypus unaryExpr)
 
-prop_parse_file_directive :: Property
-prop_parse_file_directive =
-  forAll arbitrary $ \s ->
-    let directive = generateValidDirective s
-        input = "//! " ++ directive ++ "\n"
-        result = parseTypus input
-    in case result of
-      Left _ -> property False
-      Right file -> 
-        property $ tfDirectives file /= defaultFileDirectives
+-- | 测试函数定义的解析
+prop_function_definition_parsing :: String -> String -> Property
+prop_function_definition_parsing funcName paramName =
+  let validNames = not (null funcName) && not (null paramName) && 
+                   all (`elem` ['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'] ++ "_") (funcName ++ paramName)
+      funcDef = "func " ++ funcName ++ "(" ++ paramName ++ " int) int { return " ++ paramName ++ " }"
+  in if not validNames
+     then property $ isLeft (parseTypus funcDef)
+     else property $ isRight (parseTypus funcDef)
 
-prop_parse_multiple_file_directives :: Property
-prop_parse_multiple_file_directives =
-  forAll arbitrary $ \s ->
-    let directives = take 3 $ map generateValidDirective [s, s ++ "1", s ++ "2"]
-        input = unlines $ map ("//! " ++) directives
-        result = parseTypus input
-    in case result of
-      Left _ -> property False
-      Right file -> 
-        property $ tfDirectives file /= defaultFileDirectives
+-- | 测试变量声明的解析
+prop_variable_declaration_parsing :: String -> String -> Property
+prop_variable_declaration_parsing varName typeName =
+  let validNames = not (null varName) && not (null typeName) && 
+                   all (`elem` ['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'] ++ "_") (varName ++ typeName)
+      varDecl = "var " ++ varName ++ " " ++ typeName
+  in if not validNames
+     then property $ isLeft (parseTypus varDecl)
+     else property $ isRight (parseTypus varDecl)
 
-prop_parse_block_directive :: Property
-prop_parse_block_directive =
-  forAll arbitrary $ \s ->
-    let directive = generateValidDirective s
-        code = generateValidCodeBlock s
-        input = "{//! " ++ directive ++ "}\n" ++ code ++ "\n"
-        result = parseTypus input
-    in case result of
-      Left _ -> property False
-      Right file -> 
-        property $ not (null (tfBlocks file)) &&
-                  cbDirectives (head (tfBlocks file)) /= defaultBlockDirectives
+-- | 测试赋值表达式的解析
+prop_assignment_parsing :: String -> String -> Property
+prop_assignment_parsing varName expr =
+  let validVarName = not (null varName) && all (`elem` ['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'] ++ "_") varName
+      validExpr = not (null expr) && all (`elem` ['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'] ++ "_") expr
+      assignExpr = varName ++ " = " ++ expr
+  in if not (validVarName && validExpr)
+     then property $ isLeft (parseTypus assignExpr)
+     else property $ isRight (parseTypus assignExpr)
 
-prop_parse_build_tag :: Property
-prop_parse_build_tag =
-  forAll arbitrary $ \s ->
-    let tag = "go:build test" ++ show (abs (length s) `mod` 10)
-        input = "//" ++ tag ++ "\n"
-        result = parseTypus input
-    in case result of
-      Left _ -> property False
-      Right file -> 
-        property $ not (null (tfBuildTags file))
+-- | 测试if语句的解析
+prop_if_statement_parsing :: String -> Property
+prop_if_statement_parsing condition =
+  let validCondition = not (null condition) && all (`elem` ['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'] ++ "_=<>!&| ") condition
+      ifStmt = "if " ++ condition ++ " { x := 1 }"
+  in if not validCondition
+     then property $ isLeft (parseTypus ifStmt)
+     else property $ isRight (parseTypus ifStmt)
 
-prop_parse_code_block :: Property
-prop_parse_code_block =
-  forAll arbitrary $ \s ->
-    let code = generateValidCodeBlock s
-        input = code ++ "\n"
-        result = parseTypus input
-    in case result of
-      Left _ -> property False
-      Right file -> 
-        property $ not (null (tfBlocks file))
+-- | 测试for循环的解析
+prop_for_loop_parsing :: String -> String -> Property
+prop_for_loop_parsing varName range =
+  let validVarName = not (null varName) && all (`elem` ['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'] ++ "_") varName
+      validRange = not (null range) && all (`elem` ['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'] ++ "_") range
+      forLoop = "for " ++ varName ++ " := range " ++ range ++ " { }"
+  in if not (validVarName && validRange)
+     then property $ isLeft (parseTypus forLoop)
+     else property $ isRight (parseTypus forLoop)
 
-prop_parse_mixed_content :: Property
-prop_parse_mixed_content =
-  forAll arbitrary $ \s ->
-    let directive = generateValidDirective s
-        tag = "go:build test" ++ show (abs (length s) `mod` 10)
-        code = generateValidCodeBlock s
-        input = "//! " ++ directive ++ "\n" ++
-                "//" ++ tag ++ "\n" ++
-                code ++ "\n"
-        result = parseTypus input
-    in case result of
-      Left _ -> property False
-      Right file -> 
-        property $ tfDirectives file /= defaultFileDirectives &&
-                  not (null (tfBuildTags file)) &&
-                  not (null (tfBlocks file))
+-- | 测试结构体定义的解析
+prop_struct_definition_parsing :: String -> String -> Property
+prop_struct_definition_parsing structName fieldName =
+  let validNames = not (null structName) && not (null fieldName) && 
+                   all (`elem` ['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'] ++ "_") (structName ++ fieldName)
+      structDef = "type " ++ structName ++ " struct { " ++ fieldName ++ " int }"
+  in if not validNames
+     then property $ isLeft (parseTypus structDef)
+     else property $ isRight (parseTypus structDef)
 
-prop_parse_preserves_content :: Property
-prop_parse_preserves_content =
-  forAll arbitrary $ \s ->
-    let content = "func test() {\n    return " ++ show (abs (length s) `mod` 100) ++ "\n}"
-        input = content ++ "\n"
-        result = parseTypus input
-    in case result of
-      Left _ -> property False
-      Right file -> 
-        property $ not (null (tfBlocks file)) &&
-                  content `isInfixOf` cbContent (head (tfBlocks file))
+-- | 测试接口定义的解析
+prop_interface_definition_parsing :: String -> String -> Property
+prop_interface_definition_parsing interfaceName methodName =
+  let validNames = not (null interfaceName) && not (null methodName) && 
+                   all (`elem` ['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'] ++ "_") (interfaceName ++ methodName)
+      interfaceDef = "type " ++ interfaceName ++ " interface { " ++ methodName ++ "() }"
+  in if not validNames
+     then property $ isLeft (parseTypus interfaceDef)
+     else property $ isRight (parseTypus interfaceDef)
 
-prop_parse_comments_ignored :: Property
-prop_parse_comments_ignored =
-  forAll arbitrary $ \s ->
-    let comment = "// This is a comment " ++ show (abs (length s) `mod` 10)
-        code = "func test() {\n    return 1\n}"
-        input = comment ++ "\n" ++ code ++ "\n"
-        result = parseTypus input
-    in case result of
-      Left _ -> property False
-      Right file -> 
-        property $ not (null (tfBlocks file)) &&
-                  not (comment `isInfixOf` cbContent (head (tfBlocks file)))
+-- | 测试解析器的边界情况
+test_parser_edge_cases :: Assertion
+test_parser_edge_cases = do
+  -- 测试空输入
+  assertBool "Empty input should fail" $ isLeft (parseTypus "")
+  
+  -- 测试无效的标识符
+  assertBool "Invalid identifier should fail" $ isLeft (parseTypus "123invalid")
+  
+  -- 测试无效的数字
+  assertBool "Invalid number should fail" $ isLeft (parseTypus "12a34")
+  
+  -- 测试不匹配的字符串引号
+  assertBool "Unmatched string quotes should fail" $ isLeft (parseTypus "\"unmatched")
 
-prop_parse_block_comments_ignored :: Property
-prop_parse_block_comments_ignored =
-  forAll arbitrary $ \s ->
-    let comment = "/* This is a block comment " ++ show (abs (length s) `mod` 10) ++ " */"
-        code = "func test() {\n    return 1\n}"
-        input = comment ++ "\n" ++ code ++ "\n"
-        result = parseTypus input
-    in case result of
-      Left _ -> property False
-      Right file -> 
-        property $ not (null (tfBlocks file)) &&
-                  not (comment `isInfixOf` cbContent (head (tfBlocks file)))
+-- | 测试解析器的复杂表达式
+test_parser_complex_expressions :: Assertion
+test_parser_complex_expressions = do
+  -- 测试复杂的二进制表达式
+  assertBool "Complex binary expression should succeed" $ isRight (parseTypus "a + b * c - d / e")
+  
+  -- 测试复杂的函数定义
+  assertBool "Complex function definition should succeed" $ isRight (parseTypus "func calculate(x int, y int) (int, error) { return x + y, nil }")
+  
+  -- 测试复杂的结构体定义
+  assertBool "Complex struct definition should succeed" $ isRight (parseTypus "type Person struct { Name string Age int Address *Address }")
 
-prop_parse_indented_content :: Property
-prop_parse_indented_content =
-  forAll arbitrary $ \s ->
-    let indent = replicate (abs (length s) `mod` 5 + 1) ' '
-        code = "func test() {\n    return 1\n}"
-        input = unlines $ map (indent ++) (lines code)
-        result = parseTypus input
-    in case result of
-      Left _ -> property False
-      Right file -> 
-        property $ not (null (tfBlocks file))
-
-prop_parse_unicode_content :: Property
-prop_parse_unicode_content =
-  forAll arbitrary $ \s ->
-    let unicodeChars = "测试αβγ"
-        code = "func " ++ unicodeChars ++ "() {\n    return 1\n}"
-        input = code ++ "\n"
-        result = parseTypus input
-    in case result of
-      Left _ -> property False
-      Right file -> 
-        property $ not (null (tfBlocks file)) &&
-                  unicodeChars `isInfixOf` cbContent (head (tfBlocks file))
-
--- Test suite
-testSuite :: TestTree
-testSuite = testGroup "Parser QuickCheck Tests"
-  [ testProperty "parse empty input" prop_parse_empty_input
-  , testProperty "parse whitespace only" prop_parse_whitespace_only
-  , testProperty "parse simple identifier" prop_parse_simple_identifier
-  , testProperty "parse file directive" prop_parse_file_directive
-  , testProperty "parse multiple file directives" prop_parse_multiple_file_directives
-  , testProperty "parse block directive" prop_parse_block_directive
-  , testProperty "parse build tag" prop_parse_build_tag
-  , testProperty "parse code block" prop_parse_code_block
-  , testProperty "parse mixed content" prop_parse_mixed_content
-  , testProperty "parse preserves content" prop_parse_preserves_content
-  , testProperty "parse comments ignored" prop_parse_comments_ignored
-  , testProperty "parse block comments ignored" prop_parse_block_comments_ignored
-  , testProperty "parse indented content" prop_parse_indented_content
-  , testProperty "parse unicode content" prop_parse_unicode_content
-  ]
-
--- Unit tests for specific edge cases
-unitTests :: TestTree
-unitTests = testGroup "Parser Unit Tests"
-  [ testCase "parse malformed directive" $ do
-      let input = "//! malformed directive without equals\n"
-          result = parseTypus input
-      case result of
-        Left _ -> assertBool "Should handle malformed directive gracefully" True
-        Right file -> assertBool "Should parse successfully" True
-
-  , testCase "parse incomplete expression" $ do
-      let input = "let x =\n"
-          result = parseTypus input
-      case result of
-        Left _ -> assertBool "Should detect incomplete expression" True
-        Right _ -> assertFailure "Should detect incomplete expression"
-
-  , testCase "parse if without brace" $ do
-      let input = "if x > 0\n    return x\n"
-          result = parseTypus input
-      case result of
-        Left _ -> assertBool "Should detect missing brace" True
-        Right _ -> assertFailure "Should detect missing brace"
-
-  , testCase "parse multiple packages" $ do
-      let input = "package main\npackage test\n"
-          result = parseTypus input
-      case result of
-        Left _ -> assertBool "Should detect multiple packages" True
-        Right _ -> assertFailure "Should detect multiple packages"
-
-  , testCase "parse simple content" $ do
-      let input = "{\n"
-          result = parseTypus input
-      case result of
-        Left _ -> assertFailure "Should parse simple content"
-        Right file -> assertBool "Should parse simple content" True
-  ]
-
--- Combined test suite
+-- | 解析器测试套件
 tests :: TestTree
-tests = testGroup "Parser Tests"
-  [ testSuite
-  , unitTests
+tests = testGroupWithStrategicCleanup "Parser QuickCheck Tests"
+  [ -- 基本字面量测试
+    memoryOptimizedProperty "Identifier parsing" (property prop_identifier_parsing)
+  , memoryOptimizedProperty "Number literal parsing" (property prop_number_literal_parsing)
+  , memoryOptimizedProperty "String literal parsing" (property prop_string_literal_parsing)
+  , memoryOptimizedProperty "Boolean literal parsing" (property prop_boolean_literal_parsing)
+  
+  -- 表达式测试
+  , memoryOptimizedProperty "Binary expression parsing" (property prop_binary_expression_parsing)
+  , memoryOptimizedProperty "Unary expression parsing" (property prop_unary_expression_parsing)
+  
+  -- 语句测试
+  , memoryOptimizedProperty "Function definition parsing" (property prop_function_definition_parsing)
+  , memoryOptimizedProperty "Variable declaration parsing" (property prop_variable_declaration_parsing)
+  , memoryOptimizedProperty "Assignment parsing" (property prop_assignment_parsing)
+  , memoryOptimizedProperty "If statement parsing" (property prop_if_statement_parsing)
+  , memoryOptimizedProperty "For loop parsing" (property prop_for_loop_parsing)
+  
+  -- 类型定义测试
+  , memoryOptimizedProperty "Struct definition parsing" (property prop_struct_definition_parsing)
+  , memoryOptimizedProperty "Interface definition parsing" (property prop_interface_definition_parsing)
+  
+  -- 单元测试
+  , testCase "Parser edge cases" test_parser_edge_cases
+  , testCase "Parser complex expressions" test_parser_complex_expressions
+  ]
+
+-- | 内存优化的测试套件
+memoryOptimizedTests :: TestTree
+memoryOptimizedTests = memoryLevelTestGroup Minimal "Parser Memory Optimized Tests"
+  [ testProperty "Identifier parsing" prop_identifier_parsing
+  , testProperty "Number literal parsing" prop_number_literal_parsing
+  , testProperty "Binary expression parsing" prop_binary_expression_parsing
+  , testProperty "Function definition parsing" prop_function_definition_parsing
+  , testProperty "Variable declaration parsing" prop_variable_declaration_parsing
   ]

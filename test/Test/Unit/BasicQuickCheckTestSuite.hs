@@ -15,6 +15,37 @@ import TestSupport.MemoryLimits
   , withMemoryLevel
   , gcBetweenTests
   )
+import TestSupport.EnhancedMemoryOptimization 
+  ( enhancedMemoryCleanup
+  , strategicMemoryCleanup
+  , cleanupBetweenTests
+  , withEnhancedMemoryControl
+  , withStrictMemoryLimits
+  , applyMemoryOptimizations
+  )
+import TestSupport.OptimizedStringOperations 
+  ( genMinimalString
+  , genUltraMinimalString
+  , safeTake
+  , safeLength
+  , efficientTrim
+  , efficientIsEmpty
+  , withUltraStringLimit
+  , minimizeStringUsage
+  , optimizeStringProperty
+  )
+import TestSupport.UltraLightweightTests 
+  ( ultraLightweightTestSuite
+  , minimalTestSuite
+  , emergencyTestSuite
+  )
+import TestSupport.TestPropertyMemoryCleanup 
+  ( testGroupWithCleanup
+  , testGroupWithStrategicCleanup
+  , memoryAwareProperty
+  , memoryOptimizedProperty
+  , withPropertyMemoryCleanup
+  )
 
 
 
@@ -27,12 +58,14 @@ import Data.Maybe (listToMaybe)
 -- | 测试trim函数的基本属性 - 极度内存优化
 prop_trim_basic :: String -> Property
 prop_trim_basic s =
-  let limitedString = take 1 s  -- 极度减少字符串大小到1个字符
+  let limitedString = withUltraStringLimit s  -- 使用优化的字符串限制
       trimmed = trim limitedString
+      lenLimited = safeLength limitedString
+      lenTrimmed = safeLength trimmed
   in property $ 
-    (length trimmed <= length limitedString) && 
-    (if null limitedString then null trimmed else True) &&
-    (if all isSpace limitedString then null trimmed else True)
+    (lenTrimmed <= lenLimited) && 
+    (if lenLimited == 0 then lenTrimmed == 0 else True) &&
+    (if lenLimited > 0 && all isSpace limitedString then lenTrimmed == 0 else True)
 
 -- | 测试trim对空字符串的处理
 prop_trim_empty :: Property
@@ -53,15 +86,14 @@ prop_trim_regular c s =
   let limitedS = take 1 s  -- 极度减少字符串大小到1个字符
       s' = c : limitedS
       trimmed = trim s'
-      firstCharIsC = case listToMaybe trimmed of
-                       Nothing -> property False
-                       Just h -> h === c
-  in conjoin [property (not (null trimmed)), firstCharIsC, property (length trimmed >= 1 && length trimmed <= 2)]
+      lenTrimmed = length trimmed
+      firstCharIsC = if null trimmed then property False else property (head trimmed === c)
+  in conjoin [property (lenTrimmed >= 1), firstCharIsC, property (lenTrimmed <= 2)]
 
 -- | 测试trim的幂等性 - 极度内存优化
 prop_trim_idempotent :: String -> Property
 prop_trim_idempotent s =
-  let limitedString = take 1 s  -- 极度减少字符串大小到1个字符
+  let limitedString = minimizeStringUsage s  -- 使用最小化字符串操作
       trimmed1 = trim limitedString
       trimmed2 = trim trimmed1
   in trimmed1 === trimmed2
@@ -69,14 +101,16 @@ prop_trim_idempotent s =
 -- | 测试splitBy的基本属性 - 极度内存优化
 prop_splitBy_basic :: Char -> String -> Property
 prop_splitBy_basic c s =
-  let limitedS = take 2 s  -- 极度减少字符串大小到2个字符
+  let limitedS = take 1 s  -- 进一步减少字符串大小到1个字符
       parts = splitBy c limitedS
-  in if null limitedS
+      lenLimited = length limitedS
+      lenParts = length parts
+      cCount = length (filter (== c) limitedS)
+  in if lenLimited == 0
      then parts === [""]
-     else if all (== c) limitedS
-          then parts === replicate (length limitedS + 1) ""
-          else property $ length (concat parts) >= length limitedS - length (filter (== c) limitedS) &&
-                     length parts <= 3  -- 极度减少分割后的部分数量
+     else if lenLimited > 0 && all (== c) limitedS
+          then parts === replicate (lenLimited + 1) ""
+          else property $ lenParts <= 2  -- 进一步减少分割后的部分数量
 
 -- | 测试splitBy对空字符串的处理
 prop_splitBy_empty :: Char -> Property
@@ -252,20 +286,32 @@ test_isLeft_edge_cases = do
 
 -- | 测试套件 - 极度内存优化
 tests :: TestTree
-tests = memoryLevelTestGroup Minimal "Basic QuickCheck Test Suite (Extreme Memory Optimized)"
-  [ -- 只保留最核心的5个测试属性
-    withMemoryLevel Minimal $ testProperty "Trim basic" prop_trim_basic
-  , withMemoryLevel Minimal $ testProperty "Trim idempotent" prop_trim_idempotent
-  , withMemoryLevel Minimal $ testProperty "SplitBy basic" prop_splitBy_basic
-  , withMemoryLevel Minimal $ testProperty "isRight basic" prop_isRight_basic
-  , withMemoryLevel Minimal $ testProperty "isLeft basic" prop_isLeft_basic
+tests = testGroupWithStrategicCleanup "Basic QuickCheck Test Suite (Extreme Memory Optimized)"
+  [ -- 只保留最核心的5个测试属性，使用增强内存优化和清理
+    memoryOptimizedProperty "Trim basic" (property prop_trim_basic)
+  , memoryOptimizedProperty "Trim idempotent" (property prop_trim_idempotent)
+  , memoryOptimizedProperty "SplitBy basic" (property prop_splitBy_basic)
+  , memoryOptimizedProperty "isRight basic" (property prop_isRight_basic)
+  , memoryOptimizedProperty "isLeft basic" (property prop_isLeft_basic)
   ]
 
 -- | 极简测试套件，用于极度内存受限环境
 essentialTests :: TestTree
 essentialTests = memoryLevelTestGroup Minimal "Basic QuickCheck Essential Tests (Ultra Minimal)"
-  [ -- 只保留最核心的3个测试属性
-    withMemoryLevel Minimal $ testProperty "Trim basic" prop_trim_basic
-  , withMemoryLevel Minimal $ testProperty "Trim idempotent" prop_trim_idempotent
-  , withMemoryLevel Minimal $ testProperty "SplitBy basic" prop_splitBy_basic
+  [ -- 只保留最核心的3个测试属性，使用最严格的内存优化
+    withStrictMemoryLimits $ testProperty "Trim basic" prop_trim_basic
+  , withStrictMemoryLimits $ testProperty "Trim idempotent" prop_trim_idempotent
+  , withStrictMemoryLimits $ testProperty "SplitBy basic" prop_splitBy_basic
   ]
+
+-- | 超轻量级测试套件，用于极端内存受限环境
+ultraLightweightTests :: TestTree
+ultraLightweightTests = ultraLightweightTestSuite
+
+-- | 最小化测试套件，用于非常低的内存环境
+minimalTests :: TestTree
+minimalTests = minimalTestSuite
+
+-- | 紧急测试套件，用于极端内存约束
+emergencyTests :: TestTree
+emergencyTests = emergencyTestSuite

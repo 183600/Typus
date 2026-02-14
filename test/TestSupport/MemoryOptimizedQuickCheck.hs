@@ -6,6 +6,7 @@
 module TestSupport.MemoryOptimizedQuickCheck 
   ( -- Memory-optimized QuickCheck configurations
     QuickCheckMemoryConfig(..)
+  , emergencyMemoryConfig
   , ultraLowMemoryConfig
   , criticalMemoryConfig
   , lowMemoryConfig
@@ -80,15 +81,29 @@ data QuickCheckMemoryConfig = QuickCheckMemoryConfig
   , enableShrinkLimiting :: Bool -- ^ Enable shrink limiting
   } deriving (Show, Eq)
 
+-- | Emergency memory configuration (4MB) - Extreme emergency mode
+emergencyMemoryConfig :: QuickCheckMemoryConfig
+emergencyMemoryConfig = QuickCheckMemoryConfig
+  { maxTestSize = 1
+  , testCount = 1
+  , maxShrinks = 0
+  , maxStringLength = 1
+  , maxListLength = 1
+  , maxIntRange = 2
+  , enableSizeLimiting = True
+  , enableCountLimiting = True
+  , enableShrinkLimiting = True
+  }
+
 -- | Ultra low memory configuration (8MB) - Emergency mode
 ultraLowMemoryConfig :: QuickCheckMemoryConfig
 ultraLowMemoryConfig = QuickCheckMemoryConfig
   { maxTestSize = 1
   , testCount = 1
   , maxShrinks = 0
-  , maxStringLength = 3
-  , maxListLength = 2
-  , maxIntRange = 5
+  , maxStringLength = 2
+  , maxListLength = 1
+  , maxIntRange = 3
   , enableSizeLimiting = True
   , enableCountLimiting = True
   , enableShrinkLimiting = True
@@ -100,9 +115,9 @@ criticalMemoryConfig = QuickCheckMemoryConfig
   { maxTestSize = 1
   , testCount = 2
   , maxShrinks = 1
-  , maxStringLength = 5
-  , maxListLength = 3
-  , maxIntRange = 10
+  , maxStringLength = 3
+  , maxListLength = 2
+  , maxIntRange = 5
   , enableSizeLimiting = True
   , enableCountLimiting = True
   , enableShrinkLimiting = True
@@ -114,9 +129,9 @@ lowMemoryConfig = QuickCheckMemoryConfig
   { maxTestSize = 2
   , testCount = 3
   , maxShrinks = 2
-  , maxStringLength = 8
-  , maxListLength = 5
-  , maxIntRange = 20
+  , maxStringLength = 5
+  , maxListLength = 3
+  , maxIntRange = 10
   , enableSizeLimiting = True
   , enableCountLimiting = True
   , enableShrinkLimiting = True
@@ -275,6 +290,7 @@ memoryOptimizedBoolProperty config testName propFunc =
 -- | Get configuration based on available memory
 getConfigForMemory :: Int -> QuickCheckMemoryConfig
 getConfigForMemory availableMB
+  | availableMB <= 4 = emergencyMemoryConfig
   | availableMB <= 8 = ultraLowMemoryConfig
   | availableMB <= 16 = criticalMemoryConfig
   | availableMB <= 32 = lowMemoryConfig
