@@ -50,7 +50,8 @@ import Data.Maybe (isJust, isNothing)
 prop_identifier_parsing :: String -> Property
 prop_identifier_parsing ident =
   let validIdent = not (null ident) && isAlpha (head ident) && all (`elem` ['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'] ++ "_") (tail ident)
-      identExpr = ident
+      -- 将标识符放在一个简单的变量声明中测试
+      identExpr = "var " ++ ident ++ " int"
   in if not validIdent
      then property $ isLeft (parseTypus identExpr)
      else property $ isRight (parseTypus identExpr)
@@ -59,7 +60,8 @@ prop_identifier_parsing ident =
 prop_number_literal_parsing :: String -> Property
 prop_number_literal_parsing numStr =
   let validNum = not (null numStr) && all isDigit numStr
-      numExpr = numStr
+      -- 将数字放在一个简单的变量赋值中测试
+      numExpr = "x := " ++ numStr
   in if not validNum
      then property $ isLeft (parseTypus numExpr)
      else property $ isRight (parseTypus numExpr)
@@ -78,7 +80,8 @@ prop_string_literal_parsing strContent =
 prop_boolean_literal_parsing :: String -> Property
 prop_boolean_literal_parsing boolStr =
   let validBool = boolStr `elem` ["true", "false"]
-      boolExpr = boolStr
+      -- 将布尔值放在一个简单的变量赋值中测试
+      boolExpr = "x := " ++ boolStr
   in if not validBool
      then property $ isLeft (parseTypus boolExpr)
      else property $ isRight (parseTypus boolExpr)

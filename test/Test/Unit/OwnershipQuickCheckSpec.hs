@@ -69,7 +69,7 @@ prop_block_ownership_directive_parsing directiveValue =
 prop_move_semantics_parsing :: String -> String -> Property
 prop_move_semantics_parsing varName1 varName2 =
   let validNames = not (null varName1) && not (null varName2) && 
-                   all (`elem` ['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'] ++ "_") varName1 ++ varName2
+                   all (`elem` ['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'] ++ "_") (varName1 ++ varName2)
       moveExpr = varName1 ++ " := " ++ varName2
   in if not validNames
      then property $ isLeft (parseTypus moveExpr)

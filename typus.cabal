@@ -173,6 +173,7 @@ test-suite typus-test-enhanced
         Test.Unit.Final200QuickCheckTestsOptimized
         Test.Unit.FinalExact200QuickCheckTestsOptimized
         Test.Unit.True200QuickCheckTestsOptimized
+        Test.Unit.SourceLocationQuickCheckSpec
         TestSupport.EnhancedMemoryOptimization
         TestSupport.MemoryEfficientGenerators
         TestSupport.MemoryLimits

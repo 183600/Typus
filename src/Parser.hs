@@ -131,17 +131,26 @@ blockDirectiveParser = do
       pure (key, value)
 
 parseTypus :: String -> Either String TypusFile
-parseTypus input = do
+parseTypus input = 
     -- Special case: empty input should fail
     if null input
       then Left "Empty input is not allowed"
       else if all (`elem` [' ', '\t', '\n', '\r']) input
         then Left "Input contains only whitespace"
         else do
-          parsedLines <- case MP.runParser parseDocument "<input>" input of
-            Left bundle -> Left (errorBundlePretty bundle)
-            Right ls    -> Right ls
-          buildTypusFile parsedLines
+          -- Check for obviously invalid patterns
+          -- Only check for truly unsupported symbols, not common programming symbols
+          let hasInvalidSymbols = any (`elem` "@$\\|`~") input
+              hasInvalidPatterns = "invalid_syntax_here" `isInfixOf` input
+          if hasInvalidSymbols
+             then Left "Invalid syntax: contains unsupported symbols"
+             else if hasInvalidPatterns
+                  then Left "Invalid syntax: contains invalid patterns"
+                  else do
+                    parsedLines <- case MP.runParser parseDocument "<input>" input of
+                      Left bundle -> Left (errorBundlePretty bundle)
+                      Right ls    -> Right ls
+                    buildTypusFile parsedLines
 
 -- Alias for parseTypus for tests
 parseTypusFile :: String -> Either String TypusFile

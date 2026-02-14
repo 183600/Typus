@@ -41,19 +41,14 @@ import TestSupport.TestPropertyMemoryCleanup
   )
 
 import GoToolchain
-import Parser (parseTypus)
-import Compiler (compile)
+import Parser (parseTypus, TypusFile(..), defaultFileDirectives)
+import Compiler (compile, generateGoCode)
 import Data.List (isInfixOf, isPrefixOf, isSuffixOf)
 import Data.Char (isSpace, isDigit, isAlpha)
 import Data.Either (isLeft, isRight)
 import Data.Maybe (isJust, isNothing)
 
--- | IR类型定义
-data IR = IR String deriving (Eq, Show)
 
--- | 模拟函数（实际应该从相应的模块导入）
-generateGoCode :: IR -> Either String String
-generateGoCode (IR _) = Right "package main\n\nfunc main() {\n}\n"  -- 简化实现
 
 -- | 检查Go代码是否有效
 isGoCodeValid :: String -> Bool
@@ -142,12 +137,8 @@ prop_go_toolchain_basic code =
      then property True  -- 跳过无效代码
      else case parseTypus code of
             Right ast -> 
-              case compile ast of
-                Right ir -> 
-                  case generateGoCode (IR ir) of
-                    Right goCode -> property $ isGoCodeValid goCode
-                    Left _ -> property True  -- Go代码生成失败，跳过测试
-                Left _ -> property True  -- 编译失败，跳过Go工具链测试
+              let goCode = generateGoCode ast
+              in property $ isGoCodeValid goCode
             Left _ -> property True  -- 解析失败，跳过Go工具链测试
 
 -- | 测试Go代码的有效性
@@ -158,14 +149,8 @@ prop_go_code_valid code =
      then property True  -- 跳过无效代码
      else case parseTypus code of
             Right ast -> 
-              case compile ast of
-                Right ir -> 
-                  case generateGoCode (IR ir) of
-                    Right goCode -> 
-                      -- 检查Go代码是否包含package声明
-                      property $ "package" `isInfixOf` goCode
-                    Left _ -> property True  -- Go代码生成失败，跳过测试
-                Left _ -> property True  -- 编译失败，跳过Go工具链测试
+              let goCode = generateGoCode ast
+              in property $ "package" `isInfixOf` goCode
             Left _ -> property True  -- 解析失败，跳过Go工具链测试
 
 -- | 测试Go代码的语法正确性
@@ -176,14 +161,8 @@ prop_go_code_syntax code =
      then property True  -- 跳过无效代码
      else case parseTypus code of
             Right ast -> 
-              case compile ast of
-                Right ir -> 
-                  case generateGoCode (IR ir) of
-                    Right goCode -> 
-                      -- 检查Go代码的基本语法平衡性
-                      property $ areBracketsBalanced goCode
-                    Left _ -> property True  -- Go代码生成失败，跳过测试
-                Left _ -> property True  -- 编译失败，跳过Go工具链测试
+              let goCode = generateGoCode ast
+              in property $ isGoCodeValid goCode
             Left _ -> property True  -- 解析失败，跳过Go工具链测试
 
 -- | 测试Go代码的导入处理
@@ -194,12 +173,8 @@ prop_go_code_imports code =
      then property True  -- 跳过无效代码
      else case parseTypus code of
             Right ast -> 
-              case compile ast of
-                Right ir -> 
-                  case generateGoCode (IR ir) of
-                    Right goCode -> property $ areImportsValid goCode
-                    Left _ -> property True  -- Go代码生成失败，跳过测试
-                Left _ -> property True  -- 编译失败，跳过Go工具链测试
+              let goCode = generateGoCode ast
+              in property $ areImportsValid goCode
             Left _ -> property True  -- 解析失败，跳过Go工具链测试
 
 -- | 测试Go代码的函数处理
@@ -210,12 +185,8 @@ prop_go_code_functions code =
      then property True  -- 跳过无效代码
      else case parseTypus code of
             Right ast -> 
-              case compile ast of
-                Right ir -> 
-                  case generateGoCode (IR ir) of
-                    Right goCode -> property $ areFunctionsValid goCode
-                    Left _ -> property True  -- Go代码生成失败，跳过测试
-                Left _ -> property True  -- 编译失败，跳过Go工具链测试
+              let goCode = generateGoCode ast
+              in property $ areFunctionsValid goCode
             Left _ -> property True  -- 解析失败，跳过Go工具链测试
 
 -- | 测试Go代码的结构体处理
@@ -226,12 +197,8 @@ prop_go_code_structs code =
      then property True  -- 跳过无效代码
      else case parseTypus code of
             Right ast -> 
-              case compile ast of
-                Right ir -> 
-                  case generateGoCode (IR ir) of
-                    Right goCode -> property $ areStructsValid goCode
-                    Left _ -> property True  -- Go代码生成失败，跳过测试
-                Left _ -> property True  -- 编译失败，跳过Go工具链测试
+              let goCode = generateGoCode ast
+              in property $ areStructsValid goCode
             Left _ -> property True  -- 解析失败，跳过Go工具链测试
 
 -- | 测试Go代码的接口处理
@@ -242,12 +209,8 @@ prop_go_code_interfaces code =
      then property True  -- 跳过无效代码
      else case parseTypus code of
             Right ast -> 
-              case compile ast of
-                Right ir -> 
-                  case generateGoCode (IR ir) of
-                    Right goCode -> property $ areInterfacesValid goCode
-                    Left _ -> property True  -- Go代码生成失败，跳过测试
-                Left _ -> property True  -- 编译失败，跳过Go工具链测试
+              let goCode = generateGoCode ast
+              in property $ areInterfacesValid goCode
             Left _ -> property True  -- 解析失败，跳过Go工具链测试
 
 -- | 测试Go代码的变量处理
@@ -258,12 +221,8 @@ prop_go_code_variables code =
      then property True  -- 跳过无效代码
      else case parseTypus code of
             Right ast -> 
-              case compile ast of
-                Right ir -> 
-                  case generateGoCode (IR ir) of
-                    Right goCode -> property $ areVariablesValid goCode
-                    Left _ -> property True  -- Go代码生成失败，跳过测试
-                Left _ -> property True  -- 编译失败，跳过Go工具链测试
+              let goCode = generateGoCode ast
+              in property $ areVariablesValid goCode
             Left _ -> property True  -- 解析失败，跳过Go工具链测试
 
 -- | 测试Go代码的类型转换处理
@@ -274,12 +233,8 @@ prop_go_code_type_conversions code =
      then property True  -- 跳过无效代码
      else case parseTypus code of
             Right ast -> 
-              case compile ast of
-                Right ir -> 
-                  case generateGoCode (IR ir) of
-                    Right goCode -> property $ areTypeConversionsValid goCode
-                    Left _ -> property True  -- Go代码生成失败，跳过测试
-                Left _ -> property True  -- 编译失败，跳过Go工具链测试
+              let goCode = generateGoCode ast
+              in property $ areTypeConversionsValid goCode
             Left _ -> property True  -- 解析失败，跳过Go工具链测试
 
 -- | 测试Go代码的错误处理
@@ -290,21 +245,16 @@ prop_go_code_error_handling code =
      then property True  -- 跳过无效代码
      else case parseTypus code of
             Right ast -> 
-              case compile ast of
-                Right ir -> 
-                  case generateGoCode (IR ir) of
-                    Right goCode -> property $ isErrorHandlingValid goCode
-                    Left _ -> property True  -- Go代码生成失败，跳过测试
-                Left _ -> property True  -- 编译失败，跳过Go工具链测试
+              let goCode = generateGoCode ast
+              in property $ isErrorHandlingValid goCode
             Left _ -> property True  -- 解析失败，跳过Go工具链测试
 
 -- | 单元测试：空代码的Go生成
 test_empty_code_generation :: Assertion
 test_empty_code_generation = do
-  let ir = IR ""
-  case generateGoCode ir of
-    Right goCode -> assertBool "Empty code should generate valid Go code" $ isGoCodeValid goCode
-    Left _ -> return ()
+  let emptyFile = TypusFile defaultFileDirectives [] [] []
+  let goCode = generateGoCode emptyFile
+  assertBool "Empty code should generate valid Go code" $ isGoCodeValid goCode
 
 -- | 单元测试：简单表达式的Go生成
 test_simple_expression_generation :: Assertion
@@ -312,14 +262,10 @@ test_simple_expression_generation = do
   let code = "x := 5"
   case parseTypus code of
     Right ast -> 
-      case compile ast of
-        Right ir -> 
-          case generateGoCode (IR ir) of
-            Right goCode -> do
-              assertBool "Simple expression should generate valid Go code" $ isGoCodeValid goCode
-              assertBool "Simple expression should contain package declaration" $ "package" `isInfixOf` goCode
-            Left _ -> assertFailure "Simple expression Go code generation should not fail"
-        Left _ -> assertFailure "Simple expression compilation should not fail"
+      let goCode = generateGoCode ast
+      in do
+        assertBool "Simple expression should generate valid Go code" $ isGoCodeValid goCode
+        assertBool "Simple expression should contain package declaration" $ "package" `isInfixOf` goCode
     Left _ -> assertFailure "Simple expression parsing should not fail"
 
 -- | 单元测试：函数定义的Go生成
@@ -328,14 +274,10 @@ test_function_definition_generation = do
   let code = "func add(a: int, b: int) -> int { return a + b }"
   case parseTypus code of
     Right ast -> 
-      case compile ast of
-        Right ir -> 
-          case generateGoCode (IR ir) of
-            Right goCode -> do
-              assertBool "Function definition should generate valid Go code" $ isGoCodeValid goCode
-              assertBool "Function definition should contain func keyword" $ "func" `isInfixOf` goCode
-            Left _ -> assertFailure "Function definition Go code generation should not fail"
-        Left _ -> assertFailure "Function definition compilation should not fail"
+      let goCode = generateGoCode ast
+      in do
+        assertBool "Function definition should generate valid Go code" $ isGoCodeValid goCode
+        assertBool "Function definition should contain func keyword" $ "func" `isInfixOf` goCode
     Left _ -> assertFailure "Function definition parsing should not fail"
 
 -- | 单元测试：结构体定义的Go生成
@@ -344,15 +286,11 @@ test_struct_definition_generation = do
   let code = "type Person struct { Name: string Age: int }"
   case parseTypus code of
     Right ast -> 
-      case compile ast of
-        Right ir -> 
-          case generateGoCode (IR ir) of
-            Right goCode -> do
-              assertBool "Struct definition should generate valid Go code" $ isGoCodeValid goCode
-              assertBool "Struct definition should contain type keyword" $ "type" `isInfixOf` goCode
-              assertBool "Struct definition should contain struct keyword" $ "struct" `isInfixOf` goCode
-            Left _ -> assertFailure "Struct definition Go code generation should not fail"
-        Left _ -> assertFailure "Struct definition compilation should not fail"
+      let goCode = generateGoCode ast
+      in do
+        assertBool "Struct definition should generate valid Go code" $ isGoCodeValid goCode
+        assertBool "Struct definition should contain type keyword" $ "type" `isInfixOf` goCode
+        assertBool "Struct definition should contain struct keyword" $ "struct" `isInfixOf` goCode
     Left _ -> assertFailure "Struct definition parsing should not fail"
 
 -- | 单元测试：接口定义的Go生成
@@ -361,15 +299,11 @@ test_interface_definition_generation = do
   let code = "type Writer interface { Write(data: []byte) -> int }"
   case parseTypus code of
     Right ast -> 
-      case compile ast of
-        Right ir -> 
-          case generateGoCode (IR ir) of
-            Right goCode -> do
-              assertBool "Interface definition should generate valid Go code" $ isGoCodeValid goCode
-              assertBool "Interface definition should contain type keyword" $ "type" `isInfixOf` goCode
-              assertBool "Interface definition should contain interface keyword" $ "interface" `isInfixOf` goCode
-            Left _ -> assertFailure "Interface definition Go code generation should not fail"
-        Left _ -> assertFailure "Interface definition compilation should not fail"
+      let goCode = generateGoCode ast
+      in do
+        assertBool "Interface definition should generate valid Go code" $ isGoCodeValid goCode
+        assertBool "Interface definition should contain type keyword" $ "type" `isInfixOf` goCode
+        assertBool "Interface definition should contain interface keyword" $ "interface" `isInfixOf` goCode
     Left _ -> assertFailure "Interface definition parsing should not fail"
 
 -- | 单元测试：依赖类型的Go生成
@@ -378,15 +312,11 @@ test_dependent_type_generation = do
   let code = "type Vector[n: int] struct { data: [n]int }"
   case parseTypus code of
     Right ast -> 
-      case compile ast of
-        Right ir -> 
-          case generateGoCode (IR ir) of
-            Right goCode -> do
-              assertBool "Dependent type should generate valid Go code" $ isGoCodeValid goCode
-              assertBool "Dependent type should contain type keyword" $ "type" `isInfixOf` goCode
-              assertBool "Dependent type should contain struct keyword" $ "struct" `isInfixOf` goCode
-            Left _ -> assertFailure "Dependent type Go code generation should not fail"
-        Left _ -> assertFailure "Dependent type compilation should not fail"
+      let goCode = generateGoCode ast
+      in do
+        assertBool "Dependent type should generate valid Go code" $ isGoCodeValid goCode
+        assertBool "Dependent type should contain type keyword" $ "type" `isInfixOf` goCode
+        assertBool "Dependent type should contain struct keyword" $ "struct" `isInfixOf` goCode
     Left _ -> assertFailure "Dependent type parsing should not fail"
 
 -- | Go工具链测试套件
@@ -399,7 +329,7 @@ tests = testGroupWithStrategicCleanup "Go Toolchain QuickCheck Tests"
   , memoryOptimizedProperty "Go code imports" (property prop_go_code_imports)
   
   -- 代码生成测试
-    memoryOptimizedProperty "Go code functions" (property prop_go_code_functions)
+  , memoryOptimizedProperty "Go code functions" (property prop_go_code_functions)
   , memoryOptimizedProperty "Go code structs" (property prop_go_code_structs)
   , memoryOptimizedProperty "Go code interfaces" (property prop_go_code_interfaces)
   , memoryOptimizedProperty "Go code variables" (property prop_go_code_variables)
@@ -407,7 +337,7 @@ tests = testGroupWithStrategicCleanup "Go Toolchain QuickCheck Tests"
   , memoryOptimizedProperty "Go code error handling" (property prop_go_code_error_handling)
   
   -- 单元测试
-    testCase "Empty code generation" test_empty_code_generation
+  , testCase "Empty code generation" test_empty_code_generation
   , testCase "Simple expression generation" test_simple_expression_generation
   , testCase "Function definition generation" test_function_definition_generation
   , testCase "Struct definition generation" test_struct_definition_generation

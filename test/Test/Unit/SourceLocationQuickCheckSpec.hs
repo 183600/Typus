@@ -47,10 +47,10 @@ import Data.Either (isLeft, isRight)
 import Data.Maybe (isJust, isNothing)
 
 -- | 使用SourceLocation模块中的SourcePos类型
-type SourceLocation = SourcePos
+type SourcePosType = SourcePos
 
 -- | 简单的错误类型，用于测试
-data ErrorWithLocation = ErrorWithLocation String SourceLocation
+data ErrorWithLocation = ErrorWithLocation String SourcePosType
   deriving (Show, Eq)
 
 -- | 源码位置范围数据类型（基于SourceSpan）
@@ -146,7 +146,7 @@ prop_source_location_offset line col lineOffset colOffset =
 -- | 测试源码位置与错误的关联
 prop_source_location_error_association :: String -> Int -> Int -> Property
 prop_source_location_error_association errMsg line col =
-  let loc :: SourceLocation
+  let loc :: SourcePosType
       loc = posAt line col
       errorWithLoc = ErrorWithLocation errMsg loc
   in property $ 

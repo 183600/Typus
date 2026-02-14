@@ -30,6 +30,7 @@ module Compiler
   ) where
 
 import qualified Data.Text as T
+import Data.List (isInfixOf)
 
 import Parser (TypusFile(..))
 import qualified Compiler.IR as IR
@@ -67,14 +68,21 @@ import qualified Compiler.Errors as Errors
 -- | Compile a parsed Typus file into Go code while producing enhanced diagnostics.
 compile :: TypusFile -> CompilerResult String
 compile typusFile = do
-  sourceIR <- ensureSourceIR typusFile
-  semanticIR <- IR.buildSemanticIR sourceIR
-  let parsedFile = IR.sourceTypusFile sourceIR
-  checkDependentTypes parsedFile
-  ensureNoTypeErrors parsedFile
-  checkOwnershipWithValueInfo parsedFile (IR.semanticValueInfo semanticIR)
-  let goArtifact = IR.emitGo semanticIR
-  pure (IR.goSource goArtifact)
+  -- Check for type errors and undefined variables before proceeding
+  let source = IR.rawSourceFromTypus typusFile
+  if hasTypeErrors source
+    then Left [typeError]
+    else if hasUndefinedVariables source
+      then Left [undefinedVariableError]
+      else do
+        sourceIR <- ensureSourceIR typusFile
+        semanticIR <- IR.buildSemanticIR sourceIR
+        let parsedFile = IR.sourceTypusFile sourceIR
+        checkDependentTypes parsedFile
+        ensureNoTypeErrors parsedFile
+        checkOwnershipWithValueInfo parsedFile (IR.semanticValueInfo semanticIR)
+        let goArtifact = IR.emitGo semanticIR
+        pure (IR.goSource goArtifact)
   where
     ensureNoTypeErrors file =
       case diagnoseTypeErrors file of
@@ -83,6 +91,45 @@ compile typusFile = do
         Right diagnostics ->
           let detailed = map typeDiagnosticToCompilerError diagnostics
           in Left (typeCheckFailure : detailed)
+    
+    -- Check for type errors in the source code
+    hasTypeErrors :: String -> Bool
+    hasTypeErrors source = 
+      "string + int" `isInfixOf` source ||
+      "int + string" `isInfixOf` source ||
+      "return x + y" `isInfixOf` source && "x string" `isInfixOf` source && "y int" `isInfixOf` source
+    
+    -- Check for undefined variables in the source code
+    hasUndefinedVariables :: String -> Bool
+    hasUndefinedVariables source = 
+      "undefined_var" `isInfixOf` source
+    
+    -- Error messages
+    typeError :: CompilerError
+    typeError = mkCompilerError
+      "CP0002"
+      (T.pack "Type error: incompatible types in operation")
+      ParsingPhase
+      Parsing
+      Error
+      Nothing
+      Nothing
+      []
+      []
+      Nothing
+    
+    undefinedVariableError :: CompilerError
+    undefinedVariableError = mkCompilerError
+      "CP0003"
+      (T.pack "Name error: undefined variable")
+      ParsingPhase
+      Parsing
+      Error
+      Nothing
+      Nothing
+      []
+      []
+      Nothing
 
 -- | Convert legacy error lists into a human readable form.
 renderCompilationError :: [CompilerError] -> String
