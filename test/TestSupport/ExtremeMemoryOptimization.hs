@@ -20,16 +20,16 @@ module TestSupport.ExtremeMemoryOptimization
     -- Smart memory management
   , smartMemoryCleanup
   , emergencyMemoryCleanup
+  , ultraAggressiveCleanup
   , monitorMemoryUsage
   , adaptiveTestSelection
-  
+    
     -- Data size limiters
   , limitStringSize
   , limitListSize
   , limitTreeSize
   , limitArbitrarySize
   ) where
-
 import Test.Tasty (TestTree, testGroup, localOption)
 import Test.Tasty.QuickCheck (QuickCheckMaxSize(..), QuickCheckTests(..), QuickCheckMaxShrinks(..))
 import Test.Tasty.QuickCheck (property, forAll, resize)
@@ -173,45 +173,63 @@ adaptiveTestSelection config tests targetCount = do
 smartMemoryCleanup :: IO ()
 smartMemoryCleanup = do
   -- Multiple rounds of GC, with increasing intervals
-  replicateM_ 3 $ do
+  replicateM_ 5 $ do
     performGC
-    threadDelay 2000
+    threadDelay 1000
   
   -- Medium intensity cleanup
-  replicateM_ 2 $ do
+  replicateM_ 3 $ do
     performGC
-    threadDelay 5000
+    threadDelay 3000
   
   -- Final cleanup
-  performGC
+  replicateM_ 2 performGC
 
 -- | Emergency memory cleanup
 emergencyMemoryCleanup :: IO ()
 emergencyMemoryCleanup = do
   -- Extreme multiple rounds of GC, with very short intervals
+  replicateM_ 8 $ do
+    performGC
+    threadDelay 500
+  
+  -- High intensity cleanup
   replicateM_ 5 $ do
     performGC
     threadDelay 1000
   
-  -- High intensity cleanup
-  replicateM_ 3 $ do
-    performGC
-    threadDelay 2000
-  
   -- Final cleanup
+  replicateM_ 3 performGC
+
+-- | Ultra aggressive memory cleanup - for between every test
+ultraAggressiveCleanup :: IO ()
+ultraAggressiveCleanup = do
+  -- Immediate GC with no delays
+  replicateM_ 3 performGC
+  
+  -- Short delay
+  threadDelay 200
+  
+  -- More GC
   replicateM_ 2 performGC
+  
+  -- Another short delay
+  threadDelay 200
+  
+  -- Final GC
+  performGC
 
 -- | Monitor memory usage
 monitorMemoryUsage :: IO a -> IO a
 monitorMemoryUsage action = do
   -- Force initial GC
-  smartMemoryCleanup
+  ultraAggressiveCleanup
   
   -- Run action
   result <- action
   
   -- Force final GC
-  smartMemoryCleanup
+  ultraAggressiveCleanup
   
   return result
 

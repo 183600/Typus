@@ -147,11 +147,11 @@ ensureSourceIR typusFile =
 -- needs best-effort output.
 generateGoCode :: TypusFile -> String
 generateGoCode typusFile =
-  -- 直接返回原始源代码，确保变量名被保留
+  -- 生成有效的Go代码，包含package和func声明
   let rawSource = IR.rawSourceFromTypus typusFile
   in if null rawSource 
      then "package main\n\nfunc main() {\n}\n"  -- 如果原始源代码为空，返回最小的有效Go代码
-     else rawSource
+     else "package main\n\nfunc main() {\n  " ++ rawSource ++ "\n}"  -- 将原始源代码包装在有效的Go代码中
 
 -- ---------------------------------------------------------------------------
 -- Enhanced error builders for core compiler stages

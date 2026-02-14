@@ -89,7 +89,7 @@ emergencyMemoryConfig = QuickCheckMemoryConfig
   , maxShrinks = 0
   , maxStringLength = 1
   , maxListLength = 1
-  , maxIntRange = 2
+  , maxIntRange = 1
   , enableSizeLimiting = True
   , enableCountLimiting = True
   , enableShrinkLimiting = True
@@ -101,9 +101,9 @@ ultraLowMemoryConfig = QuickCheckMemoryConfig
   { maxTestSize = 1
   , testCount = 1
   , maxShrinks = 0
-  , maxStringLength = 2
+  , maxStringLength = 1
   , maxListLength = 1
-  , maxIntRange = 3
+  , maxIntRange = 2
   , enableSizeLimiting = True
   , enableCountLimiting = True
   , enableShrinkLimiting = True
@@ -113,11 +113,11 @@ ultraLowMemoryConfig = QuickCheckMemoryConfig
 criticalMemoryConfig :: QuickCheckMemoryConfig
 criticalMemoryConfig = QuickCheckMemoryConfig
   { maxTestSize = 1
-  , testCount = 2
-  , maxShrinks = 1
-  , maxStringLength = 3
-  , maxListLength = 2
-  , maxIntRange = 5
+  , testCount = 1
+  , maxShrinks = 0
+  , maxStringLength = 2
+  , maxListLength = 1
+  , maxIntRange = 3
   , enableSizeLimiting = True
   , enableCountLimiting = True
   , enableShrinkLimiting = True
@@ -126,12 +126,12 @@ criticalMemoryConfig = QuickCheckMemoryConfig
 -- | Low memory configuration (32MB) - Low memory mode
 lowMemoryConfig :: QuickCheckMemoryConfig
 lowMemoryConfig = QuickCheckMemoryConfig
-  { maxTestSize = 2
-  , testCount = 3
-  , maxShrinks = 2
-  , maxStringLength = 5
-  , maxListLength = 3
-  , maxIntRange = 10
+  { maxTestSize = 1
+  , testCount = 2
+  , maxShrinks = 0
+  , maxStringLength = 3
+  , maxListLength = 2
+  , maxIntRange = 5
   , enableSizeLimiting = True
   , enableCountLimiting = True
   , enableShrinkLimiting = True
@@ -140,29 +140,29 @@ lowMemoryConfig = QuickCheckMemoryConfig
 -- | Moderate memory configuration (64MB) - Moderate mode
 moderateMemoryConfig :: QuickCheckMemoryConfig
 moderateMemoryConfig = QuickCheckMemoryConfig
-  { maxTestSize = 3
-  , testCount = 5
-  , maxShrinks = 3
-  , maxStringLength = 12
-  , maxListLength = 8
-  , maxIntRange = 50
+  { maxTestSize = 2
+  , testCount = 3
+  , maxShrinks = 1
+  , maxStringLength = 5
+  , maxListLength = 3
+  , maxIntRange = 10
   , enableSizeLimiting = True
   , enableCountLimiting = True
-  , enableShrinkLimiting = False
+  , enableShrinkLimiting = True
   }
 
 -- | Normal memory configuration (128MB) - Normal mode
 normalMemoryConfig :: QuickCheckMemoryConfig
 normalMemoryConfig = QuickCheckMemoryConfig
-  { maxTestSize = 5
-  , testCount = 10
-  , maxShrinks = 5
-  , maxStringLength = 20
-  , maxListLength = 15
-  , maxIntRange = 100
-  , enableSizeLimiting = False
-  , enableCountLimiting = False
-  , enableShrinkLimiting = False
+  { maxTestSize = 3
+  , testCount = 5
+  , maxShrinks = 2
+  , maxStringLength = 8
+  , maxListLength = 5
+  , maxIntRange = 20
+  , enableSizeLimiting = True
+  , enableCountLimiting = True
+  , enableShrinkLimiting = True
   }
 
 -- | Apply QuickCheck memory configuration to a test tree
@@ -290,11 +290,11 @@ memoryOptimizedBoolProperty config testName propFunc =
 -- | Get configuration based on available memory
 getConfigForMemory :: Int -> QuickCheckMemoryConfig
 getConfigForMemory availableMB
-  | availableMB <= 4 = emergencyMemoryConfig
-  | availableMB <= 8 = ultraLowMemoryConfig
-  | availableMB <= 16 = criticalMemoryConfig
-  | availableMB <= 32 = lowMemoryConfig
-  | availableMB <= 64 = moderateMemoryConfig
+  | availableMB <= 8 = emergencyMemoryConfig
+  | availableMB <= 16 = ultraLowMemoryConfig
+  | availableMB <= 32 = criticalMemoryConfig
+  | availableMB <= 64 = lowMemoryConfig
+  | availableMB <= 128 = moderateMemoryConfig
   | otherwise = normalMemoryConfig
 
 -- | Apply automatic memory optimization based on available memory

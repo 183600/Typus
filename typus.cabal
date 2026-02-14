@@ -151,7 +151,7 @@ library
 test-suite typus-test-enhanced
     type:             exitcode-stdio-1.0
     build-tool-depends: typus:typus
-    main-is:          EnhancedMemoryTestRunner.hs
+    main-is:          runners/EnhancedMemoryTestRunner.hs
     hs-source-dirs:   test
     default-extensions: NoMonomorphismRestriction
     ghc-options:      -Wall -Wcompat
@@ -347,7 +347,7 @@ flag werror
 test-suite typus-test
     type:             exitcode-stdio-1.0
     build-tool-depends: typus:typus
-    main-is:          Main.hs
+    main-is:          runners/Main.hs
     hs-source-dirs:   test
     ghc-options:      -rtsopts
     other-modules:
@@ -451,7 +451,7 @@ test-suite typus-test
 test-suite typus-test-optimized
     type:             exitcode-stdio-1.0
     build-tool-depends: typus:typus
-    main-is:          OptimizedMain.hs
+    main-is:          runners/OptimizedMain.hs
     hs-source-dirs:   test
     default-extensions: NoMonomorphismRestriction
     ghc-options:      -Wall -Wcompat

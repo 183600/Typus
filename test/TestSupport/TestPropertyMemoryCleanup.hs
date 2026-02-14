@@ -8,16 +8,19 @@ module TestSupport.TestPropertyMemoryCleanup
     withPropertyMemoryCleanup
   , withStrategicPropertyCleanup
   , withEmergencyPropertyCleanup
+  , withUltraAggressivePropertyCleanup
     
     -- Test property wrappers
     , memoryAwareProperty
   , memoryOptimizedProperty
   , memoryCriticalProperty
+  , memoryUltraOptimizedProperty
     
     -- Test group with cleanup
     , testGroupWithCleanup
   , testGroupWithStrategicCleanup
   , testGroupWithEmergencyCleanup
+  , testGroupWithUltraAggressiveCleanup
     
     -- Property execution control
     , executePropertyWithCleanup
@@ -91,23 +94,40 @@ withEmergencyPropertyCleanup action = do
   adaptiveGC
   return result
 
+-- | Ultra-aggressive memory cleanup for test properties
+withUltraAggressivePropertyCleanup :: IO a -> IO a
+withUltraAggressivePropertyCleanup action = do
+  replicateM_ 3 performGC
+  threadDelay 100
+  result <- action
+  replicateM_ 3 performGC
+  threadDelay 100
+  replicateM_ 2 performGC
+  return result
+
 -- | Memory-aware test property wrapper
 memoryAwareProperty :: String -> Property -> TestTree
 memoryAwareProperty name prop = 
   let wrappedProp = ioProperty $ withPropertyMemoryCleanup $ return prop
-  in testProperty name prop
+  in testProperty name wrappedProp
 
 -- | Memory-optimized test property wrapper
 memoryOptimizedProperty :: String -> Property -> TestTree
 memoryOptimizedProperty name prop = 
   let wrappedProp = ioProperty $ withStrategicPropertyCleanup $ return prop
-  in testProperty name prop
+  in testProperty name wrappedProp
 
 -- | Memory-critical test property wrapper
 memoryCriticalProperty :: String -> Property -> TestTree
 memoryCriticalProperty name prop = 
   let wrappedProp = ioProperty $ withEmergencyPropertyCleanup $ return prop
-  in testProperty name prop
+  in testProperty name wrappedProp
+
+-- | Memory-ultra-optimized test property wrapper
+memoryUltraOptimizedProperty :: String -> Property -> TestTree
+memoryUltraOptimizedProperty name prop = 
+  let wrappedProp = ioProperty $ withUltraAggressivePropertyCleanup $ return prop
+  in testProperty name wrappedProp
 
 -- | Test group with basic cleanup between properties
 testGroupWithCleanup :: String -> [TestTree] -> TestTree
@@ -126,6 +146,12 @@ testGroupWithEmergencyCleanup :: String -> [TestTree] -> TestTree
 testGroupWithEmergencyCleanup name tests = 
   let cleanupTests = addEmergencyCleanupBetweenTests tests
   in testGroup ("[Emergency-Cleanup] " ++ name) cleanupTests
+
+-- | Test group with ultra-aggressive cleanup between properties
+testGroupWithUltraAggressiveCleanup :: String -> [TestTree] -> TestTree
+testGroupWithUltraAggressiveCleanup name tests = 
+  let cleanupTests = addUltraAggressiveCleanupBetweenTests tests
+  in testGroup ("[Ultra-Aggressive-Cleanup] " ++ name) cleanupTests
 
 -- | Execute property with memory cleanup
 executePropertyWithCleanup :: Property -> IO Property
@@ -184,6 +210,11 @@ addEmergencyCleanupBetweenTests :: [TestTree] -> [TestTree]
 addEmergencyCleanupBetweenTests tests = 
   map applyEmergencyMemoryOptimization tests
 
+-- | Add ultra-aggressive cleanup between tests
+addUltraAggressiveCleanupBetweenTests :: [TestTree] -> [TestTree]
+addUltraAggressiveCleanupBetweenTests tests = 
+  map applyUltraAggressiveMemoryOptimization tests
+
 -- | Apply minimal memory optimization to test
 applyMinimalMemoryOptimization :: TestTree -> TestTree
 applyMinimalMemoryOptimization test = 
@@ -197,4 +228,9 @@ applyStrategicMemoryOptimization test =
 -- | Apply emergency memory optimization to test
 applyEmergencyMemoryOptimization :: TestTree -> TestTree
 applyEmergencyMemoryOptimization test = 
+  applyQuickCheckMemoryConfig emergencyMemoryConfig test
+
+-- | Apply ultra-aggressive memory optimization to test
+applyUltraAggressiveMemoryOptimization :: TestTree -> TestTree
+applyUltraAggressiveMemoryOptimization test = 
   applyQuickCheckMemoryConfig emergencyMemoryConfig test

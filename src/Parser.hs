@@ -132,11 +132,11 @@ blockDirectiveParser = do
 
 parseTypus :: String -> Either String TypusFile
 parseTypus input = 
-    -- Special case: empty input should fail
+    -- Special case: empty input should fail with a consistent error message
     if null input
-      then Left "Empty input is not allowed"
+      then Left "Empty input"
       else if all (`elem` [' ', '\t', '\n', '\r']) input
-        then Left "Input contains only whitespace"
+        then Left "Whitespace only input"
         else do
           -- Check for obviously invalid patterns
           -- Only check for truly unsupported symbols, not common programming symbols
