@@ -718,13 +718,13 @@ heuristicOwnershipErrors src =
     checkBorrowViolations linesList assignments = 
       let immutableBorrows = [(var, src) | line <- linesList, "&" `isInfixOf` line
                                           , let parts = words line
-                                          , length parts >= 2
+                                          , length parts >= 3
                                           , let var = head (drop 1 parts)
                                           , let src = cleanVarName (head (drop 2 parts))
                                           ]
           mutableBorrows = [(var, src) | line <- linesList, "&mut" `isInfixOf` line
                                         , let parts = words line
-                                        , length parts >= 2
+                                        , length parts >= 3
                                         , let var = head (drop 1 parts)
                                         , let src = cleanVarName (head (drop 2 parts))
                                         ]

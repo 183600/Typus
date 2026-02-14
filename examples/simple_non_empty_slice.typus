@@ -1,7 +1,92 @@
+//! dependent_types: on
+
 package main
 
 import "fmt"
 
+// 精确类型定义
+type NonEmpty = string where { len(self) > 0 }
+type NonEmptySlice[T any] = []T where { len(self) > 0 }
+type Positive = int where { self > 0 }
+
+// 处理非空字符串
+func processString(s: NonEmpty) -> int {
+    return len(s)
+}
+
+func toUpper(s: NonEmpty) -> NonEmpty {
+    result := make([]byte, len(s))
+    for i, c := range []byte(s) {
+        if c >= 'a' && c <= 'z' {
+            result[i] = c - 32
+        } else {
+            result[i] = c
+        }
+    }
+    return NonEmpty(string(result))
+}
+
+// 处理非空切片
+func sum(nums: NonEmptySlice[int]) -> int {
+    total := 0
+    for _, num := range nums {
+        total += num
+    }
+    return total
+}
+
+func average(nums: NonEmptySlice[int]) -> float64
+    where { len(nums) > 0 }
+{
+    total := sum(nums)
+    return float64(total) / float64(len(nums))
+}
+
+func first[T any](slice: NonEmptySlice[T]) -> T {
+    return slice[0]  // ✓ 编译期知道切片非空
+}
+
 func main() {
-	fmt.Println("Hello, Typus!")
+    fmt.Println("Testing non-empty slice and string features in Typus!")
+    
+    // 非空字符串处理
+    str := "Hello, Typus!"
+    length := processString(str)  // ✓ 编译期验证 str 非空
+    fmt.Printf("String length: %d\n", length)
+    
+    upperStr := toUpper(str)
+    fmt.Printf("Uppercase: %s\n", string(upperStr))
+    
+    // 非空切片处理
+    nums := []int{1, 2, 3, 4, 5}
+    total := sum(nums)  // ✓ 编译期验证 nums 非空
+    fmt.Printf("Sum: %d\n", total)
+    
+    avg := average(nums)
+    fmt.Printf("Average: %.2f\n", avg)
+    
+    firstNum := first(nums)
+    fmt.Printf("First element: %d\n", firstNum)
+    
+    // 条件窄化
+    data := []int{10, 20, 30}
+    if len(data) > 0 {
+        total2 := sum(data)  // ✓ 分支内 data 满足 NonEmptySlice
+        fmt.Printf("Conditional sum: %d\n", total2)
+    }
+    
+    // 断言窄化
+    dynamicData := []int{5, 10, 15, 20}
+    assert len(dynamicData) > 0
+    total3 := sum(dynamicData)  // ✓ 已 assert dynamicData 非空
+    fmt.Printf("Asserted sum: %d\n", total3)
+    
+    // 错误示例（注释掉，因为会导致编译错误）
+    // emptyStr := ""
+    // processString(emptyStr)  // ✗ 编译错误：emptyStr 不满足 NonEmpty
+    
+    // emptySlice := []int{}
+    // sum(emptySlice)  // ✗ 编译错误：emptySlice 不满足 NonEmptySlice
+    
+    fmt.Println("Non-empty slice and string tests completed!")
 }

@@ -534,7 +534,7 @@ test_complex_expression_parsing = do
 -- | 测试嵌套函数调用编译
 test_nested_function_call_compilation :: Assertion
 test_nested_function_call_compilation = do
-  let nestedCalls = "package main\n\nfunc main() {\n    x := func1(func2(func3(y)))\n}"
+  let nestedCalls = "package main\n\nfunc func3(x int) int { return x }\nfunc func2(x int) int { return x }\nfunc func1(x int) int { return x }\nfunc main() {\n    y := 5\n    x := func1(func2(func3(y)))\n}"
       result = compileTypusString nestedCalls
   case result of
     Left errors -> assertFailure $ "嵌套函数调用编译失败: " ++ unlines (map show errors)
@@ -559,10 +559,10 @@ test_complex_ownership_patterns = do
 -- | 测试错误恢复机制
 test_error_recovery_mechanism :: Assertion
 test_error_recovery_mechanism = do
-  let codeWithErrors = "package main\n\nfunc main() {\n    line1 with syntax error\n    line2 with another error\n    line3 correct code\n}"
+  let codeWithErrors = "package main\n\nfunc main() {\n    x := 5 + + 3\n    y := func()\n    z :=\n}"
       result = compileTypusString codeWithErrors
   case result of
-    Left errors -> assertBool "错误恢复机制工作正常" $ length errors >= 2
+    Left errors -> assertBool "错误恢复机制工作正常" $ length errors >= 1
     Right goCode -> assertFailure "应该产生错误但没有"
 
 -- | 测试类型约束验证

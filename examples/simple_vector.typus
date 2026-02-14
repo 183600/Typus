@@ -1,38 +1,107 @@
+//! dependent_types: on
+
 package main
 
 import "fmt"
 
-// Simple vector example
-type Vector struct {
-    length int
-    data   []float64
+// 精确类型定义
+type Positive = int where { self > 0 }
+type ValidIndex[n: int] = int where { self >= 0 && self < n }
+
+// 值参数化向量类型
+type Vector[n: int] struct {
+    data [n]float64
 }
 
-func NewVector(length int, data []float64) *Vector {
-    if len(data) != length {
-        panic("Vector data length doesn't match dimension")
-    }
-    return &Vector{length: length, data: data}
+// 构造函数
+func zeros(n: Positive) -> Vector[n] {
+    return Vector[n]{data: make([]float64, n)}
 }
 
-func (v *Vector) Get(index int) float64 {
-    if index < 0 || index >= v.length {
-        panic("Vector index out of bounds")
+func ones(n: Positive) -> Vector[n] {
+    data := make([]float64, n)
+    for i := 0; i < n; i++ {
+        data[i] = 1.0
     }
-    return v.data[index]
+    return Vector[n]{data: data}
+}
+
+func fromArray[n: int](data [n]float64) -> Vector[n] {
+    return Vector[n]{data: data}
+}
+
+// 安全访问函数
+func get[n: int](v: Vector[n], i: ValidIndex[n]) -> float64 {
+    return v.data[i]
+}
+
+func set[n: int](v: *Vector[n], i: ValidIndex[n], val: float64) {
+    v.data[i] = val
+}
+
+// 向量运算
+func add[n: int](a: Vector[n], b: Vector[n]) -> Vector[n] {
+    result := zeros(n)
+    for i := 0; i < n; i++ {
+        result.data[i] = a.data[i] + b.data[i]
+    }
+    return result
+}
+
+func scale[n: int](v: Vector[n], factor: float64) -> Vector[n] {
+    result := zeros(n)
+    for i := 0; i < n; i++ {
+        result.data[i] = v.data[i] * factor
+    }
+    return result
+}
+
+func dot[n: int](a: Vector[n], b: Vector[n]) -> float64
+    where { n > 0 }
+{
+    sum := 0.0
+    for i := 0; i < n; i++ {
+        sum += a.data[i] * b.data[i]
+    }
+    return sum
 }
 
 func main() {
-    fmt.Println("=== 简单向量测试 ===")
+    fmt.Println("=== 依赖类型向量测试 ===")
     
-    // Create a vector with length 3
-    data := []float64{1.0, 2.0, 3.0}
-    vec := NewVector(3, data)
+    // 创建向量
+    v1 := ones(3)             // Vector[3]
+    v2 := fromArray([3]float64{1.0, 2.0, 3.0})
     
-    fmt.Printf("Vector length: %d\n", vec.length)
-    fmt.Printf("Vector[0]: %.1f\n", vec.Get(0))
-    fmt.Printf("Vector[1]: %.1f\n", vec.Get(1))
-    fmt.Printf("Vector[2]: %.1f\n", vec.Get(2))
+    // 安全访问
+    x := get(v1, 0)           // ✓ 编译期验证 0 < 3
+    y := get(v2, 2)           // ✓ 编译期验证 2 < 3
+    fmt.Printf("v1[0]: %.1f\n", x)
+    fmt.Printf("v2[2]: %.1f\n", y)
     
-    fmt.Println("向量测试完成")
+    // 向量运算
+    v3 := add(v1, v2)         // Vector[3] + Vector[3] = Vector[3]
+    fmt.Printf("v1 + v2 = [%.1f, %.1f, %.1f]\n", 
+        get(v3, 0), get(v3, 1), get(v3, 2))
+    
+    // 缩放
+    v4 := scale(v3, 2.0)
+    fmt.Printf("2.0 * v3 = [%.1f, %.1f, %.1f]\n", 
+        get(v4, 0), get(v4, 1), get(v4, 2))
+    
+    // 点积
+    dp := dot(v1, v2)         // ✓ 编译期验证 n > 0
+    fmt.Printf("v1 · v2 = %.1f\n", dp)
+    
+    // 动态维度
+    n := 4
+    assert n > 0
+    v5 := zeros(n)            // Vector[4]
+    fmt.Printf("Dynamic vector v5 length: %d\n", len(v5.data))
+    
+    // 类型安全
+    v6 := ones(3)             // Vector[3]
+    // v7 := add(v5, v6)       // ✗ 编译错误：Vector[4] ≠ Vector[3]
+    
+    fmt.Println("依赖类型向量测试完成")
 }

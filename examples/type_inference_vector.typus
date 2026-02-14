@@ -1,28 +1,145 @@
 //! dependent_types: on
+
 package main
 
 import "fmt"
 
-// Vector 类型 - 在当前实现中简化为普通Go结构体
-type Vector struct {
-    length   int
-    elements []float64
+// 精确类型定义
+type Positive = int where { self > 0 }
+type ValidIndex[n: int] = int where { self >= 0 && self < n }
+
+// 值参数化Vector类型
+type Vector[n: int] struct {
+    data [n]float64
 }
 
-func createVector(n int, value float64) Vector {
+// 类型推导示例1：基本构造
+func createVector(n: Positive, value: float64) -> Vector[n] {
     elements := make([]float64, n)
     for i := 0; i < n; i++ {
         elements[i] = value
     }
-    // 返回Vector实例，长度信息包含在结构体中
-    return Vector{length: n, elements: elements}
+    // 自动推导为 Vector[n]
+    return Vector{data: elements}
+}
+
+// 类型推导示例2：从数组构造
+func fromArray[n: int](data [n]float64) -> Vector[n] {
+    // 自动推导为 Vector[n]
+    return Vector{data: data}
+}
+
+// 类型推导示例3：零向量
+func zeros[n: int](n: Positive) -> Vector[n] {
+    // 自动推导为 Vector[n]
+    return createVector(n, 0.0)
+}
+
+// 类型推导示例4：单位向量
+func ones[n: int](n: Positive) -> Vector[n] {
+    // 自动推导为 Vector[n]
+    return createVector(n, 1.0)
+}
+
+// 类型推导示例5：基于另一个向量推导
+func copy[n: int](v: Vector[n]) -> Vector[n] {
+    // 自动推导为 Vector[n]
+    result := Vector[n]{}
+    for i := 0; i < n; i++ {
+        result.data[i] = v.data[i]
+    }
+    return result
+}
+
+// 类型推导示例6：算术运算
+func add[n: int](a: Vector[n], b: Vector[n]) -> Vector[n] {
+    // 自动推导为 Vector[n]
+    result := Vector[n]{}
+    for i := 0; i < n; i++ {
+        result.data[i] = a.data[i] + b.data[i]
+    }
+    return result
+}
+
+func scale[n: int](v: Vector[n], factor: float64) -> Vector[n] {
+    // 自动推导为 Vector[n]
+    result := Vector[n]{}
+    for i := 0; i < n; i++ {
+        result.data[i] = v.data[i] * factor
+    }
+    return result
+}
+
+// 类型推导示例7：复杂表达式
+func linearCombination[n: int](v1: Vector[n], v2: Vector[n], a: float64, b: float64) -> Vector[n] {
+    // 自动推导为 Vector[n]
+    return add(scale(v1, a), scale(v2, b))
+}
+
+// 类型推导示例8：条件推导
+func conditionalVector[n: int](n: Positive, useZeros: bool) -> Vector[n] {
+    if useZeros {
+        // 自动推导为 Vector[n]
+        return zeros(n)
+    } else {
+        // 自动推导为 Vector[n]
+        return ones(n)
+    }
+}
+
+// 类型推导示例9：依赖参数的返回类型
+func extractSubvector[n: int, m: int](v: Vector[n], start: ValidIndex[n-m+1]) -> Vector[m]
+    where { m > 0 && m <= n }
+{
+    // 自动推导为 Vector[m]
+    result := Vector[m]{}
+    for i := 0; i < m; i++ {
+        result.data[i] = v.data[start+i]
+    }
+    return result
 }
 
 func main() {
-    v1 := createVector(3, 1.5) // v1 的类型推导为 Vector
-    fmt.Printf("Vector v1 (length %d): %v\n", v1.length, v1.elements)
-
+    fmt.Println("Testing type inference with dependent types in Typus!")
+    
+    // 基本类型推导
+    v1 := createVector(3, 1.5)  // v1 自动推导为 Vector[3]
+    fmt.Printf("Vector v1 (Vector[3]): %v\n", v1.data)
+    
     v2_len := 5
-    v2 := createVector(v2_len, 0.5) // v2 的类型推导为 Vector  
-    fmt.Printf("Vector v2 (length %d): %v\n", v2.length, v2.elements)
+    v2 := createVector(v2_len, 0.5)  // v2 自动推导为 Vector[5]
+    fmt.Printf("Vector v2 (Vector[5]): %v\n", v2.data)
+    
+    // 从数组推导
+    arrayData := [4]float64{1.0, 2.0, 3.0, 4.0}
+    v3 := fromArray(arrayData)  // v3 自动推导为 Vector[4]
+    fmt.Printf("Vector v3 (Vector[4]): %v\n", v3.data)
+    
+    // 算术运算推导
+    v4 := zeros(3)  // v4 自动推导为 Vector[3]
+    v5 := ones(3)   // v5 自动推导为 Vector[3]
+    v6 := add(v4, v5)  // v6 自动推导为 Vector[3]
+    fmt.Printf("Vector v6 = v4 + v5 (Vector[3]): %v\n", v6.data)
+    
+    v7 := scale(v6, 2.0)  // v7 自动推导为 Vector[3]
+    fmt.Printf("Vector v7 = 2.0 * v6 (Vector[3]): %v\n", v7.data)
+    
+    // 复杂表达式推导
+    v8 := linearCombination(v4, v5, 1.0, 2.0)  // v8 自动推导为 Vector[3]
+    fmt.Printf("Vector v8 = 1.0*v4 + 2.0*v5 (Vector[3]): %v\n", v8.data)
+    
+    // 条件推导
+    v9 := conditionalVector(4, true)   // v9 自动推导为 Vector[4]
+    v10 := conditionalVector(4, false)  // v10 自动推导为 Vector[4]
+    fmt.Printf("Vector v9 (zeros, Vector[4]): %v\n", v9.data)
+    fmt.Printf("Vector v10 (ones, Vector[4]): %v\n", v10.data)
+    
+    // 子向量推导
+    v11 := extractSubvector[4, 2>(v3, 1)  // v11 自动推导为 Vector[2]
+    fmt.Printf("Vector v11 (subvector of v3, Vector[2]): %v\n", v11.data)
+    
+    // 类型安全验证
+    // v12 := add(v1, v2)  // ✗ 编译错误：Vector[3] ≠ Vector[5]
+    
+    fmt.Println("Type inference tests completed!")
 }

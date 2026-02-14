@@ -1,7 +1,54 @@
+//! ownership: on
+
 package main
 
 import "fmt"
 
+type MyString struct {
+    data string
+}
+
+func NewMyString(s string) MyString {
+    return MyString{data: s}
+}
+
 func main() {
-	fmt.Println("Hello, Typus!")
+    fmt.Println("Testing ownership features in Typus!")
+    
+    // 基本移动语义
+    {//! ownership: on
+        s := NewMyString("hello")
+        t := s                    // 移动：s 的所有权转移给 t
+        fmt.Println("t.data:", t.data)       // ✓
+        // fmt.Println("s.data:", s.data)    // ✗ 编译错误：s 已被移动
+    }
+    
+    // 不可变借用
+    {//! ownership: on
+        s := NewMyString("immutable")
+        r := &s                   // 不可变借用
+        fmt.Println("r.data:", r.data)       // ✓ 通过借用读取
+        fmt.Println("s.data:", s.data)       // ✓ 原值仍可读
+    }
+    
+    // 可变借用
+    {//! ownership: on
+        s := NewMyString("mutable")
+        m := &mut s               // 可变借用（同一时刻只能有一个）
+        m.data = "world"          // ✓ 通过可变借用修改
+        fmt.Println("s.data after mutation:", s.data)  // ✓ 修改后的值
+    }
+    
+    // 借用规则验证
+    {//! ownership: on
+        s := NewMyString("rules")
+        r1 := &s                  // 不可变借用
+        r2 := &s                  // ✓ 可以有多个不可变借用
+        fmt.Println("r1.data:", r1.data)
+        fmt.Println("r2.data:", r2.data)
+        
+        // m := &mut s            // ✗ 编译错误：已有不可变借用
+    }
+    
+    fmt.Println("Ownership tests completed!")
 }

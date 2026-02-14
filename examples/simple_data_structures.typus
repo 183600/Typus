@@ -1,7 +1,201 @@
+//! ownership: on
+//! dependent_types: on
+
 package main
 
 import "fmt"
 
+// 精确类型定义
+type NonZero = int where { self != 0 }
+type Positive = int where { self > 0 }
+type ValidIndex[n: int] = int where { self >= 0 && self < n }
+
+// 值参数化栈类型
+type Stack[maxSize: int] struct {
+    data [maxSize]int
+    top int
+}
+
+// 栈操作
+func newStack[maxSize: int]() -> Stack[maxSize]
+    where { maxSize > 0 }
+{
+    return Stack[maxSize]{top: -1}
+}
+
+func push[maxSize: int](s: *Stack[maxSize], value: int) -> bool
+    where { maxSize > 0 }
+{
+    if s.top < maxSize-1 {
+        s.top++
+        s.data[s.top] = value
+        return true
+    }
+    return false
+}
+
+func pop[maxSize: int](s: *Stack[maxSize]) -> (int, bool)
+    where { maxSize > 0 }
+{
+    if s.top >= 0 {
+        value := s.data[s.top]
+        s.top--
+        return value, true
+    }
+    return 0, false
+}
+
+// 值参数化链表节点
+type ListNode[T any] struct {
+    data T
+    next *ListNode[T]
+}
+
+type List[T any] struct {
+    head *ListNode[T]
+    length int
+}
+
+func newList[T any]() -> List[T] {
+    return List[T]{head: nil, length: 0}
+}
+
+func append[T any](l: *List[T], value: T) {
+    newNode := ListNode[T]{data: value, next: nil}
+    if l.head == nil {
+        l.head = &newNode
+    } else {
+        current := l.head
+        for current.next != nil {
+            current = current.next
+        }
+        current.next = &newNode
+    }
+    l.length++
+}
+
+func get[T any](l: List[T], index: ValidIndex[l.length]) -> T {
+    current := l.head
+    for i := 0; i < index; i++ {
+        current = current.next
+    }
+    return current.data
+}
+
+// 值参数化二叉树节点
+type TreeNode[T any] struct {
+    data T
+    left *TreeNode[T]
+    right *TreeNode[T]
+}
+
+type Tree[T any] struct {
+    root *TreeNode[T]
+}
+
+func newTree[T any]() -> Tree[T] {
+    return Tree[T]{root: nil}
+}
+
+func insert[T any](t: *Tree[T], value: T, compare func(T, T) -> bool) {
+    node := TreeNode[T]{data: value, left: nil, right: nil}
+    if t.root == nil {
+        t.root = &node
+        return
+    }
+    
+    current := t.root
+    for {
+        if compare(value, current.data) {
+            if current.left == nil {
+                current.left = &node
+                return
+            }
+            current = current.left
+        } else {
+            if current.right == nil {
+                current.right = &node
+                return
+            }
+            current = current.right
+        }
+    }
+}
+
+// 可移动资源类型
+type Resource struct {
+    id int
+    name string
+}
+
+func newResource(id int, name string) -> Resource {
+    return Resource{id: id, name: name}
+}
+
+func consumeResource(r: Resource) {
+    fmt.Printf("Consuming resource: %d - %s\n", r.id, r.name)
+}
+
 func main() {
-	fmt.Println("Hello, Typus!")
+    fmt.Println("Testing data structures with ownership and dependent types in Typus!")
+    
+    // 栈测试
+    fmt.Println("\n=== Stack Test ===")
+    stack := newStack[5]()  // Stack[5]
+    push(&stack, 10)
+    push(&stack, 20)
+    push(&stack, 30)
+    
+    if value, ok := pop(&stack); ok {
+        fmt.Printf("Popped: %d\n", value)
+    }
+    
+    // 链表测试
+    fmt.Println("\n=== List Test ===")
+    list := newList[int]()
+    append(&list, 100)
+    append(&list, 200)
+    append(&list, 300)
+    
+    first := get(list, 0)  // ✓ 编译期验证 0 < length
+    fmt.Printf("First element: %d\n", first)
+    
+    second := get(list, 1)  // ✓ 编译期验证 1 < length
+    fmt.Printf("Second element: %d\n", second)
+    
+    // 二叉树测试
+    fmt.Println("\n=== Tree Test ===")
+    tree := newTree[int]()
+    insert(&tree, 50, func(a, b int) -> bool { return a < b })
+    insert(&tree, 30, func(a, b int) -> bool { return a < b })
+    insert(&tree, 70, func(a, b int) -> bool { return a < b })
+    
+    fmt.Printf("Tree root: %d\n", tree.root.data)
+    fmt.Printf("Left child: %d\n", tree.root.left.data)
+    fmt.Printf("Right child: %d\n", tree.root.right.data)
+    
+    // 所有权测试
+    fmt.Println("\n=== Ownership Test ===")
+    {//! ownership: on
+        r1 := newResource(1, "Resource 1")
+        r2 := r1  // 移动所有权
+        consumeResource(r2)  // ✓ 使用 r2
+        // consumeResource(r1)  // ✗ 编译错误：r1 已被移动
+    }
+    
+    // 借用测试
+    {//! ownership: on
+        r1 := newResource(2, "Resource 2")
+        
+        // 不可变借用
+        rRef := &r1
+        fmt.Printf("Resource via borrow: %d - %s\n", rRef.id, rRef.name)
+        
+        // 可变借用
+        rMut := &mut r1
+        rMut.name = "Modified Resource 2"
+        fmt.Printf("Modified resource: %d - %s\n", r1.id, r1.name)
+    }
+    
+    fmt.Println("\nData structure tests completed!")
 }

@@ -1,7 +1,208 @@
+//! ownership: on
+//! dependent_types: on
+
 package main
 
 import "fmt"
 
+// 精确类型定义
+type Positive = int where { self > 0 }
+type NonEmpty = string where { len(self) > 0 }
+
+// 线程安全计数器
+type Counter struct {
+    value int
+}
+
+func newCounter() -> Counter {
+    return Counter{value: 0}
+}
+
+func increment(c: *Counter) {
+    c.value++
+}
+
+func get(c: Counter) -> int {
+    return c.value
+}
+
+// 工作任务
+type Task struct {
+    id int
+    name NonEmpty
+}
+
+func newTask(id int, name NonEmpty) -> Task {
+    return Task{id: id, name: name}
+}
+
+func executeTask(t: Task) {
+    fmt.Printf("Executing task %d: %s\n", t.id, string(t.name))
+}
+
+// 工作池
+type WorkerPool struct {
+    workers int
+    tasks chan Task
+    results chan string
+}
+
+func newWorkerPool(workers: Positive) -> WorkerPool {
+    return WorkerPool{
+        workers: workers,
+        tasks: make(chan Task, 100),
+        results: make(chan string, 100),
+    }
+}
+
+func (wp *WorkerPool) start() {
+    for i := 0; i < wp.workers; i++ {
+        go func(workerID int) {
+            for task := range wp.tasks {
+                // 执行任务（移动语义）
+                executeTask(task)
+                wp.results <- fmt.Sprintf("Worker %d completed task %d", workerID, task.id)
+            }
+        }(i)
+    }
+}
+
+func (wp *WorkerPool) submit(task: Task) {
+    wp.tasks <- task  // 移动任务到通道
+}
+
+func (wp *WorkerPool) shutdown() {
+    close(wp.tasks)
+}
+
+// 并发安全的数据处理器
+type DataProcessor struct {
+    input chan int
+    output chan int
+    counter Counter
+}
+
+func newDataProcessor() -> DataProcessor {
+    return DataProcessor{
+        input: make(chan int, 100),
+        output: make(chan int, 100),
+        counter: newCounter(),
+    }
+}
+
+func (dp *DataProcessor) start() {
+    go func() {
+        for data := range dp.input {
+            // 处理数据
+            processed := data * 2
+            increment(&dp.counter)
+            dp.output <- processed
+        }
+    }()
+}
+
+func (dp *DataProcessor) process(data int) {
+    dp.input <- data  // 发送数据到处理通道
+}
+
+func (dp *DataProcessor) getResult() -> int {
+    return <-dp.output
+}
+
+func (dp *DataProcessor) getProcessedCount() -> int {
+    return get(dp.counter)
+}
+
+func (dp *DataProcessor) shutdown() {
+    close(dp.input)
+}
+
 func main() {
-	fmt.Println("Hello, Typus!")
+    fmt.Println("Testing concurrent programming with ownership and dependent types in Typus!")
+    
+    // 工作池测试
+    fmt.Println("\n=== Worker Pool Test ===")
+    pool := newWorkerPool(3)  // 创建3个工作线程
+    pool.start()
+    
+    // 提交任务
+    for i := 1; i <= 5; i++ {
+        task := newTask(i, fmt.Sprintf("Task %d", i))
+        pool.submit(task)  // 移动任务到工作池
+        // task 在这里已不可用
+    }
+    
+    // 收集结果
+    for i := 1; i <= 5; i++ {
+        result := <-pool.results
+        fmt.Printf("Result: %s\n", result)
+    }
+    
+    pool.shutdown()
+    
+    // 数据处理器测试
+    fmt.Println("\n=== Data Processor Test ===")
+    processor := newDataProcessor()
+    processor.start()
+    
+    // 处理数据
+    for i := 1; i <= 5; i++ {
+        processor.process(i)
+    }
+    
+    // 获取结果
+    for i := 1; i <= 5; i++ {
+        result := processor.getResult()
+        fmt.Printf("Processed result: %d\n", result)
+    }
+    
+    count := processor.getProcessedCount()
+    fmt.Printf("Total processed: %d\n", count)
+    
+    processor.shutdown()
+    
+    // 所有权与并发测试
+    fmt.Println("\n=== Ownership & Concurrency Test ===")
+    {//! ownership: on
+        // 创建共享资源
+        sharedData := "Shared resource data"
+        
+        // 创建通道传递数据（移动语义）
+        dataChannel := make(chan string, 10)
+        
+        // 启动生产者
+        go func() {
+            // 移动数据到通道
+            dataChannel <- sharedData
+            // sharedData 在这里已不可用
+        }()
+        
+        // 启动消费者
+        go func() {
+            // 从通道接收数据（移动语义）
+            received := <-dataChannel
+            fmt.Printf("Received data: %s\n", received)
+            // received 在函数结束后被释放
+        }()
+    }
+    
+    // 借用与并发测试
+    {//! ownership: on
+        counter := newCounter()
+        
+        // 多个goroutine安全访问计数器
+        for i := 0; i < 5; i++ {
+            go func() {
+                // 通过指针借用修改计数器
+                increment(&counter)
+            }()
+        }
+        
+        // 等待所有goroutine完成
+        // 在实际应用中，应该使用sync.WaitGroup或其他同步机制
+        
+        fmt.Printf("Final counter value: %d\n", get(counter))
+    }
+    
+    fmt.Println("\nConcurrent programming tests completed!")
 }

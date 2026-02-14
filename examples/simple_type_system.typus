@@ -1,7 +1,60 @@
+//! dependent_types: on
+
 package main
 
 import "fmt"
 
+// 精确类型定义
+type NonZero = int where { self != 0 }
+type Positive = int where { self > 0 }
+type NonEmpty = string where { len(self) > 0 }
+
+// 值参数化类型
+type Vector[n: int] struct {
+    data [n]float64
+}
+
+// 依赖函数签名
+func zeros(n: Positive) -> Vector[n] {
+    return Vector[n]{data: make([]float64, n)}
+}
+
+func safeDiv(a: int, b: NonZero) -> int {
+    return a / b
+}
+
+func processString(s: NonEmpty) -> int {
+    return len(s)
+}
+
 func main() {
-	fmt.Println("Hello, Typus!")
+    fmt.Println("Testing type system features in Typus!")
+    
+    // 精确类型使用
+    r := safeDiv(10, 2)      // ✓ 编译期验证 2 ≠ 0
+    fmt.Printf("10 / 2 = %d\n", r)
+    
+    // 值参数化类型使用
+    v := zeros(3)            // v: Vector[3]
+    fmt.Printf("Vector length: %d\n", len(v.data))
+    
+    // 非空字符串处理
+    str := "Hello, Typus!"
+    length := processString(str)  // ✓ 编译期验证 str 非空
+    fmt.Printf("String length: %d\n", length)
+    
+    // 条件窄化
+    x := 5
+    if x > 0 {
+        v2 := zeros(x)       // ✓ 分支内 x 满足 Positive
+        fmt.Printf("Dynamic vector length: %d\n", len(v2.data))
+    }
+    
+    // 断言窄化
+    y := 4
+    assert y > 0
+    v3 := zeros(y)           // ✓ 已 assert y > 0
+    fmt.Printf("Asserted vector length: %d\n", len(v3.data))
+    
+    fmt.Println("Type system tests completed!")
 }
