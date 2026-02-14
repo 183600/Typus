@@ -53,6 +53,7 @@ import qualified Test.Unit.BasicQuickCheckTestSuite as BasicQuickCheckTestSuite
 import qualified Test.Unit.NewComprehensiveTypusTestSuite as NewComprehensiveTypusTestSuite
 import qualified Test.Unit.EnhancedTypusFeaturesTestSuite as EnhancedTypusFeaturesTestSuite
 import qualified Test.Unit.TypusCoreQuickCheckTestSuite as TypusCoreQuickCheckTestSuite
+import qualified Test.Unit.TypusAdvancedQuickCheckTestSuite as TypusAdvancedQuickCheckTestSuite
 
 
 
@@ -160,6 +161,7 @@ tests = unsafePerformIO $ do
             , NewComprehensiveTypusTestSuite.testSuite
             , EnhancedTypusFeaturesTestSuite.testSuite
             , TypusCoreQuickCheckTestSuite.testSuite
+            , TypusAdvancedQuickCheckTestSuite.testSuite
             ]
       
       -- 根据可用内存选择测试数量
