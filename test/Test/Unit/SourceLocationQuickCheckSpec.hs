@@ -49,11 +49,12 @@ import Data.Maybe (isJust, isNothing)
 -- | 使用SourceLocation模块中的SourcePos类型
 type SourceLocation = SourcePos
 
+-- | 简单的错误类型，用于测试
+data ErrorWithLocation = ErrorWithLocation String SourceLocation
+  deriving (Show, Eq)
+
 -- | 源码位置范围数据类型（基于SourceSpan）
 type SourceLocationRange = SourceSpan
-
--- | 错误位置数据类型
-data ErrorWithLocation = ErrorWithLocation String SourceLocation deriving (Eq, Show)
 
 -- | 测试源码位置的基本属性
 prop_source_location_basic :: Int -> Int -> Property
@@ -145,7 +146,8 @@ prop_source_location_offset line col lineOffset colOffset =
 -- | 测试源码位置与错误的关联
 prop_source_location_error_association :: String -> Int -> Int -> Property
 prop_source_location_error_association errMsg line col =
-  let loc = posAt line col
+  let loc :: SourceLocation
+      loc = posAt line col
       errorWithLoc = ErrorWithLocation errMsg loc
   in property $ 
     (errorMessage errorWithLoc == errMsg) && 
@@ -157,7 +159,9 @@ prop_source_location_error_association errMsg line col =
 -- | 单元测试：源码位置的边界情况
 test_source_location_edge_cases :: Assertion
 test_source_location_edge_cases = do
-  assertEqual "Start position" startPos startPos
+  let start :: SourcePos
+      start = startPos
+  assertEqual "Start position" start start
   assertEqual "Position at 1,1" (posAt 1 1) (posAt 1 1)
   assertEqual "Position at 1000,1000" (posAt 1000 1000) (posAt 1000 1000)
 
@@ -195,8 +199,8 @@ tests = testGroupWithStrategicCleanup "Source Location QuickCheck Tests"
   , memoryOptimizedProperty "Source location error association" (property prop_source_location_error_association)
   
   -- 单元测试
-    , testCase "Source location edge cases" test_source_location_edge_cases
-    , testCase "Source location complex expressions" test_source_location_complex_expressions
+  , testCase "Source location edge cases" test_source_location_edge_cases
+  , testCase "Source location complex expressions" test_source_location_complex_expressions
   ]
 
 -- | 内存优化的测试套件
