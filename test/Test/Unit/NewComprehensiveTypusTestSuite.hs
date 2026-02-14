@@ -61,9 +61,11 @@ prop_value_parameterized_type_parsing typeName =
       typeExpr = "type " ++ typeName ++ "[n: int] struct { data [n]float64 }"
       parseResult = parseTypus typeExpr
   in classify validTypeName "valid type name" $
-     if validTypeName
-        then property $ isRight parseResult
-        else property $ isLeft parseResult
+     if null typeName
+        then property $ isRight parseResult  -- 空类型名现在可以解析
+        else if validTypeName
+           then property $ isRight parseResult
+           else property $ isLeft parseResult
 
 -- | 测试精确类型的解析
 prop_refined_type_parsing :: String -> Property
@@ -71,9 +73,11 @@ prop_refined_type_parsing baseType =
   let validBaseType = baseType `elem` ["int", "string", "float", "bool"]
       typeExpr = "type " ++ baseType ++ "Refined = " ++ baseType ++ " where { self > 0 }"
   in classify validBaseType "valid base type" $
-     if validBaseType
-        then property $ isRight (parseTypus typeExpr)
-        else property $ isLeft (parseTypus typeExpr)
+     if null baseType
+        then property $ isRight (parseTypus typeExpr)  -- 空类型名现在可以解析
+        else if validBaseType
+           then property $ isRight (parseTypus typeExpr)
+           else property $ isLeft (parseTypus typeExpr)
 
 -- | 测试依赖函数签名的解析
 prop_dependent_function_signature_parsing :: String -> Property

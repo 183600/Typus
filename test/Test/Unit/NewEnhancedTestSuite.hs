@@ -1,10 +1,10 @@
-module Main where
+module Test.Unit.NewEnhancedTestSuite where
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import Utils (trim, splitBy, removeLineComments, normalizeIndentation)
-import SourceLocation (SourcePos(..), SourceSpan(..))
+import SourceLocation (SourcePos(..), SourceSpan(..), sourceLine, sourceColumn, sourcePosOffset)
 import Data.Char (isSpace)
 
 -- Simple test properties for Utils module
@@ -36,7 +36,22 @@ test_sourcepos_creation = do
   let pos = SourcePos 10 20 100
   assertEqual "source line" 10 (sourceLine pos)
   assertEqual "source column" 20 (sourceColumn pos)
-  assertEqual "source offset" 100 (sourceOffset pos)
+  assertEqual "source offset" 100 (sourcePosOffset pos)
+
+-- | Exported tests for integration
+tests :: TestTree
+tests = testGroup "New Enhanced Test Suite"
+  [ testGroup "Utils Tests"
+    [ testProperty "trim preserves content" prop_trim_preserves_content
+    , testProperty "splitBy roundtrip" prop_splitBy_roundtrip
+    , testCase "trim empty" test_trim_empty
+    , testCase "trim all spaces" test_trim_all_spaces
+    , testCase "splitBy basic" test_splitBy_basic
+    ]
+  , testGroup "SourceLocation Tests"
+    [ testCase "SourcePos creation" test_sourcepos_creation
+    ]
+  ]
 
 main :: IO ()
 main = defaultMain $ testGroup "New Enhanced Test Suite"

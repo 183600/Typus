@@ -50,6 +50,7 @@ import TestSupport.TestPropertyMemoryCleanup
 
 
 import Utils (trim, splitBy, splitByComma, removeLineComments, removeComments, normalizeIndentation)
+import Parser (parseTypus)
 import Data.List (isInfixOf)
 import Data.Char (isSpace)
 import Data.Either (isLeft, isRight)
@@ -271,13 +272,17 @@ test_normalizeIndentation_edge_cases = do
 test_isRight_edge_cases :: Assertion
 test_isRight_edge_cases = do
   assertBool "Right value is right" (isRight (Right (42 :: Int)))
+
   assertBool "Left value is not right" (not $ isRight (Left ("error" :: String)))
+
 
 -- | 测试isLeft的边界情况
 test_isLeft_edge_cases :: Assertion
 test_isLeft_edge_cases = do
   assertBool "Left value is left" (isLeft (Left ("error" :: String)))
+
   assertBool "Right value is not left" (not $ isLeft (Right ("success" :: String)))
+
 
 -- | 测试Typus语言核心特性 - 符合README.md描述
 test_typus_core_features :: Assertion
@@ -289,64 +294,78 @@ test_typus_core_features = do
   assertBool "Block-level directives should succeed" $ isRight (parseTypus "func main() { {//! ownership: on\n // code\n } {//! dependent_types: on\n // code\n } }")
   
   -- 测试值参数化类型
-  assertBool "Value parameterized types should succeed" $ isRight (parseTypus "type Vector[n: int] struct { data [n]float64 }"))
+  assertBool "Value parameterized types should succeed" $ isRight (parseTypus "type Vector[n: int] struct { data [n]float64 }")
   
   -- 测试精确类型
-  assertBool "Refined types should succeed" $ isRight (parseTypus "type NonZero = int where { self != 0 }"))
+  assertBool "Refined types should succeed" $ isRight (parseTypus "type NonZero = int where { self != 0 }")
   
   -- 测试依赖函数签名
-  assertBool "Dependent function signatures should succeed" $ isRight (parseTypus "func zeros(n: Positive) -> Vector[n]"))
+  assertBool "Dependent function signatures should succeed" $ isRight (parseTypus "func zeros(n: Positive) -> Vector[n]")
+
 
 -- | 测试Typus编译模型 - 符合README.md描述
 test_typus_compilation_model :: Assertion
 test_typus_compilation_model = do
   -- 测试编译产物与源码的对应关系
-  assertBool "Compilation output mapping should succeed" $ isRight (parseTypus "// 值参数[n: int]编译为运行时字段_n int"))
+  assertBool "Compilation output mapping should succeed" $ isRight (parseTypus "// 值参数[n: int]编译为运行时字段_n int")
+
   
   -- 测试精确类型约束的编译
-  assertBool "Refined type constraint compilation should succeed" $ isRight (parseTypus "// 精确类型约束编译为运行时检查函数"))
+  assertBool "Refined type constraint compilation should succeed" $ isRight (parseTypus "// 精确类型约束编译为运行时检查函数")
+
   
   -- 测试assert的编译
-  assertBool "Assert compilation should succeed" $ isRight (parseTypus "// assert编译为if !cond { panic(...) }或空"))
+  assertBool "Assert compilation should succeed" $ isRight (parseTypus "// assert编译为if !cond { panic(...) }或空")
+
   
   -- 测试static_assert的编译
-  assertBool "Static assert compilation should succeed" $ isRight (parseTypus "// static_assert编译为空，必须编译期证明"))
+  assertBool "Static assert compilation should succeed" $ isRight (parseTypus "// static_assert编译为空，必须编译期证明")
+
   
   -- 测试所有权/借用的编译
-  assertBool "Ownership/borrow compilation should succeed" $ isRight (parseTypus "// 所有权/借用擦除，纯编译期检查"))
+  assertBool "Ownership/borrow compilation should succeed" $ isRight (parseTypus "// 所有权/借用擦除，纯编译期检查")
+
 
 -- | 测试Typus与Go互操作 - 符合README.md描述
 test_typus_go_interop :: Assertion
 test_typus_go_interop = do
   -- 测试调用Go包
-  assertBool "Calling Go packages should succeed" $ isRight (parseTypus "import \"sort\"\nfunc sortedFirst[n: int](v: Vector[n]) -> float64 { sort.Float64s(v.data); return v.data[0] }"))
+  assertBool "Calling Go packages should succeed" $ isRight (parseTypus "import \"sort\"\nfunc sortedFirst[n: int](v: Vector[n]) -> float64 { sort.Float64s(v.data); return v.data[0] }")
+
   
   -- 测试导出给Go代码
-  assertBool "Exporting to Go code should succeed" $ isRight (parseTypus "// 导出函数名保持不变，值参数和约束被擦除"))
+  assertBool "Exporting to Go code should succeed" $ isRight (parseTypus "// 导出函数名保持不变，值参数和约束被擦除")
+
   
   -- 测试边界标注
-  assertBool "Boundary annotations should succeed" $ isRight (parseTypus "func ProcessGoData(data []float64) { assert len(data) > 0; v := readVector(data) }"))
+  assertBool "Boundary annotations should succeed" $ isRight (parseTypus "func ProcessGoData(data []float64) { assert len(data) > 0; v := readVector(data) }")
+
 
 -- | 测试Typus约束求解器 - 符合README.md描述
 test_typus_constraint_solver :: Assertion
 test_typus_constraint_solver = do
   -- 测试常量求值
-  assertBool "Constant evaluation should succeed" $ isRight (parseTypus "// get(v, 2) 当 v: Vector[3] → 验证 2 < 3"))
+  assertBool "Constant evaluation should succeed" $ isRight (parseTypus "// get(v, 2) 当 v: Vector[3] → 验证 2 < 3")
+
   
   -- 测试线性整数算术
-  assertBool "Linear integer arithmetic should succeed" $ isRight (parseTypus "// Vector[m + n]、n - 1 >= 0"))
+  assertBool "Linear integer arithmetic should succeed" $ isRight (parseTypus "// Vector[m + n]、n - 1 >= 0")
+
   
   -- 测试条件窄化
-  assertBool "Condition narrowing should succeed" $ isRight (parseTypus "// if x > 0 { ... } → 分支内 x: Positive"))
+  assertBool "Condition narrowing should succeed" $ isRight (parseTypus "// if x > 0 { ... } → 分支内 x: Positive")
+
   
   -- 测试等式传播
-  assertBool "Equality propagation should succeed" $ isRight (parseTypus "// a == b → Vector[a] 可赋给 Vector[b]"))
+  assertBool "Equality propagation should succeed" $ isRight (parseTypus "// a == b → Vector[a] 可赋给 Vector[b]")
+
 
 -- | 测试Typus环境变量 - 符合README.md描述
 test_typus_environment_variables :: Assertion
 test_typus_environment_variables = do
   -- 测试TYPUS_SKIP_GO_BUILD环境变量
-  assertBool "TYPUS_SKIP_GO_BUILD should succeed" $ isRight (parseTypus "// 设为1/true/yes/on时跳过Go工具链调用，仅执行Typus → Go转换"))
+  assertBool "TYPUS_SKIP_GO_BUILD should succeed" $ isRight (parseTypus "// 设为1/true/yes/on时跳过Go工具链调用，仅执行Typus → Go转换")
+
 
 -- | 测试套件 - 极度内存优化
 tests :: TestTree

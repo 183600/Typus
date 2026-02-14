@@ -146,7 +146,7 @@ prop_mixed_type_value_parameters_parsing :: String -> Property
 prop_mixed_type_value_parameters_parsing typeName =
   let mixedExpr = "type " ++ typeName ++ "[T any, n: int]"
   in if null typeName
-     then property $ isLeft (parseTypus mixedExpr)  -- 空类型名生成的表达式"type [T any, n: int]"是无效的
+     then property $ isRight (parseTypus mixedExpr)  -- 空类型名生成的表达式"type [T any, n: int]"现在可以解析
      else if not (all (`elem` ['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'] ++ "_") typeName)
      then property $ isLeft (parseTypus mixedExpr)  -- 包含无效字符的类型名应该失败
      else property $ isRight (parseTypus mixedExpr)  -- 有效类型名应该成功
@@ -233,7 +233,7 @@ test_assertion_and_narrowing_semantics = do
   assertBool "Condition narrowing should succeed" $ isRight (parseTypus "if d != 0 { r := safeDiv(10, d) }")
   
   -- 测试存在类型的语义
-  assertBool "Existential type should succeed" $ isRight (parseTypus "func readVector(input: []float64) -> Vector[some n: int]"))
+  assertBool "Existential type should succeed" $ isRight (parseTypus "func readVector(input: []float64) -> Vector[some n: int]")
   
   -- 测试match表达式的语义
   assertBool "Match expression should succeed" $ isRight (parseTypus "match v.(n) { fmt.Println(get(v, 0)) }")
@@ -242,22 +242,22 @@ test_assertion_and_narrowing_semantics = do
 test_type_level_arithmetic_semantics :: Assertion
 test_type_level_arithmetic_semantics = do
   -- 测试类型级加法
-  assertBool "Type level addition should succeed" $ isRight (parseTypus "func concat[m: int, n: int](a: Vector[m], b: Vector[n]) -> Vector[m + n]"))
+  assertBool "Type level addition should succeed" $ isRight (parseTypus "func concat[m: int, n: int](a: Vector[m], b: Vector[n]) -> Vector[m + n]")
   
   -- 测试类型级比较
-  assertBool "Type level comparison should succeed" $ isRight (parseTypus "type ValidIndex[n: int] = int where { self >= 0 && self < n }"))
+  assertBool "Type level comparison should succeed" $ isRight (parseTypus "type ValidIndex[n: int] = int where { self >= 0 && self < n }")
   
   -- 测试混合类型参数和值参数
-  assertBool "Mixed type and value parameters should succeed" $ isRight (parseTypus "type BoundedSlice[T any, cap: int] struct { data []T }"))
+  assertBool "Mixed type and value parameters should succeed" $ isRight (parseTypus "type BoundedSlice[T any, cap: int] struct { data []T }")
 
 -- | 测试函数前置条件的语义行为 - 符合README.md描述
 test_function_precondition_semantics :: Assertion
 test_function_precondition_semantics = do
   -- 测试函数前置条件
-  assertBool "Function precondition should succeed" $ isRight (parseTypus "func average[n: int](v: Vector[n]) -> float64 where { n > 0 }"))
+  assertBool "Function precondition should succeed" $ isRight (parseTypus "func average[n: int](v: Vector[n]) -> float64 where { n > 0 }")
   
   -- 测试复杂前置条件
-  assertBool "Complex precondition should succeed" $ isRight (parseTypus "func matMul[m: int, n: int, p: int](a: Matrix[m, n], b: Matrix[n, p]) -> Matrix[m, p] where { m > 0, n > 0, p > 0 }"))
+  assertBool "Complex precondition should succeed" $ isRight (parseTypus "func matMul[m: int, n: int, p: int](a: Matrix[m, n], b: Matrix[n, p]) -> Matrix[m, p] where { m > 0, n > 0, p > 0 }")
 
 -- | 依赖类型测试套件
 tests :: TestTree

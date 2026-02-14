@@ -228,7 +228,7 @@ executable test-debug
 -- Smart Memory Test Runner for optimized testing with memory constraints
 executable smart-memory-test-runner
     import:           warnings
-    main-is:          SmartMemoryTestRunner.hs
+    main-is:          runners/SmartMemoryTestRunner.hs
     hs-source-dirs:   test
     other-modules:
         TestSupport.SmartTestSelector,
@@ -261,7 +261,7 @@ executable smart-memory-test-runner
 -- Super Optimized Test Runner for extreme memory-constrained environments
 executable super-optimized-test-runner
     import:           warnings
-    main-is:          SuperOptimizedTestRunner.hs
+    main-is:          runners/SuperOptimizedTestRunner.hs
     hs-source-dirs:   test
     other-modules:
         TestSupport.UnifiedMemoryOptimization,

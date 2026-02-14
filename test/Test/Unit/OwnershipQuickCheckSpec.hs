@@ -198,58 +198,59 @@ test_ownership_semantics = do
   assertBool "Block-level ownership directive should succeed" $ isRight (parseTypus "func main() { {//! ownership: on\n // code\n } }")
   
   -- 测试移动语义的语义
-  assertBool "Move semantics should succeed" $ isRight (parseTypus "s := NewMyString(\"hello\")\nt := s"))
+  assertBool "Move semantics should succeed" $ isRight (parseTypus "s := NewMyString(\"hello\")\nt := s")
   
   -- 测试不可变借用的语义
-  assertBool "Immutable borrow should succeed" $ isRight (parseTypus "r := &s\nfmt.Println(r.data)"))
+  assertBool "Immutable borrow should succeed" $ isRight (parseTypus "r := &s\nfmt.Println(r.data)")
   
   -- 测试可变借用的语义
-  assertBool "Mutable borrow should succeed" $ isRight (parseTypus "m := &mut s\nm.data = \"world\""))
+  assertBool "Mutable borrow should succeed" $ isRight (parseTypus "m := &mut s\nm.data = \"world\"")
 
 -- | 测试借用规则的语义行为 - 符合README.md描述
 test_borrow_rules_semantics :: Assertion
 test_borrow_rules_semantics = do
   -- 测试多个不可变借用
-  assertBool "Multiple immutable borrows should succeed" $ isRight (parseTypus "r1 := &s\nr2 := &s\nfmt.Println(r1.data, r2.data)"))
+  assertBool "Multiple immutable borrows should succeed" $ isRight (parseTypus "r1 := &s\nr2 := &s\nfmt.Println(r1.data, r2.data)")
   
   -- 测试可变借用排他性
-  assertBool "Mutable borrow exclusivity should succeed" $ isRight (parseTypus "m := &mut s\n// m2 := &mut s  // 这会导致编译错误"))
+  assertBool "Mutable borrow exclusivity should succeed" $ isRight (parseTypus "m := &mut s\n// m2 := &mut s  // 这会导致编译错误")
   
   -- 测试借用与原值的共存
-  assertBool "Borrow with original value should succeed" $ isRight (parseTypus "r := &s\nfmt.Println(r.data)\nfmt.Println(s.data)"))
+  assertBool "Borrow with original value should succeed" $ isRight (parseTypus "r := &s\nfmt.Println(r.data)\nfmt.Println(s.data)")
 
 -- | 测试所有权转移的语义行为 - 符合README.md描述
 test_ownership_transfer_semantics :: Assertion
 test_ownership_transfer_semantics = do
   -- 测试函数参数中的所有权转移
-  assertBool "Ownership transfer in function parameters should succeed" $ isRight (parseTypus "func process(data: Data) { /* data的所有权已转移 */ }"))
+  assertBool "Ownership transfer in function parameters should succeed" $ isRight (parseTypus "func process(data: Data) { /* data的所有权已转移 */ }")
   
   -- 测试跨goroutine的所有权转移
-  assertBool "Cross goroutine ownership transfer should succeed" $ isRight (parseTypus "go func() {\n  ch <- data\n}()"))
+  assertBool "Cross goroutine ownership transfer should succeed" $ isRight (parseTypus "go func() {\n  ch <- data\n}()")
   
   -- 测试所有权转移后的使用限制
-  assertBool "Usage restriction after ownership transfer should succeed" $ isRight (parseTypus "t := s\n// fmt.Println(s.data)  // 这会导致编译错误"))
+  assertBool "Usage restriction after ownership transfer should succeed" $ isRight (parseTypus "t := s\n// fmt.Println(s.data)  // 这会导致编译错误")
 
 -- | 测试所有权与GC的关系 - 符合README.md描述
 test_ownership_gc_relationship :: Assertion
 test_ownership_gc_relationship = do
   -- 测试所有权检查的编译期性质
-  assertBool "Compile-time ownership checking should succeed" $ isRight (parseTypus "// 所有权检查发生在编译期，零运行时开销"))
+  assertBool "Compile-time ownership checking should succeed" $ isRight (parseTypus "// 所有权检查发生在编译期，零运行时开销")
   
   -- 测试所有权与GC的共存
-  assertBool "Ownership coexistence with GC should succeed" $ isRight (parseTypus "// 通过所有权检查的代码仍由Go GC负责内存回收"))
+  assertBool "Ownership coexistence with GC should succeed" $ isRight (parseTypus "// 通过所有权检查的代码仍由Go GC负责内存回收")
 
 -- | 测试所有权机制的当前限制 - 符合README.md描述
 test_ownership_limitations :: Assertion
 test_ownership_limitations = do
   -- 测试生命周期标注的缺失
-  assertBool "Lifetime annotation absence should succeed" $ isRight (parseTypus "// 生命周期标注尚不支持，当前依赖作用域推断"))
+  assertBool "Lifetime annotation absence should succeed" $ isRight (parseTypus "// 生命周期标注尚不支持，当前依赖作用域推断")
   
   -- 测试与Go接口的交互
-  assertBool "Interaction with Go interfaces should succeed" $ isRight (parseTypus "// 实现接口方法时，接收者的所有权语义遵循方法签名声明"))
+  assertBool "Interaction with Go interfaces should succeed" $ isRight (parseTypus "// 实现接口方法时，接收者的所有权语义遵循方法签名声明")
 
 -- | 所有权测试套件
-tests :: TestGroupWithStrategicCleanup "Ownership QuickCheck Tests"
+tests :: TestTree
+tests = testGroupWithStrategicCleanup "Ownership QuickCheck Tests"
   [ -- 基本指令解析测试
     memoryOptimizedProperty "Ownership directive parsing" (property prop_ownership_directive_parsing)
   , memoryOptimizedProperty "Block ownership directive parsing" (property prop_block_ownership_directive_parsing)
