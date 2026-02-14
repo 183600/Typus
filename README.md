@@ -745,6 +745,12 @@ cabal test --test-options="--test-name \"具体测试名\"" # 运行特定名称
 
 # 极度内存优化测试（适用于CI/CD或内存受限环境）
 ./scripts/run_ultra_memory_optimized_tests.sh
+
+# 增强内存优化测试
+./scripts/enhanced_memory_test.sh
+
+# 极度增强内存优化测试
+./scripts/run_extreme_enhanced_memory_tests.sh
 ```
 
 ### 测试套件说明

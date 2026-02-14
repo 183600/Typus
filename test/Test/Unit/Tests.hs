@@ -81,6 +81,13 @@ import qualified Test.Unit.TypusAdvancedPropertiesTestSuite as TypusAdvancedProp
 import qualified Test.Unit.TypusEdgeCasesTestSuite as TypusEdgeCasesTestSuite
 import qualified Test.Unit.TypusIntegrationTestSuite as TypusIntegrationTestSuite
 
+-- 新添加的高级测试套件
+import qualified Test.Unit.NewComprehensiveQuickCheckTests as NewComprehensiveQuickCheckTests
+import qualified Test.Unit.AdvancedParserQuickCheckTests as AdvancedParserQuickCheckTests
+import qualified Test.Unit.AdvancedOwnershipQuickCheckTests as AdvancedOwnershipQuickCheckTests
+import qualified Test.Unit.AdvancedDependentTypesQuickCheckTests as AdvancedDependentTypesQuickCheckTests
+import qualified Test.Unit.AdvancedIntegrationQuickCheckTests as AdvancedIntegrationQuickCheckTests
+
 
 
 import Test.Unit.TestListPropertiesSpec (testListProperties)
@@ -225,6 +232,12 @@ tests = unsafePerformIO $ do
             , TypusAdvancedPropertiesTestSuite.tests
             , TypusEdgeCasesTestSuite.tests
             , TypusIntegrationTestSuite.tests
+            -- 新添加的高级测试套件
+            , NewComprehensiveQuickCheckTests.tests
+            , AdvancedParserQuickCheckTests.tests
+            , AdvancedOwnershipQuickCheckTests.tests
+            , AdvancedDependentTypesQuickCheckTests.tests
+            , AdvancedIntegrationQuickCheckTests.tests
             ]
       
       -- 使用优化的测试排序

@@ -253,9 +253,9 @@ memoryOptimizedIntProperty config name prop =
   extremeMemoryProperty config name (property . prop) (genExtremeSmallInt config)
 
 -- | 内存优化的布尔属性
-memoryOptimizedBoolProperty :: String -> (Bool -> Property) -> Property
-memoryOptimizedBoolProperty name prop = 
-  extremeMemoryProperty defaultExtremeConfig name prop genExtremeSmallBool
+memoryOptimizedBoolProperty :: ExtremeMemoryConfig -> String -> (Bool -> Bool) -> Property
+memoryOptimizedBoolProperty config name prop = 
+  extremeMemoryProperty config name (property . prop) genExtremeSmallBool
 
 -- | 创建内存优化的测试组
 createMemoryOptimizedTestGroup :: ExtremeMemoryConfig -> String -> [TestTree] -> TestTree
