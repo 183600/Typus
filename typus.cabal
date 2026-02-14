@@ -369,6 +369,7 @@ test-suite typus-test
         Test.Unit.AdditionalQuickCheckTests,
         Test.Unit.NewComprehensiveTypusTestSuite,
         Test.Unit.EnhancedTypusFeaturesTestSuite,
+        Test.Unit.TypusCoreQuickCheckTestSuite,
         TestSupport.Arbitrary,
         TestSupport.MemoryLimits,
         TestSupport.OptimizedMemoryLimits,

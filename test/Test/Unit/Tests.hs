@@ -52,6 +52,7 @@ import qualified Test.Unit.BasicQuickCheckTestSuite as BasicQuickCheckTestSuite
 
 import qualified Test.Unit.NewComprehensiveTypusTestSuite as NewComprehensiveTypusTestSuite
 import qualified Test.Unit.EnhancedTypusFeaturesTestSuite as EnhancedTypusFeaturesTestSuite
+import qualified Test.Unit.TypusCoreQuickCheckTestSuite as TypusCoreQuickCheckTestSuite
 
 
 
@@ -158,6 +159,7 @@ tests = unsafePerformIO $ do
             , memoryOptimizedListProperty (getConfigForMemory availableMemory) "ultra minimal list" (\xs -> let limited = take 1 xs in length limited >= 0 && length limited <= 1) (genSmallInt (getConfigForMemory availableMemory))
             , NewComprehensiveTypusTestSuite.testSuite
             , EnhancedTypusFeaturesTestSuite.testSuite
+            , TypusCoreQuickCheckTestSuite.testSuite
             ]
       
       -- 根据可用内存选择测试数量
