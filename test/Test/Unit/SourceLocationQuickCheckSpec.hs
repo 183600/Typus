@@ -3,7 +3,7 @@
 module Test.Unit.SourceLocationQuickCheckSpec where
 
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property, testProperty, Property)
 import Test.Tasty.HUnit
 import TestSupport.MemoryLimits 
   ( withMemoryLimits
