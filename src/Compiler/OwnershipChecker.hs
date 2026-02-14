@@ -186,8 +186,10 @@ extractValueCopyVarsLegacy src =
 
 isIgnorableOwnershipError :: [String] -> OwnershipError -> Bool
 isIgnorableOwnershipError valueCopyVars err = case err of
-    UseAfterMove v -> v `elem` valueCopyVars
-    OutOfScope v   -> v `elem` ownershipKeywords
+    -- Only ignore specific UseAfterMove errors for value copy variables
+    UseAfterMove var -> var `elem` valueCopyVars
+    -- Only ignore specific OutOfScope errors for value copy variables
+    OutOfScope var -> var `elem` valueCopyVars
     _ -> False
   where
     ownershipKeywords = ["owned", "mut", "borrow", "borrowed", "where", "data"]

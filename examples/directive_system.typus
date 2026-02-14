@@ -1,0 +1,64 @@
+// 文件级指令示例
+//! ownership: on
+//! dependent_types: on
+
+package main
+
+import "fmt"
+
+// 精确类型定义
+type NonZero = int where { self != 0 }
+type Positive = int where { self > 0 }
+
+// 值参数化类型
+type Vector[n: int] struct {
+    data [n]float64
+}
+
+func zeros(n: Positive) -> Vector[n] {
+    return Vector[n]{data: make([]float64, n)}
+}
+
+func safeDiv(a: int, b: NonZero) -> int {
+    return a / b
+}
+
+func main() {
+    fmt.Println("Directive system example")
+    
+    // 普通Go代码块（不启用特殊特性）
+    {
+        x := 10
+        y := 0
+        // safeDiv(x, y)  // 这里不会检查，因为不在dependent_types块中
+        fmt.Printf("x = %d, y = %d\n", x, y)
+    }
+    
+    // 块级指令示例
+    {//! ownership: on
+        fmt.Println("This block enables ownership semantics")
+        // 所有权相关的代码会在这里被检查
+    }
+    
+    {//! dependent_types: on
+        fmt.Println("This block enables dependent types")
+        
+        // 依赖类型相关代码
+        v := zeros(3)  // Vector[3]
+        fmt.Printf("Vector length: %d\n", len(v.data))
+        
+        // 编译期验证
+        r := safeDiv(10, 2)  // ✓ 编译期验证 2 ≠ 0
+        fmt.Printf("10 / 2 = %d\n", r)
+    }
+    
+    // 同时启用多个特性
+    {//! ownership: on
+     //! dependent_types: on
+        fmt.Println("This block enables both ownership and dependent types")
+        
+        // 可以同时使用两种特性的代码
+        v := zeros(5)  // Vector[5]
+        fmt.Printf("Vector length: %d\n", len(v.data))
+    }
+}

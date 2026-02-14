@@ -30,6 +30,8 @@ module DependentTypesParser (
   runDependentTypesParser,       -- 解析整个输入，返回所有定义与最终状态
   parseDependentType,            -- 解析并返回第一个顶层定义（若存在）
   parseTypeDeclaration,          -- 单独解析一个 type 定义
+  parseTypeReference,            -- 解析类型引用（表达式）
+  parseTypeExpression,           -- 解析类型表达式（别名）
   validateDependentTypeSyntax,   -- 校验输入，返回收集到的错误（不抛异常）
   showType                       -- 显示依赖类型的字符串表示
 ) where
@@ -95,6 +97,9 @@ braces = MP.between (symbol "{") (symbol "}")
 angles :: Parser a -> Parser a
 angles = MP.between (symbol "<") (symbol ">")
 
+brackets :: Parser a -> Parser a
+brackets = MP.between (symbol "[") (symbol "]")
+
 comma :: Parser String
 comma = symbol ","
 
@@ -152,7 +157,12 @@ data DependentTypeError
 data TypeRef = TypeRef
   { refName :: String
   , refArgs :: [TypeRef]
-  } deriving (Show, Eq)
+  } deriving (Eq)
+
+-- 自定义 Show 实例，以匹配期望的输出格式
+instance Show TypeRef where
+  show (TypeRef name []) = name
+  show (TypeRef name args) = name ++ "[" ++ List.intercalate "," (map show args) ++ "]"
 
 -- 结构体字段
 data Field = Field
@@ -272,12 +282,130 @@ type DependentParseResult = Either String ([DependentType], DependentTypesParser
 -- 类型引用解析（支持嵌套泛型）
 --------------------------------------------------------------------------------
 
--- 通用类型引用：Simple | Generic<...>
-parseTypeReference :: Parser TypeRef
-parseTypeReference = do
+-- 解析类型级算术表达式
+parseTypeArithmetic :: Parser TypeRef
+parseTypeArithmetic = do
+  left <- parseTypeTerm
+  rest <- MP.many (parseTypeOp left)
+  pure $ case rest of
+    [] -> left
+    _ -> foldl combineTypeOp left rest
+  where
+    parseTypeOp left = do
+      op <- parseArithmeticOp
+      right <- parseTypeTerm
+      pure (op, right)
+    
+    parseArithmeticOp = 
+      (symbol "+" >> pure "+") MP.<|>
+      (symbol "-" >> pure "-") MP.<|>
+      (symbol "*" >> pure "*") MP.<|>
+      (symbol "/" >> pure "/")
+    
+    parseTypeTerm = 
+          parseTypePrimary
+      MP.<|> parens parseTypeArithmetic
+    
+    combineTypeOp left (op, right) = 
+      TypeRef op [left, right]
+
+-- 解析类型参数，支持 "T any" 语法和 "some n: int" 语法
+-- parseTypeParam 的定义在下面
+
+-- 解析基本类型引用
+parseTypePrimary :: Parser TypeRef
+parseTypePrimary = do
   name <- identifier
   args <- MP.option [] (angles (parseTypeReference `MP.sepBy1` comma))
   pure $ TypeRef name args
+
+-- 解析类型级算术参数
+parseArithmeticParam :: Parser TypeRef
+parseArithmeticParam = do
+  left <- identifier
+  op <- parseArithmeticOp
+  right <- identifier
+  pure $ TypeRef (left ++ op ++ right) []
+  where
+    parseArithmeticOp = 
+      (symbol "+" >> pure "+") MP.<|>
+      (symbol "-" >> pure "-") MP.<|>
+      (symbol "*" >> pure "*") MP.<|>
+      (symbol "/" >> pure "/")
+
+-- 解析存在类型参数
+parseExistentialTypeParam :: Parser TypeRef
+parseExistentialTypeParam = do
+  _ <- symbol "some"
+  name <- identifier
+  _ <- symbol ":"
+  ty <- identifier
+  pure $ TypeRef ("some " ++ name ++ ":" ++ ty) []
+
+-- 解析 any 类型参数
+parseAnyTypeParam :: Parser TypeRef
+parseAnyTypeParam = do
+  name <- identifier
+  _ <- symbol "any"
+  pure $ TypeRef (name ++ " any") []
+
+-- 解析带类型的参数
+parseTypedParam :: Parser TypeRef
+parseTypedParam = do
+  name <- identifier
+  _ <- symbol ":"
+  ty <- identifier
+  pure $ TypeRef (name ++ ":" ++ ty) []
+
+-- 解析简单参数
+parseSimpleParam :: Parser TypeRef
+parseSimpleParam = do
+  name <- identifier
+  pure $ TypeRef name []
+
+-- 解析类型参数
+parseTypeParam :: Parser TypeRef
+parseTypeParam = 
+      MP.try parseExistentialTypeParam
+  MP.<|> MP.try parseAnyTypeParam
+  MP.<|> MP.try parseArithmeticParam
+  MP.<|> MP.try parseTypedParam
+  MP.<|> parseSimpleParam
+
+-- 通用类型引用：支持类型级算术和混合参数
+parseTypeReference :: Parser TypeRef
+parseTypeReference = do
+  name <- identifier
+  -- 尝试解析方括号中的参数
+  bracketArgs <- MP.option [] $ brackets $ parseTypeParam `MP.sepBy1` comma
+  -- 尝试解析尖括号中的参数
+  angleArgs <- MP.option [] $ angles $ parseTypeReference `MP.sepBy1` comma
+  let allArgs = bracketArgs ++ angleArgs
+  pure $ TypeRef name allArgs
+
+-- 解析存在类型参数，如 "some n: int"
+parseExistentialParam :: Parser TypeRef
+parseExistentialParam = do
+  MP.try $ do
+    _ <- symbol "some"
+    name <- identifier
+    _ <- symbol ":"
+    ty <- parseSimpleTypeReference
+    pure $ TypeRef ("some " ++ name ++ ":" ++ show ty) []
+
+-- 解析简单的类型引用（不支持算术运算）
+parseSimpleTypeReference :: Parser TypeRef
+parseSimpleTypeReference = do
+  name <- identifier
+  args <- MP.option [] (angles (parseSimpleTypeReference `MP.sepBy1` comma))
+  pure $ TypeRef name args
+
+-- 解析类型表达式（与 parseTypeReference 相同）
+parseTypeExpression :: String -> Either String TypeRef
+parseTypeExpression input = 
+  case runParser (sc *> parseTypeReference <* sc <* eof) "<type expr>" input of
+    Left e  -> Left (errorBundlePretty e)
+    Right ty -> Right ty
 
 -- 常用的内置类型便捷值
 tInt :: TypeRef
@@ -438,10 +566,18 @@ parseTypeDecl :: Parser DependentType
 parseTypeDecl = do
   _ <- symbol "type"
   name <- identifier
-  params <- MP.option [] (MP.try parseTypeParameterList)
-  body <- MP.option (StructBody []) (MP.try parseStructBody)
-  cons <- MP.option [] (MP.try parseWhereClause)
-  pure $ TypeDecl name params body cons
+  -- Check if this is an alias syntax (type Name = TypeRef)
+  isAlias <- MP.option False (True <$ symbol "=")
+  if isAlias
+  then do
+    target <- parseTypeReference
+    cons <- MP.option [] (MP.try parseWhereClause)
+    pure $ TypeAlias name target cons
+  else do
+    params <- MP.option [] (MP.try parseTypeParameterList)
+    body <- MP.option (StructBody []) (MP.try parseStructBody)
+    cons <- MP.option [] (MP.try parseWhereClause)
+    pure $ TypeDecl name params body cons
 
 -- alias Name = TypeRef [where ...]
 parseAlias :: Parser DependentType

@@ -16,16 +16,18 @@ import SourceLocation (SourcePos(..), emptySpan, sourceLine, sourceColumn)
 -- | Test that IR statements maintain consistency
 prop_ir_statement_consistency :: String -> String -> Property
 prop_ir_statement_consistency stmtType stmtContent = 
-    not (null stmtType) && not (null stmtContent) ==>
-    let stmt = IRStatement { irStmtType = stmtType, irStmtContent = stmtContent }
-    in irStmtType stmt == stmtType && irStmtContent stmt == stmtContent
+    let nonEmptyType = if null stmtType then "stmt" else stmtType
+        nonEmptyContent = if null stmtContent then "content" else stmtContent
+        stmt = IRStatement { irStmtType = nonEmptyType, irStmtContent = nonEmptyContent }
+    in property $ irStmtType stmt == nonEmptyType && irStmtContent stmt == nonEmptyContent
 
 -- | Test that IR expressions maintain consistency  
 prop_ir_expression_consistency :: String -> String -> Property
 prop_ir_expression_consistency exprType exprContent = 
-    not (null exprType) && not (null exprContent) ==>
-    let expr = IRExpression { irExprType = exprType, irExprContent = exprContent }
-    in irExprType expr == exprType && irExprContent expr == exprContent
+    let nonEmptyType = if null exprType then "expr" else exprType
+        nonEmptyContent = if null exprContent then "content" else exprContent
+        expr = IRExpression { irExprType = nonEmptyType, irExprContent = nonEmptyContent }
+    in property $ irExprType expr == nonEmptyType && irExprContent expr == nonEmptyContent
 
 -- | Test that TypusFile round-trips maintain structure
 prop_typus_file_structure :: [String] -> Property

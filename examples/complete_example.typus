@@ -1,0 +1,150 @@
+//! ownership: on
+//! dependent_types: on
+
+package main
+
+import "fmt"
+
+// ---- 精确类型 ----
+type NonZero    = int where { self != 0 }
+type Positive   = int where { self > 0 }
+type ValidIndex[n: int] = int where { self >= 0 && self < n }
+
+// ---- 值参数化类型 ----
+type Vector[n: int] struct {
+    data [n]float64
+}
+
+// ---- 构造 ----
+func zeros(n: Positive) -> Vector[n] {
+    return Vector[n]{data: make([]float64, n)}
+}
+
+func ones(n: Positive) -> Vector[n] {
+    data := make([]float64, n)
+    for i := 0; i < n; i++ {
+        data[i] = 1.0
+    }
+    return Vector[n]{data: data}
+}
+
+// ---- 安全访问 ----
+func get[n: int](v: Vector[n], i: ValidIndex[n]) -> float64 {
+    return v.data[i]
+}
+
+func set[n: int](v: *Vector[n], i: ValidIndex[n], val: float64) {
+    v.data[i] = val
+}
+
+// ---- 向量运算 ----
+func add[n: int](a: Vector[n], b: Vector[n]) -> Vector[n] {
+    result := zeros(n)
+    for i := 0; i < n; i++ {
+        result.data[i] = a.data[i] + b.data[i]
+    }
+    return result
+}
+
+func dot[n: int](a: Vector[n], b: Vector[n]) -> float64
+    where { n > 0 }
+{
+    sum := 0.0
+    for i := 0; i < n; i++ {
+        sum += a.data[i] * b.data[i]
+    }
+    return sum
+}
+
+func concat[m: int, n: int](a: Vector[m], b: Vector[n]) -> Vector[m + n] {
+    result := make([]float64, m+n)
+    copy(result, a.data)
+    copy(result[m:], b.data)
+    return Vector[m+n]{data: result}
+}
+
+// ---- 安全除法 ----
+func safeDiv(a: int, b: NonZero) -> int {
+    return a / b
+}
+
+// ---- 矩阵 ----
+type Matrix[rows: int, cols: int] struct {
+    data [rows][cols]float64
+}
+
+func matMul[m: int, n: int, p: int](
+    a: Matrix[m, n],
+    b: Matrix[n, p],
+) -> Matrix[m, p]
+    where { m > 0, n > 0, p > 0 }
+{
+    result := Matrix[m, p]{}
+    for i := 0; i < m; i++ {
+        for j := 0; j < p; j++ {
+            for k := 0; k < n; k++ {
+                result.data[i][j] += a.data[i][k] * b.data[k][j]
+            }
+        }
+    }
+    return result
+}
+
+// ---- 入口 ----
+func main() {
+    fmt.Println("Hello, Typus!")
+
+    // 所有权
+    {//! ownership: on
+        s := NewMyString("hello")
+        t := s                       // 移动
+        fmt.Println(t.data)
+        // fmt.Println(s.data)       // ✗ 编译错误：s 已移动
+    }
+
+    // 依赖类型——编译期安全
+    v1 := zeros(3)                   // Vector[3]
+    v2 := ones(3)                    // Vector[3]
+    v3 := add(v1, v2)               // ✓ 维度匹配
+    x  := get(v3, 0)                // ✓ 编译期验证 0 < 3
+    y  := get(v3, 2)                // ✓ 编译期验证 2 < 3
+    // get(v3, 5)                   // ✗ 编译期错误
+
+    v4 := zeros(4)                   // Vector[4]
+    // add(v1, v4)                  // ✗ Vector[3] ≠ Vector[4]
+
+    v7 := concat(v3, v4)            // Vector[7] ✓
+
+    fmt.Printf("v3[0]=%.1f v3[2]=%.1f v7.len=%d\n", x, y, 7)
+
+    // 安全除法
+    r := safeDiv(10, 2)              // ✓ 编译期验证
+    fmt.Printf("10 / 2 = %d\n", r)
+
+    // 运行时值——条件窄化
+    d := readInt()
+    if d != 0 {
+        r2 := safeDiv(10, d)         // ✓ 分支内 d 满足 NonZero
+        fmt.Printf("10 / d = %d\n", r2)
+    }
+
+    // 动态维度——assert 窄化
+    n := readInt()
+    assert n > 0
+    vn := zeros(n)
+    fmt.Printf("dynamic vector, length %d\n", n)
+}
+
+// 辅助函数
+func readInt() -> int {
+    // 简化实现，实际应该从标准输入读取
+    return 42
+}
+
+type MyString struct {
+    data string
+}
+
+func NewMyString(s string) -> MyString {
+    return MyString{data: s}
+}

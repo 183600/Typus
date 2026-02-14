@@ -20,11 +20,20 @@ import Data.Maybe (listToMaybe)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 
-import Compiler (compileTypus)
-import Parser (parseTypus)
+import Compiler (compile, CompilerResult, CompilerError(..), renderCompilationError)
+import Compiler.Errors (ErrorCategory(..), ErrorSeverity(..), CompilationPhase(..), mkCompilerError)
+import Parser (parseTypus, TypusFile(..))
 import DependentTypesParser (parseDependentType)
 import Ownership (analyzeOwnership)
 import Utils (trim, splitBy, normalizeIndentation)
+import qualified Data.Text as T
+
+-- | 辅助函数：从字符串编译 Typus 代码
+compileTypusString :: String -> CompilerResult String
+compileTypusString input = 
+  case parseTypus input of
+    Left err -> Left [mkCompilerError "ParseError" (T.pack err) ParsingPhase Parsing Error Nothing Nothing [] ["compileTypusString"] Nothing]
+    Right typusFile -> compile typusFile
 
 -- | 字符串属性测试
 
@@ -89,7 +98,7 @@ prop_nub_removes_duplicates :: [Int] -> Property
 prop_nub_removes_duplicates xs = 
   let deduped = nub xs
   in property $ 
-    length deduped <= length xs &&
+    length deduped <= length xs .&&.
     sort deduped === nub (sort xs)
 
 -- | nub函数的幂等性
@@ -125,14 +134,14 @@ prop_set_insert_member :: [Int] -> Int -> Property
 prop_set_insert_member xs elem =
   let s = Set.fromList xs
       s' = Set.insert elem s
-  in elem `Set.member` s'
+  in property $ elem `Set.member` s'
 
 -- | Set删除操作
 prop_set_delete :: [Int] -> Int -> Property
 prop_set_delete xs elem =
   let s = Set.fromList xs
       s' = Set.delete elem s
-  in not (elem `Set.member` s')
+  in property $ not (elem `Set.member` s')
 
 -- | Set大小一致性
 prop_set_size :: [Int] -> Property
@@ -145,13 +154,13 @@ prop_to_upper_idempotent :: String -> Property
 prop_to_upper_idempotent s = map toUpper (map toUpper s) === map toUpper s
 
 prop_to_lower_idempotent :: String -> Property
-prop_to_lower_idempotent s = map toLower (map toLower s) === map toLower s
+prop_to_lower_idempotent s = property $ map toLower (map toLower s) === map toLower s
 
 -- | 大小写转换不改变字符串长度
 prop_case_preserves_length :: String -> Property
 prop_case_preserves_length s = 
   property $ 
-    length (map toUpper s) === length s &&
+    length (map toUpper s) === length s .&&.
     length (map toLower s) === length s
 
 -- | 解析器属性测试
@@ -187,10 +196,10 @@ prop_parser_error_consistency s =
 prop_compiler_idempotent :: String -> Property
 prop_compiler_idempotent s =
   let limitedString = take 8 s  -- 限制字符串大小
-      result1 = compileTypus limitedString
+      result1 = compileTypusString limitedString
   in case result1 of
     Right goCode -> 
-      let result2 = compileTypus goCode
+      let result2 = compileTypusString goCode
       in case result2 of
         Right goCode2 -> property $ length goCode2 >= 0
         Left _ -> property False
@@ -200,8 +209,8 @@ prop_compiler_idempotent s =
 prop_compiler_error_consistency :: String -> Property
 prop_compiler_error_consistency s =
   let limitedString = take 6 s  -- 限制字符串大小
-      result1 = compileTypus limitedString
-      result2 = compileTypus limitedString
+      result1 = compileTypusString limitedString
+      result2 = compileTypusString limitedString
   in case (result1, result2) of
     (Left err1, Left err2) -> err1 === err2
     (Right goCode1, Right goCode2) -> goCode1 === goCode2
@@ -267,15 +276,15 @@ prop_or_commutative x y = (x || y) === (y || x)
 
 -- | 与运算的结合律
 prop_and_associative :: Bool -> Bool -> Bool -> Property
-prop_and_associative x y z = (x && y) && z === x && (y && z)
+prop_and_associative x y z = ((x && y) && z) === (x && (y && z))
 
 -- | 或运算的结合律
 prop_or_associative :: Bool -> Bool -> Bool -> Property
-prop_or_associative x y z = (x || y) || z === x || (y || z)
+prop_or_associative x y z = ((x || y) || z) === (x || (y || z))
 
 -- | 德摩根定律
 prop_de_morgan :: Bool -> Bool -> Property
-prop_de_morgan x y = not (x && y) === (not x) || (not y)
+prop_de_morgan x y = not (x && y) === ((not x) || (not y))
 
 -- | 边界条件测试
 
@@ -289,11 +298,11 @@ prop_sort_empty = sort [] === ([] :: [Int])
 
 -- | 空Map的查找
 prop_map_lookup_empty :: Int -> Property
-prop_map_lookup_empty key = Map.lookup key Map.empty === Nothing
+prop_map_lookup_empty key = (Map.lookup key Map.empty :: Maybe String) === Nothing
 
 -- | 空Set的成员检查
 prop_set_member_empty :: Int -> Property
-prop_set_member_empty elem = not (elem `Set.member` Set.empty)
+prop_set_member_empty elem = property $ not (elem `Set.member` Set.empty)
 
 -- | 测试套件
 tests :: TestTree

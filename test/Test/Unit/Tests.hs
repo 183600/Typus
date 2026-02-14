@@ -61,6 +61,8 @@ import qualified Test.Unit.NewOwnershipTestSuite as NewOwnershipTestSuite
 import qualified Test.Unit.NewCompilerIntegrationTestSuite as NewCompilerIntegrationTestSuite
 import qualified Test.Unit.NewQuickCheckPropertiesTestSuite as NewQuickCheckPropertiesTestSuite
 import qualified Test.Unit.NewParserTestSuite as NewParserTestSuite
+import qualified Test.Unit.NewEnhancedTestSuite as NewEnhancedTestSuite
+import qualified Test.Unit.NewAdvancedQuickCheckTestSuite as NewAdvancedQuickCheckTestSuite
 
 
 
@@ -191,6 +193,8 @@ tests = unsafePerformIO $ do
             , NewCompilerIntegrationTestSuite.tests
             , NewQuickCheckPropertiesTestSuite.tests
             , NewParserTestSuite.tests
+            , NewEnhancedTestSuite.tests
+            , NewAdvancedQuickCheckTestSuite.tests
             ]
       
       -- 根据可用内存选择测试数量

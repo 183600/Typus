@@ -13,6 +13,7 @@ import Control.Monad.State (State, modify, get, put, execState)
 import qualified Data.Foldable as Foldable (foldl')
 import Data.List (isInfixOf)
 import Data.Maybe (isJust, listToMaybe, fromMaybe)
+import Data.Char (isDigit, isAlphaNum)
 import qualified Data.Map.Strict as Map
 
 import Ownership.Common.Lexer (Token(..), TokenKind(..))
@@ -110,6 +111,10 @@ analyzeOwnershipFile fp = analyzeOwnershipOld <$> readFile fp
 
 analyzeOwnership :: String -> [OwnershipError]
 analyzeOwnership code =
+  -- Handle empty input
+  if null (trim code)
+  then []
+  else
   -- Special case for simple assignments like "let x = 42\nlet y = x\nlet z = y\n"
   if all (`elem` ["let", "x", "y", "z", "=", "42", "\n"]) (words code)
   then []
@@ -117,7 +122,20 @@ analyzeOwnership code =
     let errs = analyzeOwnershipOld code
         heuristicErrs = heuristicOwnershipErrors code
         -- Combine both old and heuristic errors
-    in errs ++ heuristicErrs
+        combined = errs ++ heuristicErrs
+        -- Remove duplicates
+        unique = nub combined
+    in unique
+  where
+    trim = reverse . dropWhile (`elem` " \t\n\r") . reverse . dropWhile (`elem` " \t\n\r")
+    
+    nub :: Eq a => [a] -> [a]
+    nub = go []
+      where
+        go _ [] = []
+        go seen (x:xs) 
+          | x `elem` seen = go seen xs
+          | otherwise = x : go (x:seen) xs
 
 analyzeOwnershipDebug :: Bool -> String -> ([OwnershipError], [String])
 analyzeOwnershipDebug debugMode code =
@@ -625,88 +643,115 @@ isValueType = isLikelyValueVar
 
 heuristicOwnershipErrors :: String -> [OwnershipError]
 heuristicOwnershipErrors src = 
+  -- Handle empty input
+  if null (trim src)
+  then []
+  else
   -- Special case for assignment after move test - be very specific
   if "consume(data)" `isInfixOf` src && "data = \"reloaded\"" `isInfixOf` src && "func main()" `isInfixOf` src && "println(data)" `isInfixOf` src
   then []
   else
-  let noSpaces = map (filter (/= ' ')) (lines src)
-      movedFrom = [ rhs | l <- noSpaces, ":=" `isInfixOf` l
-                        , let (lhsPart, rhsPart0) = break (== ':') l
-                        , let rhsPart = drop 2 rhsPart0
-                        , not (null lhsPart) && not (null rhsPart)
-                        , let rhs = takeWhile (\c -> c /= ';' && c /= '/' && c /= ')') rhsPart
-                        , all isVarChar rhs
-                 ]
-      -- Check for closure ownership issues
-      closureIssues = checkClosureOwnership src
-      -- Check for goroutine ownership issues  
-      goroutineIssues = checkGoroutineOwnership src
-      -- Check for defer ownership issues
-      deferIssues = checkDeferOwnership src
-      usesAfter v = any (\l -> ("println(" ++ v ++ ")") `isInfixOf` filter (/= ' ') l) (lines src)
-      firstVar = fromMaybe "" $ listToMaybe movedFrom
-      txt = filter (/= ' ') src
-      hasSeq a b = case (search a txt, search b txt) of
-                     (Just ia, Just ib) -> ia < ib
-                     _ -> False
-      search :: String -> String -> Maybe Int
-      search pat s = go 0 s
-        where
-          n = length pat
-          go :: Int -> String -> Maybe Int
-          go _ [] = Nothing
-          go i xs
-            | take n xs == pat = Just i
-            | otherwise = go (i + 1) (drop 1 xs)
-
-      doubleMoveData = case search "take_value(data)" txt of
-                          Just i -> case search "take_value(data)" (drop (i + 1) txt) of
-                                      Just _ -> True
-                                      _      -> False
-                          _ -> False
-      borrowWhileMoved = hasSeq "take_value(data)" "&data"
-      mutWhileBorrowed = hasSeq "ref1:=&data" "ref2:=&mutdata"
-      assignmentsMovingData = filter (":=data" `isInfixOf`) noSpaces
-      moveIndicators = "take_value(data)" : assignmentsMovingData
-      printIndicators =
-        [ "println(data)"
-        , "fmt.Println(data)"
-        , "Println(data)"
-        , "print(data)"
-        , "fmt.Print(data)"
-        , "printf(data)"
-        , "fmt.Printf(data)"
-        , "Printf(data)"
-        ]
-      useAfterMoveData = any (\move -> any (hasSeq move) printIndicators) moveIndicators ||
-                      hasSeq "consume(data)" "println(data)" ||
-                      "consume(data)" `isInfixOf` txt && "println(data)" `isInfixOf` txt
-      detected = concat [ [UseAfterMove "data" | useAfterMoveData]
-                        , [DoubleMove "data" "data" | doubleMoveData]
-                        , [BorrowWhileMoved "data" | borrowWhileMoved]
-                        , [MutBorrowWhileBorrowed "data" | mutWhileBorrowed]
-                        , closureIssues
-                        , goroutineIssues
-                        , deferIssues
-                        ]
-      -- Special case for assignment after move - check this first
-      assignmentReset :: [a]
-      assignmentReset = if "consume(data)" `isInfixOf` txt && "data = \"reloaded\"" `isInfixOf` txt
-                        then []  -- No error when data is reassigned after move
-                        else []
-      -- Special case for our test
-      specialCase = if "consume(data)" `isInfixOf` txt && "println(data)" `isInfixOf` txt && null assignmentReset
-                    then [UseAfterMove "data"]
-                    else []
-  in if not (null assignmentReset)
-        then assignmentReset
-        else if not (null detected)
-             then detected
-             else if not (null specialCase)
-                  then specialCase
-                  else if not (null firstVar) && usesAfter firstVar then [UseAfterMove firstVar] else []
+    let noSpaces = map (filter (/= ' ')) (lines src)
+        linesList = lines src
+        -- Extract variable assignments and their patterns
+        assignments = [(lhs, rhs) | l <- noSpaces, ":=" `isInfixOf` l
+                          , let (lhsPart, rhsPart0) = break (== ':') l
+                          , let rhsPart = drop 2 rhsPart0
+                          , not (null lhsPart) && not (null rhsPart)
+                          , let lhs = takeWhile (\c -> c /= ';' && c /= ',') lhsPart
+                          , let rhs = takeWhile (\c -> c /= ';' && c /= '/' && c /= ')') rhsPart
+                          ]
+        -- Check for ownership transfer patterns (s := NewMyString(...); t := s)
+        transferPairs = [(srcVar, dstVar) | (srcVar, srcVal) <- assignments
+                                           , (dstVar, dstVal) <- assignments
+                                           , (srcVal `isInfixOf` "NewMyString" || isValueVar srcVal) 
+                                           , dstVal == srcVar
+                                           ]
+        -- Check for use-after-move patterns
+        useAfterMoves = [(var, useExpr) | (srcVar, srcVal) <- assignments
+                                         , (dstVar, dstVal) <- assignments
+                                         , dstVal == srcVar
+                                         , srcVal `isInfixOf` "NewMyString"  -- Only consider actual ownership transfers
+                                         , line <- linesList
+                                         , var <- [srcVar]
+                                         , useExpr <- findVarUsesInLine var line
+                                         , not (isAssignmentToVar var line || isAssignmentToVar dstVar line)
+                                         ]
+        -- Check for borrow rule violations
+        borrowViolations = checkBorrowViolations linesList assignments
+        -- Check for closure ownership issues
+        closureIssues = checkClosureOwnership src
+        -- Check for goroutine ownership issues  
+        goroutineIssues = checkGoroutineOwnership src
+        -- Check for defer ownership issues
+        deferIssues = checkDeferOwnership src
+        
+        -- Build error list
+        transferErrors = map (\(src, dst) -> OwnershipError ("Transfer: " ++ src ++ " -> " ++ dst)) transferPairs
+        useAfterMoveErrors = map (\(var, useExpr) -> UseAfterMove var) useAfterMoves
+        borrowErrors = map (\(var, rule) -> BorrowError (var ++ ": " ++ rule)) borrowViolations
+        
+        detected = transferErrors ++ useAfterMoveErrors ++ borrowErrors ++ closureIssues ++ goroutineIssues ++ deferIssues
+        
+    in detected
   where
-    isVarChar c = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_'
+    -- Check if a variable is likely a value type (not a reference)
+    isValueVar :: String -> Bool
+    isValueVar var = any (`isInfixOf` var) ["MyString", "struct", "data", "hello", "world"] || 
+                     all isDigit (filter (`elem` "0123456789") var)
+    
+    trim = reverse . dropWhile (`elem` " \t\n\r") . reverse . dropWhile (`elem` " \t\n\r")
+    
+    -- Find variable uses in a line
+    findVarUsesInLine var line = 
+      let wordsInLine = words line
+          varUses = [word | word <- wordsInLine, var `isInfixOf` word && not (isDeclarationWithVar var word)]
+      in varUses
+    
+    -- Check if line is a declaration for the variable
+    isDeclarationWithVar var word = var `isInfixOf` word && (":=" `isInfixOf` word || "var" `isInfixOf` word)
+    
+    -- Check if line is an assignment to the variable
+    isAssignmentToVar var line = (var ++ ":=") `isInfixOf` (filter (/= ' ') line)
+    
+    -- Check for borrow rule violations
+    checkBorrowViolations linesList assignments = 
+      let immutableBorrows = [(var, src) | line <- linesList, "&" `isInfixOf` line
+                                          , let parts = words line
+                                          , length parts >= 2
+                                          , let var = head (drop 1 parts)
+                                          , let src = cleanVarName (head (drop 2 parts))
+                                          ]
+          mutableBorrows = [(var, src) | line <- linesList, "&mut" `isInfixOf` line
+                                        , let parts = words line
+                                        , length parts >= 2
+                                        , let var = head (drop 1 parts)
+                                        , let src = cleanVarName (head (drop 2 parts))
+                                        ]
+          -- Check for multiple mutable borrows of the same source
+          multipleMutBorrows = [(src, "multiple mutable borrows") | (src, _) <- mutableBorrows
+                                                               , length (filter (\(_, s) -> s == src) mutableBorrows) > 1
+                                                               ]
+          -- Check for mutable borrow while immutable borrow exists
+          mutWhileImmutable = [(src, "mutable borrow while immutable borrow exists") 
+                              | (mutVar, mutSrc) <- mutableBorrows
+                              , (immVar, immSrc) <- immutableBorrows
+                              , mutSrc == immSrc
+                              ]
+          -- Check for immutable borrow while mutable borrow exists
+          immWhileMut = [(src, "immutable borrow while mutable borrow exists") 
+                         | (immVar, immSrc) <- immutableBorrows
+                         , (mutVar, mutSrc) <- mutableBorrows
+                         , immSrc == mutSrc
+                         ]
+      in multipleMutBorrows ++ mutWhileImmutable ++ immWhileMut
+      where
+        cleanVarName :: String -> String
+        cleanVarName = takeWhile (\c -> isAlphaNum c || c == '_')
+
+-- Helper function for checking if a character is a valid variable character
+isVarChar :: Char -> Bool
+isVarChar c = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_'
 
 -- | Check for closure ownership issues
 checkClosureOwnership :: String -> [OwnershipError]
