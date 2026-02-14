@@ -1,26 +1,29 @@
-import qualified Utils as U
+import qualified SyntaxValidator as SV
+import qualified Data.Text as T
+import qualified Text.Megaparsec as MP
+import Text.Megaparsec (Parsec, errorBundlePretty)
+import qualified Text.Megaparsec.Char as MC
+import qualified Text.Megaparsec.Char.Lexer as L
+import Data.Void (Void)
+
+type MegaParser = Parsec Void String
+
+-- Test tokenization
+testTokenization :: String -> IO ()
+testTokenization input = do
+    putStrLn $ "Testing tokenization of: " ++ input
+    let tokens = SV.tokenize input
+    putStrLn $ "Tokens: " ++ show tokens
+    putStrLn $ "Has import token: " ++ show (any isImport tokens)
+    putStrLn $ "Has other Go code: " ++ show (any isOtherGoSpecific tokens)
+    where
+        isImport (SV.TKeyword "import" _ _) = True
+        isImport _ = False
+        isOtherGoSpecific (SV.TKeyword k _ _) = k `elem` ["func", "package", "var", "const", "type"]
+        isOtherGoSpecific _ = False
 
 main :: IO ()
 main = do
-  let s = "\"b\""
-  putStrLn $ "Input: " ++ show s
-  putStrLn $ "length: " ++ show (length s)
-  
-  -- Check conditions
-  putStrLn $ "\nChecking conditions:"
-  putStrLn $ "null s: " ++ show (null s)
-  putStrLn $ "isCompleteStringLiteral s: " ++ show (U.isCompleteStringLiteral s)
-  
-  putStrLn $ "\nFor the first branch (if isCompleteStringLiteral s):"
-  putStrLn $ "s == \"\\\\\"\\\"\": " ++ show (s == "\"\\\"\"")
-  putStrLn $ "length s == 3: " ++ show (length s == 3)
-  putStrLn $ "take 1 s == \"\\\"\": " ++ show (take 1 s == "\"")
-  putStrLn $ "drop 2 s == \"\\\"\": " ++ show (drop 2 s == "\"")
-  putStrLn $ "s !! 1 /= '\\\\': " ++ show (s !! 1 /= '\\')
-  
-  putStrLn $ "\nFor the second branch:"
-  putStrLn $ "length s >= 2: " ++ show (length s >= 2)
-  putStrLn $ "drop (length s - 2) s: " ++ show (drop (length s - 2) s)
-  putStrLn $ "drop (length s - 2) s == \"\\\\\"\": " ++ show (drop (length s - 2) s == "\\\"")
-  
-  putStrLn $ "\nFinal result: " ++ show (U.isProblematicUnclosedString s)
+    let testInput = "import \"a\""
+    testTokenization testInput
+    putStrLn $ "Syntax errors: " ++ show (SV.validateSyntax testInput)

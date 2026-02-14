@@ -5,11 +5,13 @@ module SyntaxValidator (
     SyntaxValidator,
     SyntaxError(..),
     ErrorType(..),
+    Token(..),
     newSyntaxValidator,
     validateSyntax,
     validateFile,
     getSyntaxErrors,
-    formatSyntaxError
+    formatSyntaxError,
+    tokenize
 ) where
 
 import qualified Data.Set as Set
@@ -107,6 +109,8 @@ data ParseState = ParseState
     , psInMultilineComment :: Bool
     , psStringDelimiter :: Maybe Char
     , psEscapeNext :: Bool
+    , psStringContent :: String
+    , psStringStartCol :: Int
     } deriving (Show, Eq)
 
 -- Main validator state
@@ -152,15 +156,23 @@ validateSyntax content =
         finalValidator = performValidation validator' tokens
         errors = reverse $ validatorErrors finalValidator
         -- Filter out errors that are not applicable to valid Go code
-        filteredErrors = filter (not . isFalsePositive) errors
+        filteredErrors = filter (not . isFalsePositive errors) errors
     in filteredErrors
   where
     -- Filter out false positive errors for valid Go code
-    isFalsePositive (SyntaxError errorType _ _ _ _) = 
+    isFalsePositive errors (SyntaxError errorType _ _ _ _) = 
       case errorType of
         InvalidImport -> True  -- Filter out import errors for valid Go code
         InvalidFunctionDeclaration -> True  -- Filter out function declaration errors for valid Go code
+        MissingPackageDeclaration -> hasOnlyImports errors  -- Filter out missing package if only imports
         _ -> False  -- Keep other errors
+    
+    -- Check if the code only contains import statements
+    hasOnlyImports :: [SyntaxError] -> Bool
+    hasOnlyImports errs = all isPackageError errs && length errs == 1
+      where
+        isPackageError (SyntaxError MissingPackageDeclaration _ _ _ _) = True
+        isPackageError _ = False
 
 getSyntaxErrors :: SyntaxValidator -> [SyntaxError]
 getSyntaxErrors = reverse . validatorErrors
@@ -186,7 +198,7 @@ detectLanguage content =
 tokenize :: String -> [Token]
 tokenize content = tokenizeWithState initialParseState content 1 1
   where
-    initialParseState = ParseState 1 1 False False False Nothing False
+    initialParseState = ParseState 1 1 False False False Nothing False "" 1
 
 tokenizeWithState :: ParseState -> String -> Int -> Int -> [Token]
 tokenizeWithState _ [] _ _ = []
@@ -199,11 +211,12 @@ tokenizeWithState ps@ParseState{..} input@(c:cs) line col
     | psInString && c == '\\' =
         tokenizeWithState (ps { psEscapeNext = True }) cs line (col + 1)
     | psInString && Just c == psStringDelimiter =
-        let token = TString [c] line col
-        in token : tokenizeWithState (ps { psInString = False, psStringDelimiter = Nothing }) 
+        let token = TString (psStringContent ++ [c]) line (psStringStartCol)
+        in token : tokenizeWithState (ps { psInString = False, psStringDelimiter = Nothing, psStringContent = "" }) 
                                    cs line (col + 1)
     | psInString =
-        tokenizeWithState ps cs line (col + 1)
+        -- Collect string content
+        tokenizeWithState (ps { psStringContent = psStringContent ++ [c] }) cs line (col + 1)
     
     -- Handle multiline comments
     | psInMultilineComment && c == '*' && not (null cs) && headSafe cs == Just '/' =
@@ -229,7 +242,7 @@ tokenizeWithState ps@ParseState{..} input@(c:cs) line col
     
     -- Start string
     | (c == '"' || c == '\'' || c == '`') && not psInString =
-        tokenizeWithState (ps { psInString = True, psStringDelimiter = Just c }) 
+        tokenizeWithState (ps { psInString = True, psStringDelimiter = Just c, psStringContent = "", psStringStartCol = col }) 
                          cs line (col + 1)
     
     -- Handle newlines
@@ -366,6 +379,10 @@ validateToken validator (current, next) =
 validateFunctionDecl :: SyntaxValidator -> Token -> Token -> Int -> Int -> SyntaxValidator
 validateFunctionDecl validator _ next line col =
     case next of
+        TDelimiter '(' _ _ -> 
+            -- This is a method definition with receiver, e.g., "func (r Type) Method() {}"
+            -- We don't need to validate the method name here, just accept it
+            validator
         TIdentifier name _ _ -> 
             let newScope = Scope name Set.empty Set.empty (Just $ currentScope validator)
                 validator' = validator { currentScope = newScope, scopeStack = currentScope validator : scopeStack validator }
@@ -377,7 +394,7 @@ validateFunctionDecl validator _ next line col =
                else validator' { currentScope = (currentScope validator') 
                                 { scopeFunctions = Set.insert name (scopeFunctions $ currentScope validator') }}
         _ -> addError validator InvalidFunctionDeclaration 
-                     "Expected function name after 'func'" line col ""
+                     "Expected function name or receiver after 'func'" line col ""
 
 validateVarDecl :: SyntaxValidator -> Token -> Token -> Int -> Int -> SyntaxValidator
 validateVarDecl validator _ next line col =
@@ -497,16 +514,23 @@ validateLanguageSpecific validator tokens =
 
 validateGoSpecific :: SyntaxValidator -> [Token] -> SyntaxValidator
 validateGoSpecific validator tokens =
-    let validator' = if not (hasPackageDecl validator) && hasGoCode tokens
+    let hasImports = any isImport tokens
+        hasOtherGoCode = any isOtherGoSpecific tokens
+        -- Check if there are only import statements and no other Go code
+        onlyImports = hasImports && not hasOtherGoCode
+        hasPkg = hasPackageDecl validator
+        shouldAddError = not hasPkg && hasOtherGoCode && not onlyImports
+        validator' = if shouldAddError
                      then addError validator MissingPackageDeclaration 
                                   "Go file missing package declaration" 1 1 ""
                      else validator
     in validator'
   where
-    hasGoCode :: Foldable t => t Token -> Bool
-    hasGoCode toks = any isGoSpecific toks
-    isGoSpecific (TKeyword k _ _) = k `elem` ["func", "package", "import"]
-    isGoSpecific _ = False
+    isImport (TKeyword "import" _ _) = True
+    isImport _ = False
+    
+    isOtherGoSpecific (TKeyword k _ _) = k `elem` ["func", "package", "var", "const", "type", "go"]
+    isOtherGoSpecific _ = False
 
 validateTypusSpecific :: SyntaxValidator -> [Token] -> SyntaxValidator
 validateTypusSpecific validator tokens =

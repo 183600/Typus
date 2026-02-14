@@ -722,16 +722,22 @@ typus check --show-evidence input.typus
 ## 测试
 
 ```bash
-# 单元测试
+# 单元测试（默认运行typus-test套件）
 cabal test
 
 # 完整测试套件（含集成 / Golden 测试）
 cabal test --flags="-fast full"
 
-# 运行特定模块
-cabal test --test-options="--pattern \"Parser\""
+# 运行特定测试套件
+cabal test typus-test              # 主要测试套件
+cabal test typus-test-enhanced     # 增强内存优化测试套件
+cabal test typus-test-optimized    # 内存优化测试套件
 
-# 生产环境测试
+# 运行特定测试模式（使用Tasty框架选项）
+cabal test --test-options="--pattern \"Parser\""  # 运行名称包含"Parser"的测试
+cabal test --test-options="--test-name \"具体测试名\"" # 运行特定名称的测试
+
+# 生产环境测试（包含警告检查）
 ./scripts/run_production_tests.sh
 
 # 内存优化测试
@@ -740,6 +746,19 @@ cabal test --test-options="--pattern \"Parser\""
 # 极度内存优化测试（适用于CI/CD或内存受限环境）
 ./scripts/run_ultra_memory_optimized_tests.sh
 ```
+
+### 测试套件说明
+
+- **typus-test**：主要测试套件，包含所有核心功能测试
+- **typus-test-enhanced**：增强内存优化测试套件，提供高级内存管理功能
+- **typus-test-optimized**：内存优化测试套件，适用于资源受限环境
+
+### 测试标志说明
+
+- **fast**：快速测试模式（默认启用），跳过耗时的测试
+- **full**：包含慢速/集成/性能测试的完整测试套件
+- **production**：生产级测试，包含严格的警告检查
+- **werror**：将警告视为错误（需要手动启用）
 
 ### 测试类型说明
 

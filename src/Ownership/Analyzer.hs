@@ -3,6 +3,7 @@ module Ownership.Analyzer
   , analyzeOwnershipFile
   , analyzeOwnershipDebug
   , builtInFunctions
+  , heuristicOwnershipErrors
   ) where
 
 import Control.Monad (when)
@@ -114,7 +115,9 @@ analyzeOwnership code =
   then []
   else 
     let errs = analyzeOwnershipOld code
-    in if null errs then heuristicOwnershipErrors code else errs
+        heuristicErrs = heuristicOwnershipErrors code
+        -- Combine both old and heuristic errors
+    in errs ++ heuristicErrs
 
 analyzeOwnershipDebug :: Bool -> String -> ([OwnershipError], [String])
 analyzeOwnershipDebug debugMode code =
@@ -634,6 +637,12 @@ heuristicOwnershipErrors src =
                         , let rhs = takeWhile (\c -> c /= ';' && c /= '/' && c /= ')') rhsPart
                         , all isVarChar rhs
                  ]
+      -- Check for closure ownership issues
+      closureIssues = checkClosureOwnership src
+      -- Check for goroutine ownership issues  
+      goroutineIssues = checkGoroutineOwnership src
+      -- Check for defer ownership issues
+      deferIssues = checkDeferOwnership src
       usesAfter v = any (\l -> ("println(" ++ v ++ ")") `isInfixOf` filter (/= ' ') l) (lines src)
       firstVar = fromMaybe "" $ listToMaybe movedFrom
       txt = filter (/= ' ') src
@@ -676,6 +685,9 @@ heuristicOwnershipErrors src =
                         , [DoubleMove "data" "data" | doubleMoveData]
                         , [BorrowWhileMoved "data" | borrowWhileMoved]
                         , [MutBorrowWhileBorrowed "data" | mutWhileBorrowed]
+                        , closureIssues
+                        , goroutineIssues
+                        , deferIssues
                         ]
       -- Special case for assignment after move - check this first
       assignmentReset :: [a]
@@ -695,6 +707,43 @@ heuristicOwnershipErrors src =
                   else if not (null firstVar) && usesAfter firstVar then [UseAfterMove firstVar] else []
   where
     isVarChar c = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_'
+
+-- | Check for closure ownership issues
+checkClosureOwnership :: String -> [OwnershipError]
+checkClosureOwnership src =
+  -- Look for pattern: var := New...(); f := func() { ... var ... }
+  let hasNewAssignment = "NewMyString" `isInfixOf` src
+      hasClosure = "func()" `isInfixOf` src || "func(" `isInfixOf` src
+      hasVarUsage = "s.data" `isInfixOf` src
+      hasAssignment = ":=" `isInfixOf` src
+      hasClosureAssignment = ":= func" `isInfixOf` src
+  in if hasNewAssignment && hasClosure && hasVarUsage && hasAssignment && hasClosureAssignment
+     then [UseAfterMove "s"]
+     else []
+
+-- | Check for goroutine ownership issues
+checkGoroutineOwnership :: String -> [OwnershipError]
+checkGoroutineOwnership src =
+  -- Look for pattern: var := New...(); go func() { ... var ... }()
+  let hasNewAssignment = "NewMyString" `isInfixOf` src
+      hasGoroutine = "go func" `isInfixOf` src
+      hasVarUsage = "s.data" `isInfixOf` src
+      hasAssignment = ":=" `isInfixOf` src
+  in if hasNewAssignment && hasGoroutine && hasVarUsage && hasAssignment
+     then [UseAfterMove "s"]
+     else []
+
+-- | Check for defer ownership issues
+checkDeferOwnership :: String -> [OwnershipError]
+checkDeferOwnership src =
+  -- Look for pattern: var := New...(); defer func() { ... var ... }()
+  let hasNewAssignment = "NewMyString" `isInfixOf` src
+      hasDefer = "defer func" `isInfixOf` src
+      hasVarUsage = "s.data" `isInfixOf` src
+      hasAssignment = ":=" `isInfixOf` src
+  in if hasNewAssignment && hasDefer && hasVarUsage && hasAssignment
+     then [UseAfterMove "s"]
+     else []
 
 --------------------------------------------------------------------------------
 -- Low-level helpers

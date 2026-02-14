@@ -51,6 +51,7 @@ import TestSupport.ExtremeMemoryOptimization
 import qualified Test.Unit.BasicQuickCheckTestSuite as BasicQuickCheckTestSuite
 
 import qualified Test.Unit.NewComprehensiveTypusTestSuite as NewComprehensiveTypusTestSuite
+import qualified Test.Unit.EnhancedTypusFeaturesTestSuite as EnhancedTypusFeaturesTestSuite
 
 
 
@@ -156,6 +157,7 @@ tests = unsafePerformIO $ do
             [ memoryOptimizedStringProperty (getConfigForMemory availableMemory) "ultra minimal basic" (\s -> let limited = take 1 s in length limited >= 0 && length limited <= 1)
             , memoryOptimizedListProperty (getConfigForMemory availableMemory) "ultra minimal list" (\xs -> let limited = take 1 xs in length limited >= 0 && length limited <= 1) (genSmallInt (getConfigForMemory availableMemory))
             , NewComprehensiveTypusTestSuite.testSuite
+            , EnhancedTypusFeaturesTestSuite.testSuite
             ]
       
       -- 根据可用内存选择测试数量

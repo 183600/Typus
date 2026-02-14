@@ -136,12 +136,7 @@ parseTypus input = do
     if null input
       then Left "Empty input is not allowed"
       else if all (`elem` [' ', '\t', '\n', '\r']) input
-        then Right TypusFile
-          { tfDirectives = defaultFileDirectives
-          , tfBuildTags = []
-          , tfBlocks = []
-          , tfSyntaxErrors = []
-          }
+        then Left "Input contains only whitespace"
         else do
           parsedLines <- case MP.runParser parseDocument "<input>" input of
             Left bundle -> Left (errorBundlePretty bundle)

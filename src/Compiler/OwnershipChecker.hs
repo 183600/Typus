@@ -173,6 +173,7 @@ extractValueCopyVarsLegacy :: String -> [String]
 extractValueCopyVarsLegacy src =
     let ls = lines src
         isValueInit t = any (`isInfixOf` t) ["\"", " true", " false", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+        isOwnershipTransfer t = "New" `isInfixOf` t
         pickName t = trim $ takeWhile (/= ':') t
     in [ pickName (trim l)
        | l <- ls
@@ -180,6 +181,7 @@ extractValueCopyVarsLegacy src =
        , ":=" `isInfixOf` t
        , isValueInit t
        , not ("&" `isInfixOf` t)
+       , not (isOwnershipTransfer t)
        ]
 
 isIgnorableOwnershipError :: [String] -> OwnershipError -> Bool
