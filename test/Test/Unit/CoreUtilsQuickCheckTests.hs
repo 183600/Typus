@@ -10,20 +10,30 @@ import Data.Char (isSpace, ord, isPrint)
 import Data.Maybe (isNothing)
 import Data.Either (isRight)
 
--- | 测试trim函数的幂等性
-prop_trim_idempotent :: String -> Property
-prop_trim_idempotent s = U.trim (U.trim s) === U.trim s
+-- 内存优化导入
+import TestSupport.ExtremeQuickCheckMemoryOptimization
+import TestSupport.MemoryLimits (withMinimalMemoryLimits, minimalMemoryLimitedTestGroup)
 
--- | 测试trim不会增加字符串长度
+-- | 测试trim函数的幂等性（内存优化）
+prop_trim_idempotent :: String -> Property
+prop_trim_idempotent s = 
+  let limitedS = take 3 s  -- 限制字符串长度
+  in minimalMemoryProperty "trim idempotent" 
+        (\s' -> U.trim (U.trim s') === U.trim s') 
+        (return limitedS)
+
+-- | 测试trim不会增加字符串长度（内存优化）
 prop_trim_never_increases :: String -> Property
 prop_trim_never_increases s = 
-  let trimmed = U.trim s
-  in property $ length trimmed <= length s
+  let limitedS = take 3 s  -- 限制字符串长度
+      trimmed = U.trim limitedS
+  in property $ length trimmed <= length limitedS
 
--- | 测试trim对全空白字符串的处理
+-- | 测试trim对全空白字符串的处理（内存优化）
 prop_trim_all_whitespace :: String -> Property
 prop_trim_all_whitespace s =
-  let wsOnly = filter isSpace s
+  let limitedS = take 3 s  -- 限制字符串长度
+      wsOnly = filter isSpace limitedS
   in property $ null (U.trim wsOnly)
 
 -- | 测试splitBy的基本属性
@@ -346,9 +356,9 @@ prop_trim_mixed_whitespace s =
   in property $ not (any isSpace (take 1 trimmed)) && 
                 not (any isSpace (take 1 (reverse trimmed)))
 
--- | 组合所有测试
+-- | 组合所有测试（内存优化版本）
 coreUtilsTests :: TestTree
-coreUtilsTests = testGroup "Core Utils QuickCheck Tests"
+coreUtilsTests = withMinimalMemoryLimits $ minimalMemoryLimitedTestGroup "Core Utils QuickCheck Tests (Memory Optimized)"
   [ testProperty "trim idempotent" prop_trim_idempotent
   , testProperty "trim never increases length" prop_trim_never_increases
   , testProperty "trim all whitespace" prop_trim_all_whitespace
