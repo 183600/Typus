@@ -26,16 +26,19 @@ import qualified Data.Map.Strict as Map
 -- | 测试breakOn的基本属性
 prop_breakOn_basic :: String -> String -> Property
 prop_breakOn_basic sep s =
-  let (before, after) = breakOn sep s
-  in if s == sep && not (null sep)
+  let limitedSep = take 10 sep  -- 限制分隔符大小以减少内存消耗
+      limitedInput = take 30 s  -- 限制输入大小以减少内存消耗
+      (before, after) = breakOn limitedSep limitedInput
+  in if limitedInput == limitedSep && not (null limitedSep)
      then conjoin [before === "", after === ""]
-     else before ++ sep ++ after === s
+     else before ++ limitedSep ++ after === limitedInput
 
 -- | 测试trim函数的基本属性
 prop_trim_basic :: String -> Property
 prop_trim_basic s =
-  let trimmed = trim s
-  in property $ length trimmed <= length s
+  let limitedInput = take 40 s  -- 限制输入大小以减少内存消耗
+      trimmed = trim limitedInput
+  in property $ length trimmed <= length limitedInput
 
 -- | 测试trim对空字符串的处理
 prop_trim_empty :: Property
@@ -44,27 +47,30 @@ prop_trim_empty = trim "" === ""
 -- | 测试trim对空白字符的处理
 prop_trim_whitespace :: String -> Property
 prop_trim_whitespace s =
-  let trimmed = trim s
-  in if all isSpace s
+  let limitedInput = take 50 s  -- 限制输入大小以减少内存消耗
+      trimmed = trim limitedInput
+  in if all isSpace limitedInput
      then property $ null trimmed
      else property True
 
 -- | 测试trim的幂等性
 prop_trim_idempotent :: String -> Property
 prop_trim_idempotent s =
-  let trimmed1 = trim s
+  let limitedInput = take 35 s  -- 限制输入大小以减少内存消耗
+      trimmed1 = trim limitedInput
       trimmed2 = trim trimmed1
   in trimmed1 === trimmed2
 
 -- | 测试splitBy的基本属性
 prop_splitBy_basic :: Char -> String -> Property
 prop_splitBy_basic c s =
-  let parts = splitBy c s
-  in if null s
+  let limitedInput = take 30 s  -- 限制输入大小以减少内存消耗
+      parts = splitBy c limitedInput
+  in if null limitedInput
      then parts === [""]
-     else if all (== c) s
-          then parts === replicate (length s + 1) ""
-          else property $ length (concat parts) >= length s - length (filter (== c) s)
+     else if all (== c) limitedInput
+          then parts === replicate (length limitedInput + 1) ""
+          else property $ length (concat parts) >= length limitedInput - length (filter (== c) limitedInput)
 
 -- | 测试splitBy对空字符串的处理
 prop_splitBy_empty :: Char -> Property

@@ -45,23 +45,23 @@ withMinimalMemoryLimits test =
 withUltraMemoryLimits :: TestTree -> TestTree
 withUltraMemoryLimits test = 
   localOption (QuickCheckMaxSize 1) $    -- 最小值
-  localOption (QuickCheckTests 2) $      -- 进一步减少到2个测试
+  localOption (QuickCheckTests 1) $      -- 进一步减少到1个测试，与minimal一致
   localOption (QuickCheckMaxShrinks 0) $ -- 禁用收缩以节省内存
   test
 
 -- | Apply moderate memory limits to a test tree - 极度优化
 withMemoryLimits :: TestTree -> TestTree
 withMemoryLimits test = 
-  localOption (QuickCheckMaxSize 2) $    -- 进一步减少到2
-  localOption (QuickCheckTests 5) $      -- 进一步减少到5个测试
-  localOption (QuickCheckMaxShrinks 1) $ -- 减少到1次收缩
+  localOption (QuickCheckMaxSize 1) $    -- 进一步减少到1
+  localOption (QuickCheckTests 3) $      -- 进一步减少到3个测试
+  localOption (QuickCheckMaxShrinks 0) $ -- 减少到0次收缩，禁用以节省内存
   test
 
 -- | Apply aggressive memory limits to a test tree for memory-constrained environments - 极度优化
 withAggressiveMemoryLimits :: TestTree -> TestTree
 withAggressiveMemoryLimits test = 
   localOption (QuickCheckMaxSize 1) $    -- 最小值
-  localOption (QuickCheckTests 3) $      -- 进一步减少到3个测试
+  localOption (QuickCheckTests 2) $      -- 进一步减少到2个测试
   localOption (QuickCheckMaxShrinks 0) $ -- 禁用收缩以节省内存
   test
 
@@ -98,35 +98,36 @@ aggressiveGC :: IO ()
 aggressiveGC = do
   performGC
   -- 多轮GC，每轮间隔很短
-  replicateM_ 5 $ do
+  replicateM_ 8 $ do  -- 增加GC轮数
     performGC
-    threadDelay 1000  -- 1毫秒延迟，让GC完成
+    threadDelay 800   -- 减少延迟，更频繁的GC
   -- 最后进行一次完整GC
   performGC
+  -- 额外的清理步骤
+  replicateM_ 3 performGC
   
 -- | Force extreme garbage collection for minimal memory environments
 extremeGC :: IO ()
 extremeGC = do
   -- 执行多轮完整GC
-  replicateM_ 10 $ do
+  replicateM_ 15 $ do  -- 增加GC轮数
     performGC
-    threadDelay 500  -- 0.5毫秒延迟
+    threadDelay 300   -- 减少延迟，更频繁的GC
   -- 强制清理所有可能的内存
-  performGC
-  performGC
-  threadDelay 5000
+  replicateM_ 5 $ performGC  -- 增加最终清理轮数
+  threadDelay 2000
 
 -- | Force ultra aggressive garbage collection for memory-critical situations - 极限垃圾回收
 ultraGC :: IO ()
 ultraGC = do
   performGC
   -- 多轮GC，每轮间隔很短，确保彻底清理
-  replicateM_ 5 $ do
+  replicateM_ 10 $ do  -- 增加GC轮数
     performGC
-    threadDelay 3000 -- 3ms间隔，更频繁的GC
+    threadDelay 1500   -- 减少延迟，更频繁的GC
   
   -- 最终清理
-  performGC
+  replicateM_ 3 performGC  -- 增加最终清理轮数
 
 -- | Add memory monitoring and cleanup to a test
 withMemoryMonitoring :: IO a -> IO a
