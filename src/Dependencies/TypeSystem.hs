@@ -11,7 +11,7 @@ module Dependencies.TypeSystem (
   DependentTypeChecker(..),
   Substitution,
   
-  -- Re-export from Inference module
+  -- Type system types
   TypeScheme(..),
   TypeEnvironment(..),
   TypeInferenceState(..),

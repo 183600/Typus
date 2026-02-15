@@ -1,4 +1,6 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -75,6 +77,7 @@ import Dependencies.AST (DependencyNode(..))
 import qualified Dependencies.AST as Dep (AST(..), Statement(..), TypeExpr(..), Constraint(..))
 import qualified Dependencies.TypeSystem as Dep (TypeConstraint(..))
 import qualified Dependencies.TypeSystem as Dep (TypeScheme(..))
+import qualified Dependencies.TypeSystem as DepTS (TypeConstraint(..), TypeScheme(..), Substitution)
 import qualified Compiler.TypeChecker as TC
   ( Type(..)
   , TypeEnv(..)
@@ -585,3 +588,11 @@ arbitrarySubstitution = do
   keys <- vectorOf size genIdentifier
   values <- vectorOf size arbitraryTypeVar
   return $ Map.fromList (zip keys values)
+
+-- | Arbitrary instance for DepTS.TypeConstraint
+instance Arbitrary DepTS.TypeConstraint where
+  arbitrary = arbitraryTypeConstraint
+
+-- | Arbitrary instance for DepTS.TypeScheme
+instance Arbitrary DepTS.TypeScheme where
+  arbitrary = arbitraryTypeScheme

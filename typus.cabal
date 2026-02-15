@@ -183,6 +183,7 @@ test-suite typus-test-enhanced
         TestSupport.ExtremeMemoryOptimization
         TestSupport.SmartTestSelector
         TestSupport.Arbitrary
+        TestSupport.QuickCheck
         TestSupport.MemoryOptimizedQuickCheck
         TestSupport.OptimizedStringOperations
         TestSupport.OptimizedTestOrdering
@@ -392,6 +393,7 @@ test-suite typus-test
     other-modules:
         Test.Dependencies.Arbitrary,
         Test.Unit.AdvancedDependentTypesQuickCheckSpec,
+        Test.Unit.AdvancedDependentTypesQuickCheckTests,
         Test.Unit.AdvancedModuleQuickCheckTestSuite,
         Test.Unit.AdvancedParserCombinatorsQuickCheckSpec,
         Test.Unit.AnalyzerCoreQuickCheckSpec,
@@ -458,6 +460,7 @@ test-suite typus-test
         Test.Unit.EnhancedTypusFeaturesTestSuite,
         Test.Unit.TypusCoreQuickCheckTestSuite,
         TestSupport.Arbitrary,
+        TestSupport.QuickCheck,
         TestSupport.MemoryLimits,
         TestSupport.OptimizedMemoryLimits,
         TestSupport.UnifiedMemoryOptimization,
@@ -506,6 +509,7 @@ test-suite typus-test-optimized
     other-modules:
         Test.Dependencies.Arbitrary,
         Test.Unit.AdvancedDependentTypesQuickCheckSpec,
+        Test.Unit.AdvancedDependentTypesQuickCheckTests,
         Test.Unit.AdvancedModuleQuickCheckTestSuite,
         Test.Unit.AdvancedParserCombinatorsQuickCheckSpec,
         Test.Unit.AnalyzerCoreQuickCheckSpec,
@@ -560,6 +564,7 @@ test-suite typus-test-optimized
         Test.Unit.UltraMemoryOptimizedTestSuite,
         Test.Unit.UtilsCoreQuickCheckSpec,
         TestSupport.Arbitrary,
+        TestSupport.QuickCheck,
         TestSupport.ExtremeMemoryLimits,
         TestSupport.MemoryLimits,
         TestSupport.OptimizedMemoryLimits,

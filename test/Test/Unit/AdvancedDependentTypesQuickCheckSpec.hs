@@ -24,8 +24,6 @@ import DependentTypesParser
 import Parser
 import Compiler
 
-import TestSupport.Arbitrary
-
 -- ============================================================================
 -- Advanced Dependent Types Properties
 -- ============================================================================
