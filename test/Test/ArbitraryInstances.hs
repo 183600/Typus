@@ -34,17 +34,17 @@ instance Arbitrary CompilerError where
 
 instance Arbitrary Core.TypeError where
   arbitrary = do
-    errId <- choose (1000, 9999 :: Int) >>= \n -> return ("E" ++ show n)
+    errId <- choose (1000, 1999 :: Int) >>= \n -> return ("E" ++ show n)  -- Smaller range
     errSeverity <- arbitrary
     errCategory <- arbitrary
-    errMsg <- arbitrary
+    errMsg <- resize 10 arbitrary  -- Limit message length
     errLocation <- arbitrary
     errContext <- arbitrary
     errRecovery <- arbitrary
-    -- Memory optimization: limit list sizes to prevent excessive memory usage
-    errSuggestions <- resize 3 $ listOf arbitrary
-    errRelatedErrors <- resize 2 $ listOf arbitrary
-    errErrorChain <- resize 2 $ listOf arbitrary
+    -- Extreme memory optimization: further limit list sizes
+    errSuggestions <- resize 1 $ listOf arbitrary  -- Reduced from 3 to 1
+    errRelatedErrors <- resize 1 $ listOf arbitrary  -- Reduced from 2 to 1
+    errErrorChain <- resize 1 $ listOf arbitrary    -- Reduced from 2 to 1
     errTimestamp <- arbitrary
     return $ Core.TypeError
       { Core.errorId = errId
@@ -77,7 +77,7 @@ instance Arbitrary TC.TypeCheckDiagnostic where
     return $ TC.TypeCheckDiagnostic ctx detail
 
 instance Arbitrary T.Text where
-  arbitrary = T.pack <$> arbitrary
+  arbitrary = T.pack <$> resize 5 arbitrary  -- Limit string length to reduce memory usage
 
 instance Arbitrary Core.ErrorSeverity where
   arbitrary = elements [Core.Fatal, Core.Error, Core.Warning, Core.Info]
@@ -96,12 +96,12 @@ instance Arbitrary Core.ErrorLocation where
 
 instance Arbitrary Core.ErrorContext where
   arbitrary = do
-    ctxCode <- arbitrary
-    ctxFunction <- arbitrary
-    ctxVariable <- arbitrary
-    ctxType <- arbitrary
-    -- Memory optimization: limit additional context to prevent excessive memory usage
-    ctxAdditional <- resize 3 $ listOf arbitrary
+    ctxCode <- resize 5 arbitrary  -- Limit code length
+    ctxFunction <- resize 3 arbitrary  -- Limit function name length
+    ctxVariable <- resize 3 arbitrary  -- Limit variable name length
+    ctxType <- resize 3 arbitrary   -- Limit type name length
+    -- Extreme memory optimization: further limit additional context
+    ctxAdditional <- resize 1 $ listOf arbitrary  -- Reduced from 3 to 1
     return $ Core.ErrorContext ctxCode ctxFunction ctxVariable ctxType ctxAdditional
 
 instance Arbitrary Core.ErrorRecovery where

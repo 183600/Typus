@@ -78,6 +78,13 @@ import qualified Ownership.Common.Types as Own
 import SourceLocation (SourcePos(..), SourceSpan(..))
 
 -- ============================================================================
+-- Arbitrary instances for Ownership types
+-- ============================================================================
+
+instance Arbitrary OwnershipTransfer where
+  arbitrary = OwnershipTransfer <$> arbitrary <*> arbitrary
+
+-- ============================================================================
 -- Advanced Ownership Properties
 -- ============================================================================
 
