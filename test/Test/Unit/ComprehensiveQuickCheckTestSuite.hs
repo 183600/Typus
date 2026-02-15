@@ -4,6 +4,18 @@ module Test.Unit.ComprehensiveQuickCheckTestSuite where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
+import TestSupport.UnifiedMemoryOptimization 
+  ( getUnifiedMemoryConfig
+  , withUnifiedMemoryOptimization
+  , unifiedMemoryTestGroup
+  , criticalMemoryConfig
+  , minimalMemoryConfig
+  , efficientMemoryConfig
+  , balancedMemoryConfig
+  , comprehensiveMemoryConfig
+  , unifiedMemoryGC
+  , runTestsWithMemoryOptimization
+  )
 import TestSupport.MemoryLimits 
   ( withMemoryLimits
   , memoryLimitedTestGroup
@@ -82,4 +94,78 @@ quickTestSuite = testGroup "Quick QuickCheck Tests"
       , testProperty "error collection completeness" ErrorHandlingQuickCheckTests.prop_error_collection_completeness
       , testProperty "error recovery" ErrorHandlingQuickCheckTests.prop_error_recovery
       ]
+  ]
+
+-- | 统一内存优化的测试套件（自适应）
+unifiedMemoryOptimizedTestSuite :: IO TestTree
+unifiedMemoryOptimizedTestSuite = do
+  config <- getUnifiedMemoryConfig
+  return $ unifiedMemoryTestGroup config "Unified Memory Optimized Tests"
+    [ CoreUtilsQuickCheckTests.coreUtilsTests
+    , ParserQuickCheckTests.parserQuickCheckTests
+    , CompilerCoreQuickCheckTests.compilerCoreQuickCheckTests
+    , DependencyAnalysisQuickCheckTests.dependencyAnalysisQuickCheckTests
+    , OwnershipAnalysisQuickCheckTests.ownershipAnalysisQuickCheckTests
+    , ErrorHandlingQuickCheckTests.errorHandlingQuickCheckTests
+    ]
+
+-- | 关键内存优化的测试套件
+criticalMemoryOptimizedTestSuite :: TestTree
+criticalMemoryOptimizedTestSuite = unifiedMemoryTestGroup criticalMemoryConfig "Critical Memory Tests"
+  [ testProperty "trim idempotent" CoreUtilsQuickCheckTests.prop_trim_idempotent
+  , testProperty "validate identifier" ParserQuickCheckTests.prop_validate_identifier
+  , testProperty "compile basic" CompilerCoreQuickCheckTests.prop_compile_basic
+  , testProperty "dependency analysis basic" DependencyAnalysisQuickCheckTests.prop_dependency_analysis_basic
+  , testProperty "ownership analysis basic" OwnershipAnalysisQuickCheckTests.prop_ownership_analysis_basic
+  , testProperty "error handler basic" ErrorHandlingQuickCheckTests.prop_error_handler_basic
+  ]
+
+-- | 最小内存优化的测试套件
+minimalMemoryOptimizedTestSuite :: TestTree
+minimalMemoryOptimizedTestSuite = unifiedMemoryTestGroup minimalMemoryConfig "Minimal Memory Tests"
+  [ testProperty "trim idempotent" CoreUtilsQuickCheckTests.prop_trim_idempotent
+  , testProperty "splitBy length" CoreUtilsQuickCheckTests.prop_split_by_length
+  , testProperty "validate identifier" ParserQuickCheckTests.prop_validate_identifier
+  , testProperty "parse empty input" ParserQuickCheckTests.prop_parse_empty_input
+  , testProperty "compile basic" CompilerCoreQuickCheckTests.prop_compile_basic
+  , testProperty "ir generation consistent" CompilerCoreQuickCheckTests.prop_ir_generation_consistent
+  , testProperty "dependency analysis basic" DependencyAnalysisQuickCheckTests.prop_dependency_analysis_basic
+  , testProperty "cycle detection" DependencyAnalysisQuickCheckTests.prop_cycle_detection
+  , testProperty "ownership analysis basic" OwnershipAnalysisQuickCheckTests.prop_ownership_analysis_basic
+  , testProperty "ownership transfer detection" OwnershipAnalysisQuickCheckTests.prop_ownership_transfer_detection
+  , testProperty "error handler basic" ErrorHandlingQuickCheckTests.prop_error_handler_basic
+  , testProperty "error collection completeness" ErrorHandlingQuickCheckTests.prop_error_collection_completeness
+  ]
+
+-- | 高效内存优化的测试套件
+efficientMemoryOptimizedTestSuite :: TestTree
+efficientMemoryOptimizedTestSuite = unifiedMemoryTestGroup efficientMemoryConfig "Efficient Memory Tests"
+  [ CoreUtilsQuickCheckTests.coreUtilsTests
+  , ParserQuickCheckTests.parserQuickCheckTests
+  , CompilerCoreQuickCheckTests.compilerCoreQuickCheckTests
+  , DependencyAnalysisQuickCheckTests.dependencyAnalysisQuickCheckTests
+  , OwnershipAnalysisQuickCheckTests.ownershipAnalysisQuickCheckTests
+  , ErrorHandlingQuickCheckTests.errorHandlingQuickCheckTests
+  ]
+
+-- | 平衡内存优化的测试套件
+balancedMemoryOptimizedTestSuite :: TestTree
+balancedMemoryOptimizedTestSuite = unifiedMemoryTestGroup balancedMemoryConfig "Balanced Memory Tests"
+  [ CoreUtilsQuickCheckTests.coreUtilsTests
+  , ParserQuickCheckTests.parserQuickCheckTests
+  , CompilerCoreQuickCheckTests.compilerCoreQuickCheckTests
+  , DependencyAnalysisQuickCheckTests.dependencyAnalysisQuickCheckTests
+  , OwnershipAnalysisQuickCheckTests.ownershipAnalysisQuickCheckTests
+  , ErrorHandlingQuickCheckTests.errorHandlingQuickCheckTests
+  ]
+
+-- | 全面内存优化的测试套件
+comprehensiveMemoryOptimizedTestSuite :: TestTree
+comprehensiveMemoryOptimizedTestSuite = unifiedMemoryTestGroup comprehensiveMemoryConfig "Comprehensive Memory Tests"
+  [ CoreUtilsQuickCheckTests.coreUtilsTests
+  , ParserQuickCheckTests.parserQuickCheckTests
+  , CompilerCoreQuickCheckTests.compilerCoreQuickCheckTests
+  , DependencyAnalysisQuickCheckTests.dependencyAnalysisQuickCheckTests
+  , OwnershipAnalysisQuickCheckTests.ownershipAnalysisQuickCheckTests
+  , ErrorHandlingQuickCheckTests.errorHandlingQuickCheckTests
   ]

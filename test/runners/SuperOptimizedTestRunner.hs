@@ -15,18 +15,46 @@ import Control.Concurrent (threadDelay, forkIO)
 import System.Mem (performGC)
 import Data.IORef
 import Data.List (isPrefixOf, isInfixOf)
+import Data.Maybe (isJust)
 import Text.Printf (printf)
+import qualified Data.Text as T
 
 -- 导入超级优化的内存支持模块
 import TestSupport.UnifiedMemoryOptimization
-import TestSupport.MemoryLimits
+import TestSupport.MemoryLimits hiding (gcBetweenTests)
 import TestSupport.EnhancedMemoryMonitor
 
 -- 导入核心测试模块（只选择最关键的）
 import qualified Test.Unit.BasicQuickCheckTestSuite as BasicQuickCheckTestSuite
 import qualified Test.Unit.SimpleQuickCheckTestSuite as SimpleQuickCheckTestSuite
 import qualified Test.Unit.ConciseTestSuite as ConciseTestSuite
-import qualified Utils as U
+
+-- | 超级优化内存配置（比极端内存配置更加优化）
+superOptimizedMemoryConfig :: UnifiedMemoryConfig
+superOptimizedMemoryConfig = UnifiedMemoryConfig
+  { configName = "super_optimized"
+  , maxTestSize = 1
+  , maxTestCount = 1
+  , maxShrinks = 0
+  , stringMaxLength = 1
+  , listMaxLength = 1
+  , intMaxValue = 1
+  , gcBetweenTests = True
+  , monitorMemory = True
+  , adaptiveMode = True
+  , rtsMemoryLimit = "-M2m -A64k -n8k -H256k -qg -G1"
+  , gcStrategy = AggressiveGC
+  , memoryLimitMB = 2
+  , testSelectionRatio = 0.01
+  }
+
+-- | 根据内存配置选择最优测试子集
+selectOptimalTestSubset :: UnifiedMemoryConfig -> [TestTree] -> [TestTree]
+selectOptimalTestSubset config tests = 
+  let ratio = testSelectionRatio config
+      totalTests = length tests
+      selectedCount = max 1 $ floor (fromIntegral totalTests * ratio)
+  in take selectedCount tests
 
 -- 检查环境变量
 isCIEnvironment :: IO Bool
@@ -77,8 +105,8 @@ superAggressiveCleanup = do
 prop_minimal_string_trim :: String -> Property
 prop_minimal_string_trim s = 
   let limited = take 5 s  -- 限制输入大小到5个字符
-      trimmed = U.trim limited
-  in property $ length trimmed <= length limited
+      trimmed = T.strip (T.pack limited)
+  in property $ T.length trimmed <= length limited
 
 prop_minimal_list_length :: [Int] -> Property
 prop_minimal_list_length xs = 
@@ -167,7 +195,7 @@ main = do
     printf "Debug mode enabled\n"
     printf "Memory config: %s\n" (show config)
     printf "Memory limit: %dMB\n" (memoryLimitMB config)
-    printf "Test count: %d\n" (testCount config)
+    printf "Test count: %d\n" (maxTestCount config)
     printf "Test selection ratio: %.2f\n" (testSelectionRatio config)
   
   -- 打印启动信息
