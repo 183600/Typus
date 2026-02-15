@@ -182,6 +182,7 @@ test-suite typus-test-enhanced
         TestSupport.EnhancedMemoryMonitor
         TestSupport.ExtremeMemoryOptimization
         TestSupport.SmartTestSelector
+        TestSupport.ConsolidatedMemoryOptimization
         TestSupport.Arbitrary
         TestSupport.QuickCheck
         TestSupport.MemoryOptimizedQuickCheck
@@ -234,6 +235,7 @@ executable smart-memory-test-runner
     other-modules:
         TestSupport.SmartTestSelector,
         TestSupport.AdaptiveMemoryConfig,
+        TestSupport.ConsolidatedMemoryOptimization,
         Test.Unit.CoreUtilsQuickCheckTests,
         Test.Unit.ParserQuickCheckTests,
         Test.Unit.CompilerCoreQuickCheckTests,

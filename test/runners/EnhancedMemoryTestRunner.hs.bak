@@ -3,7 +3,15 @@
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
--- | 增强内存测试运行器（简化版）
+-- | 增强内存测试运行器
+-- 这个模块是增强内存优化测试套件的入口点，提供高级内存管理功能：
+-- 1. 统一内存管理和限制 - 支持不同环境的内存配置
+-- 2. 极端内存优化策略 - 支持16MB-32MB极端内存限制
+-- 3. 智能测试选择 - 基于内存约束的动态测试选择
+-- 4. 增强内存监控 - 实时内存监控和分析
+-- 5. 自适应清理策略 - 根据内存使用情况自动调整清理策略
+-- 6. 持续内存监控 - 长时间运行的内存监控
+-- 这个测试套件对应README.md中描述的"typus-test-enhanced：增强内存优化测试套件，提供高级内存管理功能"
 module Main where
 
 import Test.Tasty (TestTree, defaultMain, testGroup)
@@ -47,6 +55,7 @@ import TestSupport.ExtremeMemoryOptimization
   , withEmergencyMemoryLimits
   , createExtremeMemorySuite
   , smartMemoryCleanup
+  , emergencyMemoryCleanup
   )
 import qualified TestSupport.SmartTestSelector as STS
   ( SmartTestSelector(..)
@@ -84,6 +93,15 @@ import TestSupport.EnhancedMemoryMonitor
   , withMemoryCleanup
   , withMemoryOptimization
   )
+
+-- 导入测试套件
+import qualified Test.Unit.ComprehensiveMemoryOptimizedTestSuite as ComprehensiveSuite
+import qualified Test.Unit.AdvancedMemoryOptimizedTestSuite as AdvancedSuite
+import qualified Test.Unit.ExtendedQuickCheckTestSuiteOptimized as ExtendedSuite
+import qualified Test.Unit.Exact200QuickCheckTestsOptimized as Exact200Suite
+import qualified Test.Unit.Exactly200QuickCheckTestsOptimized as Exactly200Suite
+import qualified Test.Unit.Final200QuickCheckTestsOptimized as Final200Suite
+import qualified Test.Unit.FinalExact200QuickCheckTestsOptimized as FinalExact200Suite
 
 -- ============================================================================
 -- 测试运行环境配置
@@ -191,23 +209,23 @@ getExtremeMemoryConfig env = case env of
 -- | 构建基础测试套件列表
 buildBaseTestSuites :: [TestTree]
 buildBaseTestSuites = 
-  [ testGroup "Basic Tests" 
-    [ testCase "Test 1" $ return ()
-    , testCase "Test 2" $ return ()
-    ]
-  , testGroup "QuickCheck Tests"
-    [ testProperty "Property 1" $ \(x :: Int) -> x == x
-    , testProperty "Property 2" $ \(x :: String) -> length x >= 0
-    ]
+  [ ComprehensiveSuite.tests
+  , AdvancedSuite.tests
+  , ExtendedSuite.tests
+  , Exact200Suite.tests
+  , Exactly200Suite.tests
+  , Final200Suite.tests
+  , FinalExact200Suite.tests
   ]
 
 -- | 构建超优化测试套件列表
 buildUltraOptimizedTestSuites :: [TestTree]
 buildUltraOptimizedTestSuites = 
-  [ testGroup "Ultra Optimized Tests"
-    [ testCase "Ultra Test 1" $ return ()
-    , testProperty "Ultra Property 1" $ \(x :: Int) -> x >= 0 || x < 0
-    ]
+  [ ExtendedSuite.ultraOptimizedTests
+  , Exact200Suite.ultraOptimizedTests
+  , Exactly200Suite.ultraOptimizedTests
+  , Final200Suite.ultraOptimizedTests
+  , FinalExact200Suite.ultraOptimizedTests
   ]
 
 -- | 根据环境选择测试套件

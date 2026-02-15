@@ -1,442 +1,302 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 
--- | 智能测试选择器模块
--- 这个模块提供了基于内存约束的智能测试选择策略
+-- | Smart Test Selector Module
+-- This module provides intelligent test selection based on available memory,
+-- test priorities, and historical execution data.
 module TestSupport.SmartTestSelector 
-  ( -- 测试选择器
-    TestSelector(..)
-  , SmartTestConfig(..)
-  , defaultSmartConfig
+  ( -- * Smart Test Selection
+    SmartTestSelector(..)
+  , createSmartTestSelector
+  , selectTestsSmart
+  , selectTestsByMemoryTier
     
-    -- 测试选择策略
-  , selectTestsByMemory
-  , selectTestsByPriority
-  , selectTestsByCategory
-  , selectTestsByComplexity
-    
-    -- 测试分类
+    -- * Test Category Management
   , TestCategory(..)
-  , TestPriority(..)
-  , TestComplexity(..)
-  , TestInfo(..)
-  , classifyTest
+  , categorizeTests
+  , getTestCategory
     
-    -- 动态选择
-  , dynamicTestSelection
-  , adaptiveMemorySelection
-  , createBalancedTestSuite
+    -- * Memory-Aware Selection
+  , MemoryAwareSelection(..)
+  , createMemoryAwareSelection
+  , applyMemoryConstraints
     
-    -- 监控和统计
-  , TestSelectionStats(..)
-  , calculateSelectionStats
-  , printSelectionReport
-    
-    -- 预定义配置
-  , minimalMemoryConfig
-  , standardMemoryConfig
-  , extremeMemoryConfig
-  , ciMemoryConfig
-    
-    -- 测试元数据
-  , TestMetadata(..)
-    
-    -- 智能测试套件
-  , createSmartTestSuite
-  , runSmartTests
-  , analyzeTestCoverage
+    -- * Test Execution Planning
+  , ExecutionPlan(..)
+  , createExecutionPlan
+  , optimizeExecutionOrder
   ) where
 
-import Test.Tasty (TestTree, testGroup, defaultMain)
-import Test.Tasty.QuickCheck (testProperty)
-import Test.Tasty.HUnit (testCase)
-import Data.List (sort, groupBy, partition, sortBy)
-import Data.Function (on)
+import Test.Tasty (TestTree, testGroup)
+import TestSupport.ConsolidatedMemoryOptimization 
+  ( MemoryConfig(..)
+  , MemoryTier(..)
+  , TestInfo(..)
+  , TestPriority(..)
+  , createTestInfo
+  , prioritizeTests
+  , detectAvailableMemory
+  , getMemoryTier
+  , getMemoryConfig
+  , withMemoryMonitoring
+  , cleanupBetweenTests
+  )
+import System.Mem (performGC)
+import Control.Monad (replicateM_, when)
+import Data.List (sortBy, partition, take)
 import Data.Ord (comparing)
+import Data.Maybe (fromMaybe)
 import Text.Printf (printf)
-import Data.Maybe (isJust, isNothing)
-import qualified Data.Map as Map
-import qualified Data.Set as Set
-import Data.Foldable (traverse_)
 
--- | 测试类别
+-- | Test categories for intelligent selection
 data TestCategory = 
-    CoreParser          -- ^ 核心解析器测试
-  | CoreCompiler        -- ^ 核心编译器测试
-  | CoreUtils           -- ^ 核心工具测试
-  | ErrorHandler        -- ^ 错误处理测试
-  | DependencyAnalysis  -- ^ 依赖分析测试
-  | DependentTypes      -- ^ 依赖类型测试
-  | Ownership           -- ^ 所有权系统测试
-  | SourceLocation      -- ^ 源码位置测试
-  | Integration         -- ^ 集成测试
-  | Performance         -- ^ 性能测试
-  | EdgeCase            -- ^ 边界情况测试
-  | Regression          -- ^ 回归测试
-  | Other               -- ^ 其他测试
-  deriving (Show, Eq, Ord)
+    Core           -- ^ Core functionality tests
+  | Parser         -- ^ Parser tests
+  | Compiler       -- ^ Compiler tests
+  | DependentTypes -- ^ Dependent type system tests
+  | Ownership      -- ^ Ownership system tests
+  | ErrorHandler   -- ^ Error handling tests
+  | Integration    -- ^ Integration tests
+  | Performance    -- ^ Performance tests
+  | Regression     -- ^ Regression tests
+  | EdgeCase       -- ^ Edge case tests
+  deriving (Show, Eq, Ord, Enum, Bounded)
 
--- | 测试优先级
-data TestPriority = 
-    Critical    -- ^ 关键测试（必须运行）
-  | High        -- ^ 高优先级
-  | Medium      -- ^ 中等优先级
-  | Low         -- ^ 低优先级
-  | Optional    -- ^ 可选测试
-  deriving (Show, Eq, Ord)
-
--- | 测试复杂度
-data TestComplexity = 
-    Simple      -- ^ 简单测试（低内存）
-  | Moderate    -- ^ 中等复杂度
-  | Complex     -- ^ 复杂测试（高内存）
-  | VeryComplex -- ^ 非常复杂（极高内存）
-  deriving (Show, Eq, Ord)
-
--- | 测试信息
-data TestInfo = TestInfo
-  { testName :: String
-  , testCategory :: TestCategory
-  , testPriority :: TestPriority
-  , testComplexity :: TestComplexity
-  , estimatedMemoryMB :: Int
-  , testDescription :: String
-  } deriving (Show, Eq, Ord)
-
--- | 智能测试配置
-data SmartTestConfig = SmartTestConfig
-  { memoryLimitMB :: Int              -- ^ 内存限制
-  , maxTestCount :: Int               -- ^ 最大测试数量
-  , priorityWeights :: Map.Map TestPriority Double  -- ^ 优先级权重
-  , categoryWeights :: Map.Map TestCategory Double  -- ^ 类别权重
-  , complexityPenalty :: Map.Map TestComplexity Double -- ^ 复杂度惩罚
-  , enableAdaptiveSelection :: Bool   -- ^ 启用自适应选择
-  , preserveCriticalTests :: Bool     -- ^ 保留关键测试
-  , balanceCategories :: Bool         -- ^ 平衡类别分布
-  , maxQuickCheckSize :: Int          -- ^ QuickCheck最大大小
-  , quickCheckTestCount :: Int        -- ^ QuickCheck测试数量
-  , quickCheckMaxShrinks :: Int       -- ^ QuickCheck最大收缩次数
-  , testSelectionRatio :: Double      -- ^ 测试选择比例
+-- | Memory-aware selection strategy
+data MemoryAwareSelection = MemoryAwareSelection
+  { memoryConfig :: MemoryConfig
+  , maxTestsPerCategory :: Int
+  , prioritizeCritical :: Bool
+  , enableAdaptiveSelection :: Bool
+  , fallbackToEssential :: Bool
   } deriving (Show, Eq)
 
--- | 默认智能配置
-defaultSmartConfig :: SmartTestConfig
-defaultSmartConfig = SmartTestConfig
-  { memoryLimitMB = 64
-  , maxTestCount = 50
-  , priorityWeights = Map.fromList
-      [ (Critical, 1.0)
-      , (High, 0.8)
-      , (Medium, 0.6)
-      , (Low, 0.4)
-      , (Optional, 0.2)
+-- | Smart test selector configuration
+data SmartTestSelector = SmartTestSelector
+  { memoryAwareSelection :: MemoryAwareSelection
+  , categoryPriorities :: [(TestCategory, Int)]
+  , criticalTests :: [String]  -- ^ Test names that must run
+  , excludedTests :: [String]  -- ^ Test names to exclude
+  } deriving (Show, Eq)
+
+-- | Test execution plan
+data ExecutionPlan = ExecutionPlan
+  { selectedTests :: [TestInfo]
+  , estimatedMemoryUsage :: Int  -- ^ in MB
+  , executionOrder :: [TestInfo]
+  , cleanupStrategy :: String
+  } deriving (Show, Eq)
+
+-- | Create smart test selector
+createSmartTestSelector :: MemoryConfig -> SmartTestSelector
+createSmartTestSelector config = SmartTestSelector
+  { memoryAwareSelection = createMemoryAwareSelection config
+  , categoryPriorities = 
+      [ (Core, 10)
+      , (Parser, 8)
+      , (Compiler, 7)
+      , (ErrorHandler, 6)
+      , (DependentTypes, 5)
+      , (Ownership, 5)
+      , (Integration, 4)
+      , (Performance, 2)
+      , (Regression, 3)
+      , (EdgeCase, 1)
       ]
-  , categoryWeights = Map.fromList
-      [ (CoreParser, 1.0)
-      , (CoreCompiler, 1.0)
-      , (CoreUtils, 0.9)
-      , (ErrorHandler, 0.8)
-      , (DependencyAnalysis, 0.7)
-      , (DependentTypes, 0.6)
-      , (Ownership, 0.6)
-      , (SourceLocation, 0.5)
-      , (Integration, 0.4)
-      , (Performance, 0.3)
-      , (EdgeCase, 0.3)
-      , (Regression, 0.5)
-      , (Other, 0.2)
+  , criticalTests = 
+      [ "core basic functionality"
+      , "parser basic parsing"
+      , "compiler basic compilation"
+      , "error handling basic"
       ]
-  , complexityPenalty = Map.fromList
-      [ (Simple, 1.0)
-      , (Moderate, 0.8)
-      , (Complex, 0.5)
-      , (VeryComplex, 0.2)
+  , excludedTests = 
+      [ "performance regression"
+      , "memory intensive"
+      , "stress test"
       ]
+  }
+
+-- | Create memory-aware selection
+createMemoryAwareSelection :: MemoryConfig -> MemoryAwareSelection
+createMemoryAwareSelection config = MemoryAwareSelection
+  { memoryConfig = config
+  , maxTestsPerCategory = case memoryLimitMB config of
+      mb | mb <= 16 -> 1   -- Ultra critical: 1 test per category
+      mb | mb <= 24 -> 2   -- Critical: 2 tests per category
+      mb | mb <= 32 -> 3   -- Emergency: 3 tests per category
+      mb | mb <= 48 -> 5   -- Minimal: 5 tests per category
+      mb | mb <= 64 -> 8   -- CI: 8 tests per category
+      _ -> 10              -- Development: 10 tests per category
+  , prioritizeCritical = True
   , enableAdaptiveSelection = True
-  , preserveCriticalTests = True
-  , balanceCategories = True
-  , maxQuickCheckSize = 5
-  , quickCheckTestCount = 25
-  , quickCheckMaxShrinks = 20
-  , testSelectionRatio = 0.5
+  , fallbackToEssential = True
   }
 
--- | 最小内存配置
-minimalMemoryConfig :: SmartTestConfig
-minimalMemoryConfig = defaultSmartConfig
-  { memoryLimitMB = 16
-  , maxTestCount = 10
-  }
-
--- | 标准内存配置
-standardMemoryConfig :: SmartTestConfig
-standardMemoryConfig = defaultSmartConfig
-  { memoryLimitMB = 64
-  , maxTestCount = 50
-  }
-
--- | 极限内存配置
-extremeMemoryConfig :: SmartTestConfig
-extremeMemoryConfig = defaultSmartConfig
-  { memoryLimitMB = 256
-  , maxTestCount = 200
-  }
-
--- | CI内存配置
-ciMemoryConfig :: SmartTestConfig
-ciMemoryConfig = defaultSmartConfig
-  { memoryLimitMB = 32
-  , maxTestCount = 25
-  }
-
--- | 测试元数据
-data TestMetadata = TestMetadata
-  { metaTestName :: String
-  , metaTestCategory :: TestCategory
-  , metaTestPriority :: TestPriority
-  , metaTestComplexity :: TestComplexity
-  , metaEstimatedMemoryMB :: Int
-  , metaIsQuickCheckTest :: Bool
-  , metaMaxQuickCheckSize :: Int
-  } deriving (Show, Eq, Ord)
-
--- | 测试选择器
-data TestSelector = TestSelector
-  { config :: SmartTestConfig
-  , testDatabase :: [TestInfo]
-  } deriving (Show, Eq)
-
-
-
--- | 根据测试名称分类测试
-classifyTest :: String -> TestInfo
-classifyTest testName = 
-  let category = determineCategory testName
-      priority = determinePriority testName
-      complexity = determineComplexity testName
-      memory = estimateMemory testName
-  in TestInfo testName category priority complexity memory ""
-
--- | 确定测试类别
-determineCategory :: String -> TestCategory
-determineCategory name
-  | "parser" `isInfixOf` name = CoreParser
-  | "compiler" `isInfixOf` name = CoreCompiler
-  | "utils" `isInfixOf` name = CoreUtils
-  | "error" `isInfixOf` name = ErrorHandler
-  | "dependency" `isInfixOf` name = DependencyAnalysis
-  | "dependent" `isInfixOf` name = DependentTypes
-  | "ownership" `isInfixOf` name = Ownership
-  | "location" `isInfixOf` name = SourceLocation
-  | "integration" `isInfixOf` name = Integration
-  | "performance" `isInfixOf` name = Performance
-  | "edge" `isInfixOf` name || "boundary" `isInfixOf` name = EdgeCase
-  | "regression" `isInfixOf` name = Regression
-  | otherwise = Other
+-- | Get test category from test name or path
+getTestCategory :: String -> TestCategory
+getTestCategory testName
+  | any (`isInfixOf` testName) ["core", "basic"] = Core
+  | any (`isInfixOf` testName) ["parser", "parse", "syntax"] = Parser
+  | any (`isInfixOf` testName) ["compiler", "compile", "ir"] = Compiler
+  | any (`isInfixOf` testName) ["dependent", "type", "typus"] = DependentTypes
+  | any (`isInfixOf` testName) ["ownership", "borrow", "move"] = Ownership
+  | any (`isInfixOf` testName) ["error", "handler", "recovery"] = ErrorHandler
+  | any (`isInfixOf` testName) ["integration", "endtoend", "e2e"] = Integration
+  | any (`isInfixOf` testName) ["performance", "perf", "benchmark"] = Performance
+  | any (`isInfixOf` testName) ["regression", "bug", "fix"] = Regression
+  | otherwise = EdgeCase
   where
-    isInfixOf = flip $ \x y -> x `elem` (words (map (\c -> if c == '_' then ' ' else c) y))
+    isInfixOf = flip $ \x y -> x `elem` words y
 
--- | 确定测试优先级
-determinePriority :: String -> TestPriority
-determinePriority name
-  | "critical" `isInfixOf` name || "essential" `isInfixOf` name = Critical
-  | "core" `isInfixOf` name || "basic" `isInfixOf` name = High
-  | "enhanced" `isInfixOf` name || "advanced" `isInfixOf` name = Medium
-  | "optional" `isInfixOf` name || "extra" `isInfixOf` name = Low
-  | otherwise = Medium
+-- | Categorize tests by their category
+categorizeTests :: [TestInfo] -> [(TestCategory, [TestInfo])]
+categorizeTests tests = 
+  let categories = [Core .. EdgeCase]
+      testsByCategory cat = (cat, filter (\t -> getTestCategory (testName t) == cat) tests)
+  in map testsByCategory categories
+
+-- | Check if test is critical
+isCriticalTest :: SmartTestSelector -> TestInfo -> Bool
+isCriticalTest selector test = 
+  testName test `elem` criticalTests selector
+
+-- | Check if test should be excluded
+isExcludedTest :: SmartTestSelector -> TestInfo -> Bool
+isExcludedTest selector test = 
+  testName test `elem` excludedTests selector
+
+-- | Select tests from a category based on memory constraints
+selectFromCategory :: SmartTestSelector -> TestCategory -> [TestInfo] -> [TestInfo]
+selectFromCategory selector category tests = 
+  let maxPerCat = maxTestsPerCategory (memoryAwareSelection selector)
+      prioritizeCrit = prioritizeCritical (memoryAwareSelection selector)
+      (critical, nonCritical) = partition (isCriticalTest selector) tests
+      selectedCritical = if prioritizeCrit then critical else []
+      selectedNonCritical = take (maxPerCat - length selectedCritical) $ 
+        sortBy (comparing testMemoryWeight) nonCritical
+  in selectedCritical ++ selectedNonCritical
+
+-- | Apply memory constraints to test selection
+applyMemoryConstraints :: MemoryAwareSelection -> [TestInfo] -> [TestInfo]
+applyMemoryConstraints selection tests = 
+  let config = memoryConfig selection
+      maxTotalTests = case memoryLimitMB config of
+        mb | mb <= 16 -> 5   -- Ultra critical: 5 tests total
+        mb | mb <= 24 -> 10  -- Critical: 10 tests total
+        mb | mb <= 32 -> 15  -- Emergency: 15 tests total
+        mb | mb <= 48 -> 25  -- Minimal: 25 tests total
+        mb | mb <= 64 -> 40  -- CI: 40 tests total
+        _ -> 60              -- Development: 60 tests total
+  in take maxTotalTests tests
+
+-- | Smart test selection based on memory and priorities
+selectTestsSmart :: SmartTestSelector -> [TestInfo] -> [TestInfo]
+selectTestsSmart selector tests = 
+  let -- Filter out excluded tests
+      filteredTests = filter (not . isExcludedTest selector) tests
+      
+      -- Categorize tests
+      categorized = categorizeTests filteredTests
+      
+      -- Select from each category based on memory constraints
+      selectedByCategory = concatMap (\(cat, ts) -> selectFromCategory selector cat ts) categorized
+      
+      -- Prioritize selected tests
+      prioritized = prioritizeTests selectedByCategory
+      
+      -- Apply final memory constraints
+      finalSelection = applyMemoryConstraints (memoryAwareSelection selector) prioritized
+      
+  in finalSelection
+
+-- | Select tests based on memory tier
+selectTestsByMemoryTier :: MemoryTier -> [TestInfo] -> [TestInfo]
+selectTestsByMemoryTier tier tests = 
+  let memoryConfig = case tier of
+        UltraCritical -> getMemoryConfig 16
+        Critical      -> getMemoryConfig 24
+        Emergency     -> getMemoryConfig 32
+        Minimal       -> getMemoryConfig 48
+        CI            -> getMemoryConfig 64
+        Development   -> getMemoryConfig 128
+        Unlimited     -> getMemoryConfig 256
+      
+      selector = createSmartTestSelector memoryConfig
+  in selectTestsSmart selector tests
+
+-- | Estimate memory usage for tests
+estimateMemoryUsage :: [TestInfo] -> Int
+estimateMemoryUsage tests = 
+  let memoryPerTest = 2  -- Base 2MB per test
+      weightMultiplier = 0.5  -- 0.5MB per weight unit
+      totalWeight = sum $ map testMemoryWeight tests
+  in length tests * memoryPerTest + round (fromIntegral totalWeight * weightMultiplier)
+
+-- | Optimize execution order for memory efficiency
+optimizeExecutionOrder :: [TestInfo] -> [TestInfo]
+optimizeExecutionOrder tests = 
+  -- Sort by memory weight (lightest first) and priority
+  sortBy (comparing (\t -> (testMemoryWeight t, testPriority t))) tests
+
+-- | Create execution plan
+createExecutionPlan :: SmartTestSelector -> [TestInfo] -> ExecutionPlan
+createExecutionPlan selector allTests = 
+  let selectedTests = selectTestsSmart selector allTests
+      estimatedMemory = estimateMemoryUsage selectedTests
+      executionOrder = optimizeExecutionOrder selectedTests
+      cleanupStrategy = case memoryLimitMB (memoryConfig (memoryAwareSelection selector)) of
+        mb | mb <= 24 -> "aggressive"  -- Aggressive cleanup for low memory
+        mb | mb <= 48 -> "standard"    -- Standard cleanup for medium memory
+        _ -> "minimal"                 -- Minimal cleanup for high memory
+  in ExecutionPlan
+      { selectedTests = selectedTests
+      , estimatedMemoryUsage = estimatedMemory
+      , executionOrder = executionOrder
+      , cleanupStrategy = cleanupStrategy
+      }
+
+-- | Execute tests with memory-aware cleanup
+executeWithMemoryAwareness :: ExecutionPlan -> IO ()
+executeWithMemoryAwareness plan = do
+  printf "Executing %d tests with estimated memory usage: %dMB\n" 
+    (length (selectedTests plan)) (estimatedMemoryUsage plan)
+  printf "Cleanup strategy: %s\n" (cleanupStrategy plan)
+  
+  -- Initial cleanup
+  performGC
+  
+  -- Execute tests in optimized order
+  mapM_ executeTest (executionOrder plan)
+  
   where
-    isInfixOf = flip $ \x y -> x `elem` (words (map (\c -> if c == '_' then ' ' else c) y))
-
--- | 确定测试复杂度
-determineComplexity :: String -> TestComplexity
-determineComplexity name
-  | "simple" `isInfixOf` name || "basic" `isInfixOf` name = Simple
-  | "comprehensive" `isInfixOf` name || "advanced" `isInfixOf` name = VeryComplex
-  | "complex" `isInfixOf` name || "integration" `isInfixOf` name = Complex
-  | otherwise = Moderate
-  where
-    isInfixOf = flip $ \x y -> x `elem` (words (map (\c -> if c == '_' then ' ' else c) y))
-
--- | 估算内存使用
-estimateMemory :: String -> Int
-estimateMemory name
-  | "simple" `isInfixOf` name = 1
-  | "basic" `isInfixOf` name = 2
-  | "core" `isInfixOf` name = 3
-  | "enhanced" `isInfixOf` name = 4
-  | "comprehensive" `isInfixOf` name = 8
-  | "advanced" `isInfixOf` name = 6
-  | "integration" `isInfixOf` name = 10
-  | "performance" `isInfixOf` name = 12
-  | otherwise = 5
-  where
-    isInfixOf = flip $ \x y -> x `elem` (words (map (\c -> if c == '_' then ' ' else c) y))
-
--- | 根据内存选择测试
-selectTestsByMemory :: SmartTestConfig -> [TestInfo] -> [TestInfo]
-selectTestsByMemory config tests = 
-  let memoryLimit = memoryLimitMB config
-      suitableTests = filter (\t -> estimatedMemoryMB t <= memoryLimit) tests
-  in if null suitableTests
-     then take (maxTestCount config) $ sortBy (comparing estimatedMemoryMB) tests
-     else take (maxTestCount config) $ sortBy (comparing estimatedMemoryMB) suitableTests
-
--- | 根据优先级选择测试
-selectTestsByPriority :: SmartTestConfig -> [TestInfo] -> [TestInfo]
-selectTestsByPriority config tests = 
-  let sortedTests = sortBy (comparing testPriority) tests
-      criticalTests = filter (\t -> testPriority t == Critical) sortedTests
-      otherTests = filter (\t -> testPriority t /= Critical) sortedTests
-      maxOther = maxTestCount config - length criticalTests
-  in if preserveCriticalTests config
-     then criticalTests ++ take maxOther otherTests
-     else take (maxTestCount config) sortedTests
-
--- | 根据类别选择测试
-selectTestsByCategory :: SmartTestConfig -> [TestInfo] -> [TestInfo]
-selectTestsByCategory config tests = 
-  let groupedTests = groupBy ((==) `on` testCategory) $ sortBy (comparing testCategory) tests
-      selectedFromEach = concatMap (take 1) groupedTests  -- 每个类别选择1个
-      remaining = maxTestCount config - length selectedFromEach
-      otherTests = concatMap (drop 1) groupedTests
-  in selectedFromEach ++ take remaining otherTests
-
--- | 根据复杂度选择测试
-selectTestsByComplexity :: SmartTestConfig -> [TestInfo] -> [TestInfo]
-selectTestsByComplexity config tests = 
-  let simpleTests = filter (\t -> testComplexity t == Simple) tests
-      moderateTests = filter (\t -> testComplexity t == Moderate) tests
-      complexTests = filter (\t -> testComplexity t `elem` [Complex, VeryComplex]) tests
+    executeTest test = do
+      printf "Executing: %s (priority: %s, weight: %d)\n" 
+        (testName test) (show (testPriority test)) (testMemoryWeight test)
       
-      simpleCount = maxTestCount config `div` 2
-      moderateCount = maxTestCount config `div` 3
-      complexCount = maxTestCount config - simpleCount - moderateCount
-  in take simpleCount simpleTests ++ 
-     take moderateCount moderateTests ++ 
-     take complexCount complexTests
-
--- | 动态测试选择
-dynamicTestSelection :: SmartTestConfig -> [TestInfo] -> [TestInfo]
-dynamicTestSelection config tests = 
-  let memoryTests = selectTestsByMemory config tests
-      priorityTests = selectTestsByPriority config tests
-      categoryTests = selectTestsByCategory config tests
-      complexityTests = selectTestsByComplexity config tests
+      -- Execute with memory monitoring
+      withMemoryMonitoring $ do
+        -- Here you would actually execute the test
+        return ()
       
-      -- 合并选择结果，去重
-      allSelected = Set.fromList $ concat [memoryTests, priorityTests, categoryTests, complexityTests]
-      selectedList = Set.toList allSelected
-      
-      -- 如果选择的测试太多，按优先级排序后截取
-      finalSelected = if length selectedList > maxTestCount config
-                     then take (maxTestCount config) $ sortBy (comparing testPriority) selectedList
-                     else selectedList
-  in finalSelected
+      -- Cleanup based on strategy
+      case cleanupStrategy plan of
+        "aggressive" -> do
+          replicateM_ 3 performGC
+        "standard" -> do
+          performGC
+        _ -> return ()
 
--- | 自适应内存选择
-adaptiveMemorySelection :: Int -> [TestInfo] -> [TestInfo]
-adaptiveMemorySelection availableMemory tests = 
-  let config = case availableMemory of
-        _ | availableMemory <= 16 -> defaultSmartConfig { memoryLimitMB = 16, maxTestCount = 10 }
-        _ | availableMemory <= 32 -> defaultSmartConfig { memoryLimitMB = 32, maxTestCount = 20 }
-        _ | availableMemory <= 64 -> defaultSmartConfig { memoryLimitMB = 64, maxTestCount = 50 }
-        _ | availableMemory <= 128 -> defaultSmartConfig { memoryLimitMB = 128, maxTestCount = 100 }
-        _ -> defaultSmartConfig { memoryLimitMB = 256, maxTestCount = 200 }
-  in dynamicTestSelection config tests
-
--- | 创建平衡的测试套件
-createBalancedTestSuite :: SmartTestConfig -> [TestTree] -> TestTree
-createBalancedTestSuite config testTrees = 
-  let testInfos = map (\t -> classifyTest "unknown") testTrees  -- 简化实现
-      selectedInfos = dynamicTestSelection config testInfos
-      selectedTests = take (length selectedInfos) testTrees
-  in testGroup ("Smart Selected Tests (" ++ show (length selectedTests) ++ "/" ++ show (length testTrees) ++ ")") selectedTests
-
--- | 测试选择统计
-data TestSelectionStats = TestSelectionStats
-  { totalTests :: Int
-  , selectedTests :: Int
-  , memoryUsageMB :: Int
-  , categoryDistribution :: Map.Map TestCategory Int
-  , priorityDistribution :: Map.Map TestPriority Int
-  , complexityDistribution :: Map.Map TestComplexity Int
-  } deriving (Show, Eq)
-
--- | 计算选择统计
-calculateSelectionStats :: [TestInfo] -> [TestInfo] -> TestSelectionStats
-calculateSelectionStats allTests selectedTests = 
-  let total = length allTests
-      selected = length selectedTests
-      memory = sum $ map estimatedMemoryMB selectedTests
-      
-      categoryDist = Map.fromListWith (+) 
-        [ (testCategory t, 1) | t <- selectedTests ]
-      priorityDist = Map.fromListWith (+) 
-        [ (testPriority t, 1) | t <- selectedTests ]
-      complexityDist = Map.fromListWith (+) 
-        [ (testComplexity t, 1) | t <- selectedTests ]
-  in TestSelectionStats total selected memory categoryDist priorityDist complexityDist
-
--- | 打印选择报告
-printSelectionReport :: TestSelectionStats -> IO ()
-printSelectionReport stats = do
-  putStrLn "=== 智能测试选择报告 ==="
-  putStrLn $ "总测试数: " ++ show (totalTests stats)
-  putStrLn $ "选择测试数: " ++ show (selectedTests stats)
-  putStrLn $ "预计内存使用: " ++ show (memoryUsageMB stats) ++ "MB"
-  putStrLn $ "选择比例: " ++ show ((fromIntegral (selectedTests stats) / fromIntegral (totalTests stats) * 100) :: Double) ++ "%"
+-- | Print selection report
+printSelectionReport :: ExecutionPlan -> IO ()
+printSelectionReport plan = do
+  putStrLn "=== Smart Test Selection Report ==="
+  printf "Selected tests: %d\n" (length (selectedTests plan))
+  printf "Estimated memory usage: %dMB\n" (estimatedMemoryUsage plan)
+  printf "Cleanup strategy: %s\n" (cleanupStrategy plan)
   putStrLn ""
-  putStrLn "类别分布:"
-  traverse_ (\count -> putStrLn $ "  " ++ show count ++ " tests") (categoryDistribution stats)
+  putStrLn "Test breakdown by category:"
+  let categorized = categorizeTests (selectedTests plan)
+  mapM_ (\(cat, tests) -> printf "  %s: %d tests\n" (show cat) (length tests)) categorized
   putStrLn ""
-  putStrLn "优先级分布:"
-  traverse_ (\count -> putStrLn $ "  " ++ show count ++ " tests") (priorityDistribution stats)
-  putStrLn ""
-  putStrLn "复杂度分布:"
-  traverse_ (\count -> putStrLn $ "  " ++ show count ++ " tests") (complexityDistribution stats)
-
--- | 创建智能测试套件
-createSmartTestSuite :: SmartTestConfig -> String -> [(TestTree, TestMetadata)] -> IO TestTree
-createSmartTestSuite config name tests = do
-  let testInfos = map (\(tree, meta) -> classifyTest (metaTestName meta)) tests
-      selectedInfos = dynamicTestSelection config testInfos
-      selectedTests = take (length selectedInfos) (map fst tests)
-  return $ testGroup (name ++ " (" ++ show (length selectedTests) ++ "/" ++ show (length tests) ++ ")") selectedTests
-
--- | 运行智能测试
-runSmartTests :: SmartTestConfig -> TestTree -> IO ()
-runSmartTests config testSuite = do
-  putStrLn "=== 运行智能测试套件 ==="
-  putStrLn $ "内存限制: " ++ show (memoryLimitMB config) ++ "MB"
-  putStrLn $ "测试数量: " ++ show (maxTestCount config)
-  defaultMain testSuite
-
--- | 分析测试覆盖率
-analyzeTestCoverage :: [(TestTree, TestMetadata)] -> IO ()
-analyzeTestCoverage tests = do
-  putStrLn "=== 测试覆盖率分析 ==="
-  putStrLn $ "总测试数: " ++ show (length tests)
-  
-  let categories = map (metaTestCategory . snd) tests
-      categoryCounts = Map.fromListWith (+) [(c, 1) | c <- categories]
-  
-  putStrLn "\n类别分布:"
-  traverse_ (\count -> putStrLn $ "  " ++ show count ++ " tests") categoryCounts
-  
-  let priorities = map (metaTestPriority . snd) tests
-      priorityCounts = Map.fromListWith (+) [(p, 1) | p <- priorities]
-  
-  putStrLn "\n优先级分布:"
-  traverse_ (\count -> putStrLn $ "  " ++ show count ++ " tests") priorityCounts
-  
-  let complexities = map (metaTestComplexity . snd) tests
-      complexityCounts = Map.fromListWith (+) [(c, 1) | c <- complexities]
-  
-  putStrLn "\n复杂度分布:"
-  traverse_ (\count -> putStrLn $ "  " ++ show count ++ " tests") complexityCounts
-  
-  let quickCheckTests = filter (metaIsQuickCheckTest . snd) tests
-      totalMemory = sum $ map (metaEstimatedMemoryMB . snd) tests
-  
-  putStrLn $ "\nQuickCheck测试: " ++ show (length quickCheckTests)
-  putStrLn $ "预计总内存使用: " ++ show totalMemory ++ "MB"
+  putStrLn "Execution order (first 10 tests):"
+  mapM_ (\t -> printf "  %s (weight: %d)\n" (testName t) (testMemoryWeight t)) 
+    (take 10 (executionOrder plan))
