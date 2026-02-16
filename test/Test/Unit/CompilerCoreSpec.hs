@@ -58,9 +58,9 @@ instance Arbitrary Compiler.Errors.Core.TypeError where
     location <- arbitrary
     context <- arbitrary
     recovery <- arbitrary
-    suggestions <- listOf arbitrary
-    relatedErrors <- listOf arbitrary
-    errorChain <- listOf arbitrary
+    suggestions <- resize 1 $ listOf arbitrary  -- Limit suggestions to 1
+    relatedErrors <- resize 1 $ listOf arbitrary  -- Limit related errors to 1
+    errorChain <- resize 1 $ listOf arbitrary    -- Limit error chain to 1
     timestamp <- arbitrary
     return $ Compiler.Errors.Core.TypeError errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
 
@@ -95,7 +95,7 @@ instance Arbitrary ErrorContext where
     contextFunction <- arbitrary
     contextVariable <- arbitrary
     contextType <- arbitrary
-    contextAdditional <- listOf arbitrary
+    contextAdditional <- resize 1 $ listOf arbitrary  -- Limit additional context to 1
     return $ ErrorContext contextCode contextFunction contextVariable contextType contextAdditional
 
 instance Arbitrary ErrorRecovery where

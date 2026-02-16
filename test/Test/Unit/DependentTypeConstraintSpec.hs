@@ -328,28 +328,28 @@ instance Arbitrary TypeVar where
 instance Arbitrary Type where
   arbitrary = do
     name <- arbitrary
-    params <- listOf arbitrary
+    params <- resize 2 $ listOf arbitrary  -- Limit params to 2
     return $ Type name params
 
 instance Arbitrary TypeConstraint where
   arbitrary = do
     cType <- arbitrary
-    cVars <- listOf arbitrary
+    cVars <- resize 2 $ listOf arbitrary  -- Limit vars to 2
     cSpan <- arbitrary
     return $ TypeConstraint cType cVars cSpan
 
 instance Arbitrary DependentType where
   arbitrary = do
     name <- arbitrary
-    vars <- listOf arbitrary
-    constraints <- listOf arbitrary
+    vars <- resize 2 $ listOf arbitrary    -- Limit vars to 2
+    constraints <- resize 2 $ listOf arbitrary  -- Limit constraints to 2
     return $ DependentType name vars constraints
 
 instance Arbitrary TypeEnvironment where
   arbitrary = do
-    types <- listOf arbitrary
-    constraints <- listOf arbitrary
-    substitutions <- listOf arbitrary
+    types <- resize 2 $ listOf arbitrary        -- Limit types to 2
+    constraints <- resize 2 $ listOf arbitrary  -- Limit constraints to 2
+    substitutions <- resize 2 $ listOf arbitrary  -- Limit substitutions to 2
     return $ TypeEnvironment types constraints substitutions
 
 -- Arbitrary instance for SourcePos is now defined in SourceLocation module

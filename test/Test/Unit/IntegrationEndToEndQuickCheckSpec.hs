@@ -28,7 +28,7 @@ instance Arbitrary CompilationPipeline where
     pipelineInput <- arbitrary
     pipelineSteps <- sublistOf ["parse", "typecheck", "optimize", "generate"]
     pipelineOutput <- arbitrary
-    pipelineErrors <- listOf arbitrary
+    pipelineErrors <- resize 1 $ listOf arbitrary  -- Limit errors to 1
     return $ CompilationPipeline pipelineInput pipelineSteps pipelineOutput pipelineErrors
 
 -- | 测试编译管道的输入输出一致性

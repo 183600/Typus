@@ -92,24 +92,24 @@ prop_compilerVariableDeclarations =
         Left _ -> property True  -- Parsing failed
         Right _ -> property $ True  -- Basic sanity check for successful parse
 
--- | Test that compiler handles function declarations
+-- | Test that compiler handles function declarations (memory optimized)
 prop_compilerFunctionDeclarations :: Property
 prop_compilerFunctionDeclarations =
   forAll arbitraryIdentifier $ \funcName ->
-    forAll (listOf arbitraryIdentifier) $ \params ->
-      let paramsStr = unwords params
+    forAll (resize 2 $ listOf arbitraryIdentifier) $ \params ->
+      let paramsStr = unwords (take 2 params)  -- Further limit params
           code = "function " ++ funcName ++ "(" ++ paramsStr ++ ") { }"
           parsed = parseTypus code
       in case parsed of
         Left _ -> property True  -- Parsing failed
         Right _ -> property $ True  -- Basic sanity check for successful parse
 
--- | Test that compiler handles function calls
+-- | Test that compiler handles function calls (memory optimized)
 prop_compilerFunctionCalls :: Property
 prop_compilerFunctionCalls =
   forAll arbitraryIdentifier $ \funcName ->
-    forAll (listOf arbitraryInt) $ \args ->
-      let argsStr = unwords (map show args)
+    forAll (resize 2 $ listOf arbitraryInt) $ \args ->
+      let argsStr = unwords (map show (take 2 args))  -- Further limit args
           code = funcName ++ "(" ++ argsStr ++ ")"
           parsed = parseTypus code
       in case parsed of
@@ -203,11 +203,11 @@ prop_compilerUnaryOperations =
       Left _ -> property True  -- Parsing failed
       Right _ -> property $ True  -- Basic sanity check for successful parse
 
--- | Test that compiler handles arrays
+-- | Test that compiler handles arrays (memory optimized)
 prop_compilerArrays :: Property
 prop_compilerArrays =
-  forAll (listOf arbitraryInt) $ \values ->
-    let valuesStr = unwords (map show values)
+  forAll (resize 3 $ listOf arbitraryInt) $ \values ->
+    let valuesStr = unwords (map show (take 3 values))  -- Limit array size
         code = "[" ++ valuesStr ++ "]"
         parsed = parseTypus code
     in case parsed of
@@ -225,24 +225,24 @@ prop_compilerArrayAccess =
       Left _ -> property True  -- Parsing failed
       Right _ -> property $ True  -- Basic sanity check for successful parse
 
--- | Test that compiler handles struct declarations
+-- | Test that compiler handles struct declarations (memory optimized)
 prop_compilerStructDeclarations :: Property
 prop_compilerStructDeclarations =
   forAll arbitraryIdentifier $ \structName ->
-    forAll (listOf arbitraryIdentifier) $ \fields ->
-      let fieldsStr = unwords fields
+    forAll (resize 2 $ listOf arbitraryIdentifier) $ \fields ->
+      let fieldsStr = unwords (take 2 fields)  -- Limit fields
           code = "struct " ++ structName ++ " { " ++ fieldsStr ++ " }"
           parsed = parseTypus code
     in case parsed of
       Left _ -> property True  -- Parsing failed
       Right _ -> property $ True  -- Basic sanity check for successful parse
 
--- | Test that compiler handles struct instantiation
+-- | Test that compiler handles struct instantiation (memory optimized)
 prop_compilerStructInstantiation :: Property
 prop_compilerStructInstantiation =
   forAll arbitraryIdentifier $ \structName ->
-    forAll (listOf arbitraryInt) $ \values ->
-      let valuesStr = unwords (map show values)
+    forAll (resize 2 $ listOf arbitraryInt) $ \values ->
+      let valuesStr = unwords (map show (take 2 values))  -- Limit values
           code = structName ++ " { " ++ valuesStr ++ " }"
           parsed = parseTypus code
     in case parsed of

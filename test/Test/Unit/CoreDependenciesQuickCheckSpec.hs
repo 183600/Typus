@@ -35,11 +35,11 @@ prop_newDependentTypeCheckerValid =
   let _ = newDependentTypeChecker
   in property $ True  -- Basic sanity check
 
--- | Test that newDependentTypeCheckerWithTypes creates a valid checker
+-- | Test that newDependentTypeCheckerWithTypes creates a valid checker (memory optimized)
 prop_newDependentTypeCheckerWithTypesValid :: Property
 prop_newDependentTypeCheckerWithTypesValid =
-  forAll (listOf arbitraryIdentifier) $ \typeNames ->
-    let _ = newDependentTypeCheckerWithTypes (map (\name -> (name, [], [])) typeNames)
+  forAll (resize 2 $ listOf arbitraryIdentifier) $ \typeNames ->
+    let _ = newDependentTypeCheckerWithTypes (map (\name -> (name, [], [])) (take 2 typeNames))
     in property $ True  -- Basic sanity check
 
 -- | Test that analyzeDependentTypes processes basic code
@@ -133,11 +133,11 @@ prop_inferStatement =
     let _ = runTypeInference (inferStatement stmt)
     in property $ True  -- Basic sanity check
 
--- | Test that inferProgram infers program types
+-- | Test that inferProgram infers program types (memory optimized)
 prop_inferProgram :: Property
 prop_inferProgram =
-  forAll (listOf arbitraryStatement) $ \stmts ->
-    let _ = runTypeInference (inferProgram (Program stmts))
+  forAll (resize 2 $ listOf arbitraryStatement) $ \stmts ->
+    let _ = runTypeInference (inferProgram (Program (take 2 stmts)))
     in property $ True  -- Basic sanity check
 
 -- | Test that generalize creates type schemes

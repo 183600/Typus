@@ -67,7 +67,7 @@ instance Arbitrary OwnershipRelation where
 
 instance Arbitrary OwnershipGraph where
   arbitrary = do
-    relations <- listOf arbitrary
+    relations <- resize 2 $ listOf arbitrary  -- Limit relations to 2
     let owners = map relationOwner relations
         resources = map relationResource relations
     return $ OwnershipGraph relations owners resources

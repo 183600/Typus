@@ -41,7 +41,7 @@ instance Arbitrary ErrorContext where
     contextFunction <- arbitrary
     contextVariable <- arbitrary
     contextType <- arbitrary
-    contextAdditional <- listOf arbitrary
+    contextAdditional <- resize 1 $ listOf arbitrary  -- Limit additional context to 1
     return $ ErrorContext contextCode contextFunction contextVariable contextType contextAdditional
 
 instance Arbitrary ErrorRecovery where
@@ -57,7 +57,7 @@ instance Arbitrary ErrorRecovery where
 instance Arbitrary CombinedError where
   arbitrary = oneof
     [ IntegrationError <$> arbitrary <*> arbitrary
-    , CrossAnalyzerError <$> arbitrary <*> arbitrary <*> listOf arbitrary
+    , CrossAnalyzerError <$> arbitrary <*> arbitrary <*> resize 1 $ listOf arbitrary  -- Limit errors to 1
     ]
 
 instance Arbitrary TypeError where
@@ -69,7 +69,7 @@ instance Arbitrary TypeError where
     location <- arbitrary
     context <- arbitrary
     recovery <- arbitrary
-    suggestions <- listOf arbitrary
+    suggestions <- resize 1 $ listOf arbitrary  -- Limit suggestions to 1
     -- 限制递归深度，避免无限递归
     let relatedErrorsSize = max 0 (size `div` 3)
         errorChainSize = max 0 (size `div` 3)

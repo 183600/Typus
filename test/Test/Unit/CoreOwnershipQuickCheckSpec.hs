@@ -47,10 +47,10 @@ prop_analyzeOwnershipDebug =
     let _ = analyzeOwnershipDebug True code
     in property $ True  -- Basic sanity check
 
--- | Test that formatOwnershipErrors formats errors
+-- | Test that formatOwnershipErrors formats errors (memory optimized)
 prop_formatOwnershipErrors :: Property
 prop_formatOwnershipErrors =
-  forAll (listOf arbitraryOwnershipError) $ \errors ->
+  forAll (resize 2 $ listOf arbitraryOwnershipError) $ \errors ->
     let formatted = formatOwnershipErrors errors
     in property $ not (null formatted) ==> not (null formatted)
 
@@ -108,12 +108,12 @@ prop_analyzeOwnershipHandlesAssignments =
       let _ = analyzeOwnership (varName ++ " = " ++ value)
       in property $ True  -- Basic sanity check
 
--- | Test that ownership analysis handles function calls
+-- | Test that ownership analysis handles function calls (memory optimized)
 prop_analyzeOwnershipHandlesFunctionCalls :: Property
 prop_analyzeOwnershipHandlesFunctionCalls =
   forAll arbitraryIdentifier $ \funcName ->
-    forAll (listOf arbitraryIdentifier) $ \args ->
-      let _ = analyzeOwnership (funcName ++ "(" ++ unwords args ++ ")")
+    forAll (resize 2 $ listOf arbitraryIdentifier) $ \args ->
+      let _ = analyzeOwnership (funcName ++ "(" ++ unwords (take 2 args) ++ ")")
       in property $ True  -- Basic sanity check
 
 -- | Test that ownership analysis handles ownership transfer

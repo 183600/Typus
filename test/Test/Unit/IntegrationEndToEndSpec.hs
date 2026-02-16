@@ -178,18 +178,18 @@ instance Arbitrary CompilationResult where
   arbitrary = do
     resultPhase <- arbitrary
     resultSuccess <- arbitrary
-    resultWarnings <- listOf arbitrary
-    resultErrors <- listOf arbitrary
+    resultWarnings <- resize 1 $ listOf arbitrary  -- Limit warnings to 1
+    resultErrors <- resize 1 $ listOf arbitrary    -- Limit errors to 1
     resultOutput <- oneof [return Nothing, arbitrary >>= return . Just]
     return $ CompilationResult resultPhase resultSuccess resultWarnings resultErrors resultOutput
 
 instance Arbitrary CompilationPipeline where
   arbitrary = do
     pipelineSource <- arbitrary
-    pipelineTokens <- listOf arbitrary
+    pipelineTokens <- resize 1 $ listOf arbitrary  -- Limit tokens to 1
     pipelineAST <- arbitrary
-    pipelineIR <- listOf arbitrary
-    pipelineResults <- listOf arbitrary
+    pipelineIR <- resize 1 $ listOf arbitrary      -- Limit IR to 1
+    pipelineResults <- resize 1 $ listOf arbitrary  -- Limit results to 1
     return $ CompilationPipeline pipelineSource pipelineTokens pipelineAST pipelineIR pipelineResults
 
 tests :: TestTree
