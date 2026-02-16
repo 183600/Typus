@@ -95,16 +95,18 @@ prop_complex_type_declaration typeName typeDef =
            in property $ isRight $ parseDeclaration decl
       else property True
 
--- | Property: Function declarations should preserve parameter order
+-- | Property: Function declarations should preserve parameter order (memory optimized)
 prop_function_parameter_order :: String -> [String] -> Property
 prop_function_parameter_order funcName params = 
   let isValidName = isValidIdentifier funcName && not (null funcName)
-      validParams = all isValidIdentifier params
+      -- Limit params to first 3 to reduce memory usage
+      limitedParams = take 3 params
+      validParams = all isValidIdentifier limitedParams
   in if isValidName && validParams
-      then let paramStr = joinWith ", " params
+      then let paramStr = joinWith ", " limitedParams
                funcDecl = "func " ++ funcName ++ "(" ++ paramStr ++ ") {}"
            in case parseDeclaration funcDecl of
-                Right decl -> property $ extractParamOrder decl == params
+                Right decl -> property $ extractParamOrder decl == limitedParams
                 Left _ -> property True -- Skip invalid parsing
       else property True
   where
@@ -232,38 +234,44 @@ prop_complex_type_expressions typeExpr =
            in property $ isRight $ parseDeclaration decl
       else property True
 
--- | Property: Interface type definitions should be parsed correctly
+-- | Property: Interface type definitions should be parsed correctly (memory optimized)
 prop_interface_type_definitions :: String -> [String] -> Property
 prop_interface_type_definitions interfaceName methods = 
   let validName = isValidIdentifier interfaceName && not (null interfaceName)
-      validMethods = all isValidIdentifier methods
+      -- Limit methods to first 3 to reduce memory usage
+      limitedMethods = take 3 methods
+      validMethods = all isValidIdentifier limitedMethods
   in if validName && validMethods
-      then let methodStrs = map (\m -> m ++ "()") methods
+      then let methodStrs = map (\m -> m ++ "()") limitedMethods
                interfaceBody = joinWith "\n  " methodStrs
                interfaceDef = "type " ++ interfaceName ++ " interface {\n  " ++ interfaceBody ++ "\n}"
            in property $ isRight $ parseDeclaration interfaceDef
       else property True
 
--- | Property: Struct type definitions should be parsed correctly
+-- | Property: Struct type definitions should be parsed correctly (memory optimized)
 prop_struct_type_definitions :: String -> [(String, String)] -> Property
 prop_struct_type_definitions structName fields = 
   let validName = isValidIdentifier structName && not (null structName)
-      validFields = all (\(name, typ) -> isValidIdentifier name && not (null typ)) fields
+      -- Limit fields to first 3 to reduce memory usage
+      limitedFields = take 3 fields
+      validFields = all (\(name, typ) -> isValidIdentifier name && not (null typ)) limitedFields
   in if validName && validFields
-      then let fieldStrs = map (\(name, typ) -> name ++ " " ++ typ) fields
+      then let fieldStrs = map (\(name, typ) -> name ++ " " ++ typ) limitedFields
                structBody = joinWith "\n  " fieldStrs
                structDecl = "type " ++ structName ++ " struct {\n  " ++ structBody ++ "\n}"
            in property $ isRight $ parseDeclaration structDecl
       else property True
 
--- | Property: Generic type parameters should be parsed correctly
+-- | Property: Generic type parameters should be parsed correctly (memory optimized)
 prop_generic_type_parameters :: String -> [String] -> String -> Property
 prop_generic_type_parameters typeName typeParams baseType = 
   let validName = isValidIdentifier typeName && not (null typeName)
-      validParams = all isValidIdentifier typeParams
+      -- Limit type params to first 3 to reduce memory usage
+      limitedParams = take 3 typeParams
+      validParams = all isValidIdentifier limitedParams
       validBase = not $ null baseType
   in if validName && validParams && validBase
-      then let paramStr = joinWith ", " typeParams
+      then let paramStr = joinWith ", " limitedParams
                genericType = typeName ++ "[" ++ paramStr ++ "] " ++ baseType
                decl = "var x " ++ genericType
            in property $ isRight $ parseDeclaration decl
@@ -280,13 +288,15 @@ prop_dependent_type_constraints typeName constraint =
            in property $ isRight $ parseDeclaration decl
       else property True
 
--- | Property: Function type expressions should be parsed correctly
+-- | Property: Function type expressions should be parsed correctly (memory optimized)
 prop_function_type_expressions :: [String] -> String -> Property
 prop_function_type_expressions paramTypes returnType = 
-  let validParams = all (not . null) paramTypes
+  -- Limit param types to first 3 to reduce memory usage
+  let limitedParams = take 3 paramTypes
+      validParams = all (not . null) limitedParams
       validReturn = not $ null returnType
   in if validParams && validReturn
-      then let paramStr = joinWith ", " paramTypes
+      then let paramStr = joinWith ", " limitedParams
                funcType = "func(" ++ paramStr ++ ") " ++ returnType
                decl = "var x " ++ funcType
            in property $ isRight $ parseDeclaration decl

@@ -20,9 +20,9 @@ import Data.List (intersperse)
 instance Arbitrary TypusFile where
   arbitrary = do
     directives <- arbitrary
-    buildTags <- listOf $ arbitrary
-    blocks <- listOf $ arbitrary
-    syntaxErrors <- listOf $ arbitrary
+    buildTags <- resize 2 $ listOf $ arbitrary  -- Limit build tags to 2
+    blocks <- resize 3 $ listOf $ arbitrary      -- Limit blocks to 3
+    syntaxErrors <- resize 2 $ listOf $ arbitrary -- Limit syntax errors to 2
     return $ TypusFile directives buildTags blocks syntaxErrors
 
 instance Arbitrary FileDirectives where

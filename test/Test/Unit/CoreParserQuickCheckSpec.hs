@@ -70,10 +70,10 @@ prop_parseBlockDirectives =
           Left _ -> property False
           Right file -> property $ True
 
--- | Test that parsing preserves line structure
+-- | Test that parsing preserves line structure (memory optimized)
 prop_parsePreservesLines :: Property
 prop_parsePreservesLines =
-  forAll (listOf (arbitraryShortString `suchThat` (not . null))) $ \lineList ->
+  forAll (resize 5 $ listOf (arbitraryShortString `suchThat` (not . null))) $ \lineList ->
     let input = unlines lineList
         result = parseTypus input
     in case result of

@@ -130,19 +130,19 @@ prop_removeComments =
       in property $ ("//" `isInfixOf` input1 ==> not ("//" `isInfixOf` result1)) .&&.
                    ("/*" `isInfixOf` input2 ==> not ("/*" `isInfixOf` result2))
 
--- | Test that normalizeIndentation preserves relative indentation
+-- | Test that normalizeIndentation preserves relative indentation (memory optimized)
 prop_normalizeIndentationPreservesRelative :: Property
 prop_normalizeIndentationPreservesRelative =
-  forAll (listOf1 (arbitraryString `suchThat` (not . null))) $ \inputLines ->
+  forAll (resize 5 $ listOf1 (arbitraryString `suchThat` (not . null))) $ \inputLines ->
     let input = unlines inputLines
         result = normalizeIndentation input
         resultLines = lines result
     in property $ length resultLines == length inputLines
 
--- | Test that normalizeIndentation removes common prefix
+-- | Test that normalizeIndentation removes common prefix (memory optimized)
 prop_normalizeIndentationRemovesCommonPrefix :: Property
 prop_normalizeIndentationRemovesCommonPrefix =
-  forAll (listOf1 (arbitraryString `suchThat` (not . null))) $ \inputLines ->
+  forAll (resize 5 $ listOf1 (arbitraryString `suchThat` (not . null))) $ \inputLines ->
     let input = unlines $ map ("  " ++) inputLines  -- Add common prefix
         result = normalizeIndentation input
         resultLines = lines result

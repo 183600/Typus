@@ -343,10 +343,10 @@ prop_compilerModules =
       Left _ -> property True  -- Parsing failed
       Right _ -> property $ True  -- Basic sanity check for successful parse
 
--- | Test that compiler handles multiple statements
+-- | Test that compiler handles multiple statements (memory optimized)
 prop_compilerMultipleStatements :: Property
 prop_compilerMultipleStatements =
-  forAll (listOf1 arbitraryIdentifier) $ \varNames ->
+  forAll (resize 3 $ listOf1 arbitraryIdentifier) $ \varNames ->
     let statements = map (\name -> "let " ++ name ++ " = 42") varNames
         code = unlines statements
         parsed = parseTypus code

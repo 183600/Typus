@@ -6,15 +6,19 @@
 ## 优化措施
 
 ### 1. 已优化的文件
-- `test/Test/Unit/CoreCompilerQuickCheckSpec.hs`: 优化了5个测试属性，限制了listOf arbitrary的大小
+- `test/Test/Unit/CoreCompilerQuickCheckSpec.hs`: 优化了6个测试属性，限制了listOf arbitrary的大小
 - `test/Test/Unit/CompilerCoreSpec.hs`: 优化了2个Arbitrary实例，限制了列表大小
 - `test/Test/Unit/OwnershipTransitivitySpec.hs`: 优化了1个Arbitrary实例
 - `test/Test/Unit/IntegrationEndToEndQuickCheckSpec.hs`: 优化了1个Arbitrary实例
-- `test/Test/Unit/CoreOwnershipQuickCheckSpec.hs`: 优化了2个测试属性
+- `test/Test/Unit/CoreOwnershipQuickCheckSpec.hs`: 优化了4个测试属性
 - `test/Test/Unit/CoreDependenciesQuickCheckSpec.hs`: 优化了2个测试属性
 - `test/Test/Unit/DependentTypeConstraintSpec.hs`: 优化了4个Arbitrary实例
 - `test/Test/Unit/ErrorHandlerSpec.hs`: 优化了3个Arbitrary实例
 - `test/Test/Unit/IntegrationEndToEndSpec.hs`: 优化了2个Arbitrary实例
+- `test/Test/Unit/ParserCoreFunctionalitySpec.hs`: 优化了Arbitrary TypusFile实例，限制了buildTags、blocks和syntaxErrors大小
+- `test/Test/Unit/AdvancedParserQuickCheckTests.hs`: 优化了5个测试属性，限制了参数列表大小
+- `test/Test/Unit/CoreParserQuickCheckSpec.hs`: 优化了1个测试属性，限制了行列表大小
+- `test/Test/Unit/CoreUtilsQuickCheckSpec.hs`: 优化了2个测试属性，限制了输入行列表大小
 
 ### 2. 优化策略
 - 使用 `resize` 限制 `listOf arbitrary` 的大小，通常限制为1-2个元素
@@ -39,8 +43,8 @@
 ### 测试文件统计
 - 总测试文件数: 2025
 - QuickCheck测试文件数: 1531
-- 已优化的测试文件数: 97
-- 优化覆盖率: 6%
+- 已优化的测试文件数: 104
+- 优化覆盖率: 7%
 
 ### 测试用例保留情况
 - 关键测试文件保留率: 75%

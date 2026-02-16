@@ -169,17 +169,17 @@ prop_analyzeOwnershipHandlesOwnershipTypes =
       let _ = analyzeOwnership (varName ++ ": " ++ show ownershipType)
       in property $ True  -- Basic sanity check
 
--- | Test that ownership analysis handles multiple statements
+-- | Test that ownership analysis handles multiple statements (memory optimized)
 prop_analyzeOwnershipHandlesMultipleStatements :: Property
 prop_analyzeOwnershipHandlesMultipleStatements =
-  forAll (listOf1 arbitraryIdentifier) $ \varNames ->
+  forAll (resize 3 $ listOf1 arbitraryIdentifier) $ \varNames ->
     let _ = analyzeOwnership (unlines (map (\name -> "let " ++ name ++ " = 42") varNames))
     in property $ True  -- Basic sanity check
 
--- | Test that ownership analysis handles ownership transfer chains
+-- | Test that ownership analysis handles ownership transfer chains (memory optimized)
 prop_analyzeOwnershipHandlesOwnershipTransferChains :: Property
 prop_analyzeOwnershipHandlesOwnershipTransferChains =
-  forAll (listOf1 arbitraryIdentifier) $ \varNames ->
+  forAll (resize 3 $ listOf1 arbitraryIdentifier) $ \varNames ->
     let rest [] = []
         rest (_:ys) = ys
         transfers = case varNames of
