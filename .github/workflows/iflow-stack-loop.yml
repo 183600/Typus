@@ -24,7 +24,7 @@ jobs:
 
       IFLOW_API_KEY: ${{ secrets.IFLOW_API_KEY }}
       IFLOW_BASE_URL: http://maas-api.cn-huabei-1.xf-yun.com/v1
-      IFLOW_MODEL_NAME: xminimaxm25
+      IFLOW_MODEL_NAME: xopglm5
 
       GH_TOKEN: ${{ github.token }}
       GITEE_REMOTE_URL: ${{ secrets.GITEE_REMOTE_URL }}
