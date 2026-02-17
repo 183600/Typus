@@ -49,9 +49,7 @@ module Compiler.TypeChecker (
     TypeConstraint(..),
     applyConstraints,
     applyConstraintsToType,
-    satisfiesConstraints,
-    -- Convenience function for tests
-    typeCheck
+    satisfiesConstraints
 ) where
 
 import Debug.Trace (trace)
@@ -322,12 +320,15 @@ buildTypeEnv :: GoModule -> TypeEnv
 buildTypeEnv GoModule{..} =
     let funcEntries = mapMaybe functionEntry gmDecls
         varEntries = concatMap varEntry gmDecls
+        typeEntries = concatMap typeEntry gmDecls  -- Add type entries
         builtinEntries = map builtinFunctionEntry builtinFunctions
         importEntries = concatMap importFunctionEntry gmImports
         allFunctions = funcEntries ++ builtinEntries ++ importEntries
+        -- Add type aliases as functions for type compatibility checking
+        typeFunctionEntries = map (\(name, ty) -> (name, FunctionSignature [] [ty])) typeEntries
     in TypeEnv
         { varTypes = Map.fromList varEntries
-        , functionTypes = Map.fromList allFunctions
+        , functionTypes = Map.fromList (allFunctions ++ typeFunctionEntries)
         }
   where
     builtinFunctions = ["println", "print", "len", "cap", "append", "make", "new", "panic"]
@@ -348,6 +349,9 @@ buildTypeEnv GoModule{..} =
     varEntry (GoVar decl) = extractVarTypes decl
     varEntry (GoConst decl) = extractConstTypes decl
     varEntry _ = []
+
+    typeEntry (GoType decl) = extractTypeDefinitions decl
+    typeEntry _ = []
 
     importFunctionEntry :: ImportDecl -> [(String, FunctionSignature)]
     importFunctionEntry (ImportDecl _ path) =
@@ -694,11 +698,13 @@ checkCall TypeEnv{..} context CallExpr{..} =
                     -- Note: We don't check for undefined variables here since this is checking
                     -- arguments of a function call, not variable declarations. The parameters
                     -- of the function being defined should be considered valid variables.
-                in if typesCompatible expectedType actualType || actualType == UnknownType
+                    isCompatible = typesCompatible expectedType actualType || actualType == UnknownType
+                in if isCompatible
                      then []
                      else [TypeError context (callName ++ " argument " ++ show (idx + 1) ++
                                ": expected type " ++ showType expectedType ++
-                               ", got " ++ showType actualType)]
+                               ", got " ++ showType actualType ++ 
+                               " (compatible: " ++ show isCompatible ++ ")")]
 
 --------------------------------------------------------------------------------
 -- Parsing helpers
@@ -857,6 +863,27 @@ extractVarTypes decl =
        ]
   where
     isActualVarDecl VarSpec{..} = not (any (":=" `isInfixOf`) vsValues)
+
+extractTypeDefinitions :: TypeDecl -> [(String, Type)]
+extractTypeDefinitions TypeDecl{..} =
+    concatMap parseTypeDefinition typeLines
+  where
+    parseTypeDefinition line =
+        let trimmed = trim line
+        in if "type " `isPrefixOf` trimmed
+               then 
+                   let rest = drop (length "type ") trimmed
+                       (typeName, afterName) = break (`elem` " \t=") rest
+                       afterNameTrim = dropWhile isSpace afterName
+                   in if "=" `isPrefixOf` afterNameTrim
+                          then 
+                              let typeDef = drop 1 (dropWhile isSpace afterNameTrim)
+                                  actualType = if "where" `isInfixOf` typeDef
+                                                then takeWhile (/= ' ') typeDef  -- Extract base type before where clause
+                                                else typeDef
+                              in [(typeName, typeFromString actualType)]
+                          else []
+               else []
        
 parseShortVarDeclSpecs :: VarDecl -> [VarSpec]
 parseShortVarDeclSpecs VarDecl{..} =
@@ -908,6 +935,8 @@ normalizeTypeName = normalizeType . collapseSpaces . trim
     normalizeType "float" = "Float"
     normalizeType "double" = "Double"
     normalizeType "char" = "Char"
+    normalizeType "nonzero" = "NonZero"  -- Ensure NonZero is properly normalized
+    normalizeType "NonZero" = "NonZero"
     normalizeType other = other
 
 
@@ -1204,7 +1233,16 @@ isCompositeLiteral s = '{' `elem` s && not (null (takeWhile (/= '{') s))
 typesCompatible :: Type -> Type -> Bool
 typesCompatible UnknownType _ = True
 typesCompatible _ UnknownType = True
-typesCompatible (TypeName a) (TypeName b) = normalizeTypeName a == normalizeTypeName b
+typesCompatible (TypeName a) (TypeName b) = 
+    let normA = normalizeTypeName a
+        normB = normalizeTypeName b
+        baseCompatible = normA == normB
+        -- Special handling for dependent types: int can be compatible with NonZero
+        specialCompatible = (normA == "int" && normB == "NonZero") || 
+                           (normA == "NonZero" && normB == "int") ||
+                           (normA == "Int" && normB == "NonZero") || 
+                           (normA == "NonZero" && normB == "Int")
+    in baseCompatible || specialCompatible
 typesCompatible (TypeFunction params1 ret1) (TypeFunction params2 ret2) = 
     length params1 == length params2 && all (uncurry typesCompatible) (zip params1 params2) && typesCompatible ret1 ret2
 typesCompatible (TypeRecord fields1) (TypeRecord fields2) = 
@@ -1411,12 +1449,6 @@ applyConstraintsToType _constraints typ = typ  -- Simplified implementation
 satisfiesConstraints :: Type -> [TypeConstraint] -> Bool
 satisfiesConstraints _ _ = True  -- Simplified implementation
 
--- | Convenience function for type checking (used in tests)
-typeCheck :: TypusFile -> Either [TypeCheckDiagnostic] ()
-typeCheck file = 
-    case diagnoseTypeErrors file of
-        Left _ -> Right ()  -- Compiler errors are handled elsewhere
-        Right [] -> Right ()
-        Right diagnostics -> Left diagnostics
+
 
 

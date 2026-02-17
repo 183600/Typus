@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 
 -- | Stub module for ownership testing
-module Ownership.Stub (
+module TestSupport.TestStubs.Ownership (
   OwnershipAnalysis(..),
   OwnershipTransfer(..),
   OwnershipConstraint(..),

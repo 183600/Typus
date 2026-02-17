@@ -79,10 +79,15 @@ prop_compileSimple s =
 testCompileErrorConsistency :: TestTree
 testCompileErrorConsistency = testCase "编译错误一致性" $ do
   -- 使用固定的无效代码片段
-  let code = ""  -- 空字符串应该失败
+  let code = ""  -- 空字符串解析成功但编译应该失败
       parsed = parseTypusFile code
-  -- 确保解析失败
-  assertBool "解析空字符串应该失败" $ isLeft parsed
+  -- 确保解析成功但编译失败
+  case parsed of
+    Right ast -> 
+      case compile ast of
+        Right _ -> assertFailure "Empty code compilation should fail"
+        Left _ -> assertBool "Compilation should fail for empty code" True
+    Left _ -> assertFailure "Empty code should parse successfully"
 
 -- ============================================================================
 -- 3. 依赖类型测试

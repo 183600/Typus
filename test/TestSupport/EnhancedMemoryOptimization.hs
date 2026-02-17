@@ -62,13 +62,13 @@ enhancedMemoryCleanup = do
   -- First pass: immediate cleanup
   performGC
   
-  -- Strategic delays to allow memory to be released
-  threadDelay 1000  -- 1ms delay
+  -- Reduced delays for faster cleanup
+  threadDelay 200  -- 从1000减少到200微秒
   
-  -- Second pass: more aggressive cleanup
-  replicateM_ 3 $ do
+  -- Second pass: more aggressive cleanup with fewer cycles
+  replicateM_ 2 $ do  -- 从3减少到2
     performGC
-    threadDelay 500  -- 0.5ms delay
+    threadDelay 100  -- 从500减少到100微秒
   
   -- Final cleanup
   performGC

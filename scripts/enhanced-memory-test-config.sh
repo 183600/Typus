@@ -166,7 +166,7 @@ set_environment_variables() {
 create_test_config() {
     echo -e "${BLUE}创建测试配置文件...${NC}"
     
-    cat > test-memory-config.yaml << EOF
+    cat > test/test-memory-config.yaml << EOF
 # 增强内存测试配置
 memory:
   limit_mb: $MEMORY_MB
@@ -196,7 +196,7 @@ environment:
   detected_memory_mb: ${AVAILABLE_MEM:-unknown}
 EOF
     
-    echo -e "${GREEN}测试配置文件已创建: test-memory-config.yaml${NC}"
+    echo -e "${GREEN}测试配置文件已创建: test/test-memory-config.yaml${NC}"
 }
 
 # 运行内存优化的测试

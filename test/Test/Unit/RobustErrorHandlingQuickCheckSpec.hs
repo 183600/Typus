@@ -24,6 +24,7 @@ import SourceLocation
 import Utils
 
 import TestSupport.Arbitrary
+import TestSupport.ErrorHandlerTestUtils (filterBySeverityForTests)
 
 -- ============================================================================
 -- Robust Error Handling Properties
@@ -118,7 +119,7 @@ prop_error_filtering errors =
      then property True
      else let errorList = map (\msg -> ErrorHandler.createError "test" (T.pack msg) (ErrorLocation Nothing 0 0 Nothing Nothing)) errors
               handler = ErrorHandler.handleErrors [] errorList
-              filtered = ErrorHandler.filterBySeverityForTests Error handler
+              filtered = TestSupport.ErrorHandlerTestUtils.filterBySeverityForTests Error handler
           in property $ ErrorHandler.errorCount filtered <= ErrorHandler.errorCount handler
 
 -- | 测试错误计数

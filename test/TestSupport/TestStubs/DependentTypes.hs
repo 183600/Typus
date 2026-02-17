@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 
 -- | Stub module for dependent types testing
-module DependentTypesParser.Stub (
+module TestSupport.TestStubs.DependentTypes (
   DependentType(..),
   TypeConstraint(..),
   DependentTypeChecker(..),

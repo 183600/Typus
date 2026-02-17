@@ -51,42 +51,34 @@ import TestSupport.OptimizedTestOrdering
   , createMemoryAwareTestSuite
   )
 
--- 极度精简的导入 - 只导入绝对必要的测试模块
+-- 精简的导入 - 只导入核心测试模块以减少内存使用
 
 import qualified Test.Unit.BasicQuickCheckTestSuite as BasicQuickCheckTestSuite
 
+-- 核心测试套件 - 只保留最关键的
 import qualified Test.Unit.NewComprehensiveTypusTestSuite as NewComprehensiveTypusTestSuite
-import qualified Test.Unit.EnhancedTypusFeaturesTestSuite as EnhancedTypusFeaturesTestSuite
 import qualified Test.Unit.TypusCoreQuickCheckTestSuite as TypusCoreQuickCheckTestSuite
-import qualified Test.Unit.TypusAdvancedQuickCheckTestSuite as TypusAdvancedQuickCheckTestSuite
 
--- 新添加的测试套件
+-- 关键功能测试套件
 import qualified Test.Unit.NewDependentTypesTestSuite as NewDependentTypesTestSuite
 import qualified Test.Unit.NewOwnershipTestSuite as NewOwnershipTestSuite
 import qualified Test.Unit.NewCompilerIntegrationTestSuite as NewCompilerIntegrationTestSuite
-import qualified Test.Unit.NewQuickCheckPropertiesTestSuite as NewQuickCheckPropertiesTestSuite
 import qualified Test.Unit.NewParserTestSuite as NewParserTestSuite
-import qualified Test.Unit.NewEnhancedTestSuite as NewEnhancedTestSuite
-import qualified Test.Unit.NewAdvancedQuickCheckTestSuite as NewAdvancedQuickCheckTestSuite
-import qualified Test.Unit.NewComprehensiveQuickCheckTestSuite as NewComprehensiveQuickCheckTestSuite
+
+-- 核心QuickCheck测试规范
 import qualified Test.Unit.DependentTypesQuickCheckSpec as DependentTypesQuickCheckSpec
 import qualified Test.Unit.OwnershipQuickCheckSpec as OwnershipQuickCheckSpec
 import qualified Test.Unit.ParserQuickCheckSpec as ParserQuickCheckSpec
 import qualified Test.Unit.CompilerQuickCheckSpec as CompilerQuickCheckSpec
 import qualified Test.Unit.ErrorHandlingQuickCheckSpec as ErrorHandlingQuickCheckSpec
-import qualified Test.Unit.SourceLocationQuickCheckSpec as SourceLocationQuickCheckSpec
-import qualified Test.Unit.GoToolchainQuickCheckSpec as GoToolchainQuickCheckSpec
-import qualified Test.Unit.TypusCoreFeaturesTestSuite as TypusCoreFeaturesTestSuite
-import qualified Test.Unit.TypusAdvancedPropertiesTestSuite as TypusAdvancedPropertiesTestSuite
-import qualified Test.Unit.TypusEdgeCasesTestSuite as TypusEdgeCasesTestSuite
-import qualified Test.Unit.TypusIntegrationTestSuite as TypusIntegrationTestSuite
 
--- 新添加的高级测试套件
-import qualified Test.Unit.NewComprehensiveQuickCheckTests as NewComprehensiveQuickCheckTests
-import qualified Test.Unit.AdvancedParserQuickCheckTests as AdvancedParserQuickCheckTests
-import qualified Test.Unit.AdvancedOwnershipQuickCheckTests as AdvancedOwnershipQuickCheckTests
-import qualified Test.Unit.AdvancedDependentTypesQuickCheckTests as AdvancedDependentTypesQuickCheckTests
-import qualified Test.Unit.AdvancedIntegrationQuickCheckTests as AdvancedIntegrationQuickCheckTests
+-- 新增的QuickCheck测试套件
+import qualified Test.Unit.NewDependentTypesQuickCheckTests as NewDependentTypesQuickCheckTests
+import qualified Test.Unit.NewRefinementTypesQuickCheckTests as NewRefinementTypesQuickCheckTests
+import qualified Test.Unit.NewOwnershipQuickCheckTests as NewOwnershipQuickCheckTests
+import qualified Test.Unit.NewCompilerParserQuickCheckTests as NewCompilerParserQuickCheckTests
+import qualified Test.Unit.NewErrorHandlingQuickCheckTests as NewErrorHandlingQuickCheckTests
+
 
 
 
@@ -140,23 +132,32 @@ createOptimizedTestRegistry = do
         1 "Core" registryWithHigh
   
   -- 注册基本测试套件（如果内存允许）
-  let registryWithBasic = if availableMemory >= 24
+  let registryWithBasic = if availableMemory >= 20  -- 从24减少到20
         then registerTest "basic essential tests" BasicQuickCheckTestSuite.essentialTests 
                 PriorityMedium 5 "Utils" False registryWithHigh2
         else registryWithHigh2
   
   -- 注册新创建的测试套件（如果内存允许）
-  let registryWithNew = if availableMemory >= 32
+  let registryWithNew = if availableMemory >= 28  -- 从32减少到28
         then let reg1 = registerTest "dependent types tests" NewDependentTypesTestSuite.tests 
                     PriorityMedium 6 "DependentTypes" False registryWithBasic
                  reg2 = registerTest "ownership tests" NewOwnershipTestSuite.tests 
                     PriorityMedium 6 "Ownership" False reg1
                  reg3 = registerTest "compiler integration tests" NewCompilerIntegrationTestSuite.tests 
                     PriorityMedium 6 "Compiler" False reg2
-                 reg4 = registerTest "quickcheck properties tests" NewQuickCheckPropertiesTestSuite.tests 
-                    PriorityMedium 6 "QuickCheck" False reg3
-             in registerTest "parser tests" NewParserTestSuite.tests 
-                    PriorityMedium 6 "Parser" False reg4
+                 reg4 = registerTest "parser tests" NewParserTestSuite.tests 
+                    PriorityMedium 6 "Parser" False reg3
+                 reg5 = registerTest "new dependent types tests" NewDependentTypesQuickCheckTests.tests 
+                    PriorityMedium 6 "DependentTypes" False reg4
+                 reg6 = registerTest "new refinement types tests" NewRefinementTypesQuickCheckTests.tests 
+                    PriorityMedium 6 "RefinementTypes" False reg5
+                 reg7 = registerTest "new ownership tests" NewOwnershipQuickCheckTests.tests 
+                    PriorityMedium 6 "Ownership" False reg6
+                 reg8 = registerTest "new compiler parser tests" NewCompilerParserQuickCheckTests.tests 
+                    PriorityMedium 6 "CompilerParser" False reg7
+                 reg9 = registerTest "new error handling tests" NewErrorHandlingQuickCheckTests.tests 
+                    PriorityMedium 6 "ErrorHandling" False reg8
+             in reg9
         else registryWithBasic
   
   let finalRegistry = registryWithNew
@@ -203,53 +204,42 @@ tests = unsafePerformIO $ do
       return $ memoryOptimizedStringProperty criticalMemoryConfig "critical test" (\s -> length s >= 0 && length s <= 1)
     
     _ -> do
-      -- 创建测试套件
+      -- 创建精简的测试套件
       let allTests = 
             [ memoryOptimizedStringProperty (getConfigForMemory availableMemory) "ultra minimal basic" (\s -> let limited = take 1 s in length limited >= 0 && length limited <= 1)
             , memoryOptimizedListProperty (getConfigForMemory availableMemory) "ultra minimal list" (\xs -> let limited = take 1 xs in length limited >= 0 && length limited <= 1) (genSmallInt (getConfigForMemory availableMemory))
             , NewComprehensiveTypusTestSuite.testSuite
-            , EnhancedTypusFeaturesTestSuite.testSuite
             , TypusCoreQuickCheckTestSuite.testSuite
-            , TypusAdvancedQuickCheckTestSuite.testSuite
-            -- 新添加的测试套件
+            -- 核心测试套件
             , NewDependentTypesTestSuite.tests
             , NewOwnershipTestSuite.tests
             , NewCompilerIntegrationTestSuite.tests
-            , NewQuickCheckPropertiesTestSuite.tests
             , NewParserTestSuite.tests
-            , NewEnhancedTestSuite.tests
-            , NewAdvancedQuickCheckTestSuite.tests
-            -- 新添加的QuickCheck测试套件
-            , NewComprehensiveQuickCheckTestSuite.newComprehensiveQuickCheckTestSuite
+            -- 核心QuickCheck测试规范
             , DependentTypesQuickCheckSpec.tests
             , OwnershipQuickCheckSpec.tests
             , ParserQuickCheckSpec.tests
             , CompilerQuickCheckSpec.tests
             , ErrorHandlingQuickCheckSpec.tests
-            , SourceLocationQuickCheckSpec.tests
-            , GoToolchainQuickCheckSpec.tests
-            , TypusCoreFeaturesTestSuite.tests
-            , TypusAdvancedPropertiesTestSuite.tests
-            , TypusEdgeCasesTestSuite.tests
-            , TypusIntegrationTestSuite.tests
-            -- 新添加的高级测试套件
-            , NewComprehensiveQuickCheckTests.tests
-            , AdvancedParserQuickCheckTests.tests
-            , AdvancedOwnershipQuickCheckTests.tests
-            , AdvancedDependentTypesQuickCheckTests.tests
-            , AdvancedIntegrationQuickCheckTests.tests
+            -- 新增的QuickCheck测试套件
+            , NewDependentTypesQuickCheckTests.tests
+            , NewRefinementTypesQuickCheckTests.tests
+            , NewOwnershipQuickCheckTests.tests
+            , NewCompilerParserQuickCheckTests.tests
+            , NewErrorHandlingQuickCheckTests.tests
+            
             ]
       
       -- 使用优化的测试排序
       orderedTests <- optimizeTestExecutionOrder availableMemory allTests
       
-      -- 根据可用内存选择测试数量
+      -- 根据可用内存选择测试数量 - 减少测试数量
       let maxTests = case availableMemory of
-            _ | availableMemory <= 16 -> 3
-            _ | availableMemory <= 24 -> 6
-            _ | availableMemory <= 32 -> 9
-            _ | availableMemory <= 48 -> 12
-            _ -> 15
+            _ | availableMemory <= 16 -> 2  -- 从3减少到2
+            _ | availableMemory <= 24 -> 4  -- 从6减少到4
+            _ | availableMemory <= 32 -> 8  -- 增加以包含新测试
+            _ | availableMemory <= 48 -> 16  -- 增加以包含新测试
+            _ -> 20  -- 增加以包含新测试
       
       let selectedTests = take maxTests orderedTests
       

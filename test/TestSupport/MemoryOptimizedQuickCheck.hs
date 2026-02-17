@@ -123,43 +123,43 @@ criticalMemoryConfig = QuickCheckMemoryConfig
   , enableShrinkLimiting = True
   }
 
--- | Low memory configuration (32MB) - Low memory mode
+-- | Low memory configuration (16MB) - Low memory mode
 lowMemoryConfig :: QuickCheckMemoryConfig
 lowMemoryConfig = QuickCheckMemoryConfig
   { maxTestSize = 1
-  , testCount = 2
+  , testCount = 1  -- 从2减少到1
   , maxShrinks = 0
-  , maxStringLength = 3
-  , maxListLength = 2
-  , maxIntRange = 5
+  , maxStringLength = 2  -- 从3减少到2
+  , maxListLength = 1   -- 从2减少到1
+  , maxIntRange = 3     -- 从5减少到3
   , enableSizeLimiting = True
   , enableCountLimiting = True
   , enableShrinkLimiting = True
   }
 
--- | Moderate memory configuration (64MB) - Moderate mode
+-- | Moderate memory configuration (32MB) - Moderate mode
 moderateMemoryConfig :: QuickCheckMemoryConfig
 moderateMemoryConfig = QuickCheckMemoryConfig
-  { maxTestSize = 2
-  , testCount = 3
-  , maxShrinks = 1
-  , maxStringLength = 5
-  , maxListLength = 3
-  , maxIntRange = 10
+  { maxTestSize = 1  -- 从2减少到1
+  , testCount = 2    -- 从3减少到2
+  , maxShrinks = 0   -- 从1减少到0
+  , maxStringLength = 3  -- 从5减少到3
+  , maxListLength = 2    -- 从3减少到2
+  , maxIntRange = 5      -- 从10减少到5
   , enableSizeLimiting = True
   , enableCountLimiting = True
   , enableShrinkLimiting = True
   }
 
--- | Normal memory configuration (128MB) - Normal mode
+-- | Normal memory configuration (64MB) - Normal mode
 normalMemoryConfig :: QuickCheckMemoryConfig
 normalMemoryConfig = QuickCheckMemoryConfig
-  { maxTestSize = 3
-  , testCount = 5
-  , maxShrinks = 2
-  , maxStringLength = 8
-  , maxListLength = 5
-  , maxIntRange = 20
+  { maxTestSize = 2  -- 从3减少到2
+  , testCount = 3    -- 从5减少到3
+  , maxShrinks = 1   -- 从2减少到1
+  , maxStringLength = 5  -- 从8减少到5
+  , maxListLength = 3    -- 从5减少到3
+  , maxIntRange = 10     -- 从20减少到10
   , enableSizeLimiting = True
   , enableCountLimiting = True
   , enableShrinkLimiting = True
@@ -290,11 +290,11 @@ memoryOptimizedBoolProperty config testName propFunc =
 -- | Get configuration based on available memory
 getConfigForMemory :: Int -> QuickCheckMemoryConfig
 getConfigForMemory availableMB
-  | availableMB <= 8 = emergencyMemoryConfig
-  | availableMB <= 16 = ultraLowMemoryConfig
-  | availableMB <= 32 = criticalMemoryConfig
-  | availableMB <= 64 = lowMemoryConfig
-  | availableMB <= 128 = moderateMemoryConfig
+  | availableMB <= 4 = emergencyMemoryConfig
+  | availableMB <= 8 = ultraLowMemoryConfig
+  | availableMB <= 16 = criticalMemoryConfig
+  | availableMB <= 32 = lowMemoryConfig
+  | availableMB <= 64 = moderateMemoryConfig
   | otherwise = normalMemoryConfig
 
 -- | Apply automatic memory optimization based on available memory

@@ -64,10 +64,10 @@ library
         Dependencies.Analyzer,
         Dependencies.Inference,
         Dependencies.Parser,
-        Dependencies.Stub,
+        
         Dependencies.TypeSystem,
         DependentTypesParser,
-        DependentTypesParser.Stub,
+        
         EmbedAssets,
         EnhancedDebug,
         ErrorHandler,
@@ -76,7 +76,7 @@ library
         IntegratedCompiler,
         Ownership,
         Ownership.Common.Types,
-        Ownership.Stub,
+        
         Ownership.Lexer,
         Ownership.Analyzer,
         Ownership.Reporter,

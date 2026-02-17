@@ -28,10 +28,10 @@ import ErrorHandler
   , clearWarnings
   , clearInfos
   , mergeHandlers
-  , filterBySeverityForTests
   , sortBySeverity
   , renderErrors
   )
+import TestSupport.ErrorHandlerTestUtils (filterBySeverityForTests)
 import Compiler.Errors.Core
   ( TypeError(..)
   , ErrorSeverity(..)

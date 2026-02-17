@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 
 -- | Simple dependency analysis stub for testing
-module Dependencies.Stub (
+module TestSupport.TestStubs.Dependencies (
   DependencyAnalysis(..),
   Dependency(..),
   DependencyType(..),

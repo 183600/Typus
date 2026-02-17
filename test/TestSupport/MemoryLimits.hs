@@ -45,24 +45,24 @@ withMinimalMemoryLimits test =
 withUltraMemoryLimits :: TestTree -> TestTree
 withUltraMemoryLimits test = 
   localOption (QuickCheckMaxSize 1) $    -- 最小值
-  localOption (QuickCheckTests 1) $      -- 进一步减少到1个测试，与minimal一致
+  localOption (QuickCheckTests 1) $      -- 保持1个测试
   localOption (QuickCheckMaxShrinks 0) $ -- 禁用收缩以节省内存
   test
 
 -- | Apply moderate memory limits to a test tree - 极度优化
 withMemoryLimits :: TestTree -> TestTree
 withMemoryLimits test = 
-  localOption (QuickCheckMaxSize 1) $    -- 进一步减少到1
-  localOption (QuickCheckTests 3) $      -- 进一步减少到3个测试
-  localOption (QuickCheckMaxShrinks 0) $ -- 减少到0次收缩，禁用以节省内存
+  localOption (QuickCheckMaxSize 1) $    -- 保持最小值
+  localOption (QuickCheckTests 2) $      -- 从3减少到2个测试
+  localOption (QuickCheckMaxShrinks 0) $ -- 保持0次收缩
   test
 
 -- | Apply aggressive memory limits to a test tree for memory-constrained environments - 极度优化
 withAggressiveMemoryLimits :: TestTree -> TestTree
 withAggressiveMemoryLimits test = 
-  localOption (QuickCheckMaxSize 1) $    -- 最小值
-  localOption (QuickCheckTests 2) $      -- 进一步减少到2个测试
-  localOption (QuickCheckMaxShrinks 0) $ -- 禁用收缩以节省内存
+  localOption (QuickCheckMaxSize 1) $    -- 保持最小值
+  localOption (QuickCheckTests 1) $      -- 从2减少到1个测试
+  localOption (QuickCheckMaxShrinks 0) $ -- 保持禁用收缩
   test
 
 -- | Create a test group with minimal memory limits

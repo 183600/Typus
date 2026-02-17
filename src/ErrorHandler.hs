@@ -19,7 +19,6 @@ module ErrorHandler (
   clearWarnings,
   clearInfos,
   mergeHandlers,
-  filterBySeverityForTests,
   renderErrors,
   handleWithResourceManagement,
   collectErrors,
@@ -88,8 +87,7 @@ clearInfos = filter (\e -> severity e /= Info)
 mergeHandlers :: ErrorHandler -> ErrorHandler -> ErrorHandler
 mergeHandlers h1 h2 = h1 ++ h2
 
-filterBySeverityForTests :: ErrorSeverity -> ErrorHandler -> ErrorHandler
-filterBySeverityForTests sev = filter (\e -> severity e == sev)
+
 
 -- Use sortBySeverity from Compiler.Errors.Core
 

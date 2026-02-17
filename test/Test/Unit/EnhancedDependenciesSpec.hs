@@ -21,7 +21,7 @@ import Dependencies (newDependentTypeChecker,
 import Dependencies.Parser (runParser)
 import Dependencies.AST (AST(..), Statement(..), TypeExpr(..), Constraint(..))
 import Dependencies.Parser (parseProgram, runParser)
-import Dependencies.Stub (DependencyType(..), Dependency(..), DependencyAnalysis(..), 
+import TestSupport.TestStubs.Dependencies (DependencyType(..), Dependency(..), DependencyAnalysis(..), 
                           analyzeDependencies, checkCircularDependencies, resolveDependencyOrder,
                           validateDependencies)
 import qualified Dependencies.TypeSystem as DTS

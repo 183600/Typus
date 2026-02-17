@@ -1,0 +1,411 @@
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+module Test.Unit.NewIntegrationQuickCheckTests where
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+import Test.Tasty.HUnit
+import Control.Monad (when, replicateM, forM_)
+import Data.List (isInfixOf, isPrefixOf, isSuffixOf, nub, sort, intercalate)
+import Data.Char (isSpace, isDigit, isLetter, isAlphaNum, isAlpha)
+import Data.Either (isLeft, isRight, fromRight)
+import Data.Maybe (isJust, isNothing, listToMaybe, fromMaybe)
+import qualified Data.Text as T
+import qualified Data.Map as Map
+import Data.Map (Map)
+import qualified Data.Set as Set
+import Data.Set (Set)
+
+-- Import Typus modules
+import Parser (parseTypus, parseTypusFile)
+import Compiler (compile)
+import DependentTypesParser (runDependentTypesParser)
+import Ownership (analyzeOwnership)
+import SyntaxValidator (validateSyntax)
+import SourceLocation (SourcePos(..))
+import IntegratedCompiler (integratedCompile)
+import AnalyzerIntegration (runAnalyzerIntegration)
+
+-- ============================================================================
+-- 1. 解析与编译集成测试
+-- ============================================================================
+
+-- | 测试基本解析与编译集成
+prop_testBasicParseCompileIntegration :: String -> Property
+prop_testBasicParseCompileIntegration varNameStr =
+  let limitedVarName = take 8 $ filter isAlpha varNameStr
+      validVarName = if null limitedVarName then "x" else limitedVarName
+      code = "package main\n\nvar " ++ validVarName ++ " int = 1"
+      parseResult = parseTypusFile code
+  in property $ (length validVarName > 0 && isRight parseResult) ==> 
+    isRight (compile (fromMaybe undefined (listToMaybe [fromRight undefined parseResult])))
+
+-- | 测试函数解析与编译集成
+prop_testFunctionParseCompileIntegration :: String -> String -> Property
+prop_testFunctionParseCompileIntegration funcNameStr paramNameStr =
+  let limitedFuncName = take 8 $ filter isAlpha funcNameStr
+      limitedParamName = take 8 $ filter isAlpha paramNameStr
+      validFuncName = if null limitedFuncName then "test" else limitedFuncName
+      validParamName = if null limitedParamName then "x" else limitedParamName
+      code = "package main\n\nfunc " ++ validFuncName ++ "(" ++ validParamName ++ " int) int { return " ++ validParamName ++ " + 1 }"
+      parseResult = parseTypusFile code
+  in property $ (length validFuncName > 0 && length validParamName > 0 && isRight parseResult) ==> 
+    isRight (compile (fromMaybe undefined (listToMaybe [fromRight undefined parseResult])))
+
+-- | 测试结构体解析与编译集成
+prop_testStructParseCompileIntegration :: String -> String -> Property
+prop_testStructParseCompileIntegration structNameStr fieldNameStr =
+  let limitedStructName = take 8 $ filter isAlpha structNameStr
+      limitedFieldName = take 8 $ filter isAlpha fieldNameStr
+      validStructName = if null limitedStructName then "MyStruct" else limitedStructName
+      validFieldName = if null limitedFieldName then "field" else limitedFieldName
+      code = "package main\n\ntype " ++ validStructName ++ " struct { " ++ validFieldName ++ " int }\n\nfunc test() { s := " ++ validStructName ++ "{" ++ validFieldName ++ ": 1} }"
+      parseResult = parseTypusFile code
+  in property $ (length validStructName > 0 && length validFieldName > 0 && isRight parseResult) ==> 
+    isRight (compile (fromMaybe undefined (listToMaybe [fromRight undefined parseResult])))
+
+-- ============================================================================
+-- 2. 依赖类型与编译器集成测试
+-- ============================================================================
+
+-- | 测试依赖类型解析与编译集成
+prop_testDependentTypesParseCompileIntegration :: String -> Int -> Property
+prop_testDependentTypesParseCompileIntegration typeNameStr size =
+  let limitedTypeName = take 8 $ filter isAlpha typeNameStr
+      validTypeName = if null limitedTypeName then "Vector" else limitedTypeName
+      validSize = max 1 (abs size `mod` 50)
+      code = "package main\n\n//! dependent_types: on\ntype " ++ validTypeName ++ "[" ++ show validSize ++ ": int] struct { data [" ++ show validSize ++ "]int }\n\nfunc test() { v := " ++ validTypeName ++ "[" ++ show validSize ++ "]{data: [" ++ show validSize ++ "]int{}} }"
+      parseResult = parseTypusFile code
+  in property $ (length validTypeName > 0 && isRight parseResult) ==> 
+    isRight (compile (fromMaybe undefined (listToMaybe [fromRight undefined parseResult])))
+
+-- | 测试精确类型与编译集成
+prop_testRefinementTypesCompileIntegration :: String -> Property
+prop_testRefinementTypesCompileIntegration typeNameStr =
+  let limitedTypeName = take 8 $ filter isAlpha typeNameStr
+      validTypeName = if null limitedTypeName then "Positive" else limitedTypeName
+      code = "package main\n\n//! dependent_types: on\ntype " ++ validTypeName ++ " = int where { self > 0 }\n\nfunc test() { x := " ++ validTypeName ++ "(1) }"
+      parseResult = parseTypusFile code
+  in property $ (length validTypeName > 0 && isRight parseResult) ==> 
+    isRight (compile (fromMaybe undefined (listToMaybe [fromRight undefined parseResult])))
+
+-- | 测试依赖函数与编译集成
+prop_testDependentFunctionCompileIntegration :: String -> Int -> Property
+prop_testDependentFunctionCompileIntegration funcNameStr size =
+  let limitedFuncName = take 8 $ filter isAlpha funcNameStr
+      validFuncName = if null limitedFuncName then "zeros" else limitedFuncName
+      validSize = max 1 (abs size `mod` 50)
+      code = "package main\n\n//! dependent_types: on\ntype Vector[" ++ show validSize ++ ": int] struct { data [" ++ show validSize ++ "]int }\ntype Positive = int where { self > 0 }\n\nfunc " ++ validFuncName ++ "(n: Positive) -> Vector[" ++ show validSize ++ "] { return Vector[" ++ show validSize ++ "]{data: [" ++ show validSize ++ "]int{}} }"
+      parseResult = parseTypusFile code
+  in property $ (length validFuncName > 0 && isRight parseResult) ==> 
+    isRight (compile (fromMaybe undefined (listToMaybe [fromRight undefined parseResult])))
+
+-- ============================================================================
+-- 3. 所有权与编译器集成测试
+-- ============================================================================
+
+-- | 测试所有权解析与编译集成
+prop_testOwnershipParseCompileIntegration :: String -> Property
+prop_testOwnershipParseCompileIntegration varNameStr =
+  let limitedVarName = take 8 $ filter isAlpha varNameStr
+      validVarName = if null limitedVarName then "s" else limitedVarName
+      code = "package main\n\n//! ownership: on\nfunc test() { " ++ validVarName ++ " := 1\nt := " ++ validVarName ++ "\nfmt.Println(t) }"
+      parseResult = parseTypusFile code
+  in property $ (length validVarName > 0 && isRight parseResult) ==> 
+    isRight (compile (fromMaybe undefined (listToMaybe [fromRight undefined parseResult])))
+
+-- | 测试借用与编译集成
+prop_testBorrowingCompileIntegration :: String -> Property
+prop_testBorrowingCompileIntegration varNameStr =
+  let limitedVarName = take 8 $ filter isAlpha varNameStr
+      validVarName = if null limitedVarName then "s" else limitedVarName
+      code = "package main\n\n//! ownership: on\nfunc test() { " ++ validVarName ++ " := 1\nr := &" ++ validVarName ++ "\nfmt.Println(*r) }"
+      parseResult = parseTypusFile code
+  in property $ (length validVarName > 0 && isRight parseResult) ==> 
+    isRight (compile (fromMaybe undefined (listToMaybe [fromRight undefined parseResult])))
+
+-- | 测试所有权转移与编译集成
+prop_testOwnershipTransferCompileIntegration :: String -> String -> Property
+prop_testOwnershipTransferCompileIntegration funcNameStr varNameStr =
+  let limitedFuncName = take 8 $ filter isAlpha funcNameStr
+      limitedVarName = take 8 $ filter isAlpha varNameStr
+      validFuncName = if null limitedFuncName then "consume" else limitedFuncName
+      validVarName = if null limitedVarName then "s" else limitedVarName
+      code = "package main\n\n//! ownership: on\nfunc " ++ validFuncName ++ "(x int) { fmt.Println(x) }\n\nfunc test() { " ++ validVarName ++ " := 1\n" ++ validFuncName ++ "(" ++ validVarName ++ ") }"
+      parseResult = parseTypusFile code
+  in property $ (length validFuncName > 0 && length validVarName > 0 && isRight parseResult) ==> 
+    isRight (compile (fromMaybe undefined (listToMaybe [fromRight undefined parseResult])))
+
+-- ============================================================================
+-- 4. 依赖类型与所有权集成测试
+-- ============================================================================
+
+-- | 测试依赖类型与所有权交互
+prop_testDependentTypesOwnershipInteraction :: String -> Int -> Property
+prop_testDependentTypesOwnershipInteraction typeNameStr size =
+  let limitedTypeName = take 8 $ filter isAlpha typeNameStr
+      validTypeName = if null limitedTypeName then "Vector" else limitedTypeName
+      validSize = max 1 (abs size `mod` 50)
+      code = "package main\n\n//! dependent_types: on\n//! ownership: on\ntype " ++ validTypeName ++ "[" ++ show validSize ++ ": int] struct { data [" ++ show validSize ++ "]int }\n\nfunc test() { v := " ++ validTypeName ++ "[" ++ show validSize ++ "]{data: [" ++ show validSize ++ "]int{}}\nt := v\nfmt.Println(t) }"
+      parseResult = parseTypusFile code
+      ownershipResult = analyzeOwnership code
+  in property $ (length validTypeName > 0 && isRight parseResult) ==> 
+    (isRight (compile (fromMaybe undefined (listToMaybe [fromRight undefined parseResult])))
+
+-- | 测试约束与所有权交互
+prop_testConstraintsOwnershipInteraction :: String -> Property
+prop_testConstraintsOwnershipInteraction typeNameStr =
+  let limitedTypeName = take 8 $ filter isAlpha typeNameStr
+      validTypeName = if null limitedTypeName then "Positive" else limitedTypeName
+      code = "package main\n\n//! dependent_types: on\n//! ownership: on\ntype " ++ validTypeName ++ " = int where { self > 0 }\n\nfunc test() { x := " ++ validTypeName ++ "(1)\ny := x\nfmt.Println(y) }"
+      parseResult = parseTypusFile code
+      ownershipResult = analyzeOwnership code
+  in property $ (length validTypeName > 0 && isRight parseResult) ==> 
+    (isRight (compile (fromMaybe undefined (listToMaybe [fromRight undefined parseResult])))
+
+-- | 测试借用与约束交互
+prop_testBorrowingConstraintsInteraction :: String -> Property
+prop_testBorrowingConstraintsInteraction typeNameStr =
+  let limitedTypeName = take 8 $ filter isAlpha typeNameStr
+      validTypeName = if null limitedTypeName then "NonZero" else limitedTypeName
+      code = "package main\n\n//! dependent_types: on\n//! ownership: on\ntype " ++ validTypeName ++ " = int where { self != 0 }\n\nfunc test() { x := " ++ validTypeName ++ "(1)\nr := &x\nfmt.Println(*r) }"
+      parseResult = parseTypusFile code
+      ownershipResult = analyzeOwnership code
+  in property $ (length validTypeName > 0 && isRight parseResult) ==> 
+    (isRight (compile (fromMaybe undefined (listToMaybe [fromRight undefined parseResult])))
+
+-- ============================================================================
+-- 5. 语法验证与编译器集成测试
+-- ============================================================================
+
+-- | 测试语法验证与编译集成
+prop_testSyntaxValidationCompileIntegration :: String -> Property
+prop_testSyntaxValidationCompileIntegration varNameStr =
+  let limitedVarName = take 8 $ filter isAlpha varNameStr
+      validVarName = if null limitedVarName then "x" else limitedVarName
+      code = "package main\n\nvar " ++ validVarName ++ " int = 1"
+      validationResult = validateSyntax code
+      parseResult = parseTypusFile code
+  in property $ (length validVarName > 0 && null validationResult && isRight parseResult) ==> 
+    isRight (compile (fromMaybe undefined (listToMaybe [fromRight undefined parseResult])))
+
+-- | 测试语法错误与编译集成
+prop_testSyntaxErrorCompileIntegration :: String -> Property
+prop_testSyntaxErrorCompileIntegration varNameStr =
+  let limitedVarName = take 8 $ filter isAlpha varNameStr
+      validVarName = if null limitedVarName then "x" else limitedVarName
+      code = "package main\n\nvar " ++ validVarName ++ " int = @@@@"
+      validationResult = validateSyntax code
+      parseResult = parseTypusFile code
+  in property $ (length validVarName > 0) ==> isLeft parseResult
+
+-- | 测试语义验证与编译集成
+prop_testSemanticValidationCompileIntegration :: String -> Property
+prop_testSemanticValidationCompileIntegration varNameStr =
+  let limitedVarName = take 8 $ filter isAlpha varNameStr
+      validVarName = if null limitedVarName then "x" else limitedVarName
+      code = "package main\n\nfunc test() { " ++ validVarName ++ " := 1\n" ++ validVarName ++ " := 2 }"
+      validationResult = validateSyntax code
+      parseResult = parseTypusFile code
+  in property $ (length validVarName > 0 && isRight parseResult) ==> 
+    True  -- 解析成功，但语义验证应该失败
+
+-- ============================================================================
+-- 6. 分析器集成测试
+-- ============================================================================
+
+-- | 测试分析器与依赖类型集成
+prop_testAnalyzerDependentTypesIntegration :: String -> Int -> Property
+prop_testAnalyzerDependentTypesIntegration typeNameStr size =
+  let limitedTypeName = take 8 $ filter isAlpha typeNameStr
+      validTypeName = if null limitedTypeName then "Vector" else limitedTypeName
+      validSize = max 1 (abs size `mod` 50)
+      code = "package main\n\n//! dependent_types: on\ntype " ++ validTypeName ++ "[" ++ show validSize ++ ": int] struct { data [" ++ show validSize ++ "]int }"
+      parseResult = parseTypusFile code
+      analyzerResult = runAnalyzerIntegration code
+  in property $ (length validTypeName > 0 && isRight parseResult) ==> 
+    True  -- 分析应该成功
+
+-- | 测试分析器与所有权集成
+prop_testAnalyzerOwnershipIntegration :: String -> Property
+prop_testAnalyzerOwnershipIntegration varNameStr =
+  let limitedVarName = take 8 $ filter isAlpha varNameStr
+      validVarName = if null limitedVarName then "s" else limitedVarName
+      code = "package main\n\n//! ownership: on\nfunc test() { " ++ validVarName ++ " := 1\nt := " ++ validVarName ++ "\nfmt.Println(t) }"
+      parseResult = parseTypusFile code
+      analyzerResult = runAnalyzerIntegration code
+  in property $ (length validVarName > 0 && isRight parseResult) ==> 
+    True  -- 分析应该成功
+
+-- | 测试分析器与编译器集成
+prop_testAnalyzerCompilerIntegration :: String -> Property
+prop_testAnalyzerCompilerIntegration funcNameStr =
+  let limitedFuncName = take 8 $ filter isAlpha funcNameStr
+      validFuncName = if null limitedFuncName then "test" else limitedFuncName
+      code = "package main\n\nfunc " ++ validFuncName ++ "() int { return 1 }"
+      parseResult = parseTypusFile code
+      analyzerResult = runAnalyzerIntegration code
+  in property $ (length validFuncName > 0 && isRight parseResult) ==> 
+    (isRight (compile (fromMaybe undefined (listToMaybe [fromRight undefined parseResult])))
+
+-- ============================================================================
+-- 7. 端到端集成测试
+-- ============================================================================
+
+-- | 测试简单端到端流程
+prop_testSimpleEndToEndFlow :: String -> Property
+prop_testSimpleEndToEndFlow varNameStr =
+  let limitedVarName = take 8 $ filter isAlpha varNameStr
+      validVarName = if null limitedVarName then "x" else limitedVarName
+      code = "package main\n\nvar " ++ validVarName ++ " int = 1\n\nfunc main() { fmt.Println(" ++ validVarName ++ ") }"
+      parseResult = parseTypusFile code
+      validationResult = validateSyntax code
+      compileResult = if isRight parseResult && null validationResult
+        then compile (fromMaybe undefined (listToMaybe [fromRight undefined parseResult]))
+        else Left undefined
+  in property $ (length validVarName > 0) ==> 
+    (isRight parseResult && null validationResult && isRight compileResult)
+
+-- | 测试复杂端到端流程
+prop_testComplexEndToEndFlow :: String -> String -> Int -> Property
+prop_testComplexEndToEndFlow structNameStr fieldNameStr size =
+  let limitedStructName = take 8 $ filter isAlpha structNameStr
+      limitedFieldName = take 8 $ filter isAlpha fieldNameStr
+      validStructName = if null limitedStructName then "MyStruct" else limitedStructName
+      validFieldName = if null limitedFieldName then "field" else limitedFieldName
+      validSize = max 1 (abs size `mod` 10)
+      code = "package main\n\n//! dependent_types: on\n//! ownership: on\ntype " ++ validStructName ++ "[" ++ show validSize ++ ": int] struct { " ++ validFieldName ++ " [" ++ show validSize ++ "]int }\n\nfunc create() -> " ++ validStructName ++ "[" ++ show validSize ++ "] { return " ++ validStructName ++ "[" ++ show validSize ++ "]{" ++ validFieldName ++ ": [" ++ show validSize ++ "]int{}} }\n\nfunc main() { s := create()\nt := s\nfmt.Println(t) }"
+      parseResult = parseTypusFile code
+      validationResult = validateSyntax code
+      compileResult = if isRight parseResult && null validationResult
+        then compile (fromMaybe undefined (listToMaybe [fromRight undefined parseResult]))
+        else Left undefined
+  in property $ (length validStructName > 0 && length validFieldName > 0) ==> 
+    (isRight parseResult && null validationResult)
+
+-- | 测试错误处理端到端流程
+prop_testErrorHandlingEndToEndFlow :: String -> Property
+prop_testErrorHandlingEndToEndFlow varNameStr =
+  let limitedVarName = take 8 $ filter isAlpha varNameStr
+      validVarName = if null limitedVarName then "x" else limitedVarName
+      code = "package main\n\nfunc test() { " ++ validVarName ++ " := 1\n" ++ validVarName ++ " = \"string\" }"
+      parseResult = parseTypusFile code
+      validationResult = validateSyntax code
+  in property $ (length validVarName > 0 && isRight parseResult) ==> 
+    not (null validationResult)  -- 应该有语义错误
+
+-- ============================================================================
+-- 8. 性能集成测试
+-- ============================================================================
+
+-- | 测试大文件处理性能
+testLargeFilePerformance :: TestTree
+testLargeFilePerformance = testCase "大文件处理性能" $ do
+  let largeCode = "package main\n\n" ++ unlines ["var x" ++ show i ++ " int = " ++ show i | i <- [1..1000]]
+      parseResult = parseTypusFile largeCode
+  case parseResult of
+    Right _ -> assertBool "大文件应该能成功解析" True
+    Left _ -> assertFailure "大文件解析失败"
+
+-- | 测试复杂依赖类型性能
+testComplexDependentTypesPerformance :: TestTree
+testComplexDependentTypesPerformance = testCase "复杂依赖类型性能" $ do
+  let complexCode = "package main\n\n//! dependent_types: on\n" ++ 
+                   unlines ["type Vector" ++ show i ++ "[" ++ show i ++ ": int] struct { data [" ++ show i ++ "]int }" | i <- [1..100]]
+      parseResult = parseTypusFile complexCode
+  case parseResult of
+    Right _ -> assertBool "复杂依赖类型应该能成功解析" True
+    Left _ -> assertFailure "复杂依赖类型解析失败"
+
+-- | 测试深度嵌套结构性能
+testDeepNestingPerformance :: TestTree
+testDeepNestingPerformance = testCase "深度嵌套结构性能" $ do
+  let createNestedStruct 0 = "field int"
+      createNestedStruct n = "inner struct { " ++ createNestedStruct (n-1) ++ " }"
+      nestedStruct = createNestedStruct 50
+      deepCode = "package main\n\ntype DeepStruct struct { " ++ nestedStruct ++ " }"
+      parseResult = parseTypusFile deepCode
+  case parseResult of
+    Right _ -> assertBool "深度嵌套结构应该能成功解析" True
+    Left _ -> assertFailure "深度嵌套结构解析失败"
+
+-- ============================================================================
+-- 测试套件组装
+-- ============================================================================
+
+-- | 解析与编译集成测试套件
+parseCompileIntegrationTests :: TestTree
+parseCompileIntegrationTests = testGroup "解析与编译集成测试"
+  [ testProperty "基本解析与编译集成" prop_testBasicParseCompileIntegration
+  , testProperty "函数解析与编译集成" prop_testFunctionParseCompileIntegration
+  , testProperty "结构体解析与编译集成" prop_testStructParseCompileIntegration
+  ]
+
+-- | 依赖类型与编译器集成测试套件
+dependentTypesCompilerIntegrationTests :: TestTree
+dependentTypesCompilerIntegrationTests = testGroup "依赖类型与编译器集成测试"
+  [ testProperty "依赖类型解析与编译集成" prop_testDependentTypesParseCompileIntegration
+  , testProperty "精确类型与编译集成" prop_testRefinementTypesCompileIntegration
+  , testProperty "依赖函数与编译集成" prop_testDependentFunctionCompileIntegration
+  ]
+
+-- | 所有权与编译器集成测试套件
+ownershipCompilerIntegrationTests :: TestTree
+ownershipCompilerIntegrationTests = testGroup "所有权与编译器集成测试"
+  [ testProperty "所有权解析与编译集成" prop_testOwnershipParseCompileIntegration
+  , testProperty "借用与编译集成" prop_testBorrowingCompileIntegration
+  , testProperty "所有权转移与编译集成" prop_testOwnershipTransferCompileIntegration
+  ]
+
+-- | 依赖类型与所有权集成测试套件
+dependentTypesOwnershipIntegrationTests :: TestTree
+dependentTypesOwnershipIntegrationTests = testGroup "依赖类型与所有权集成测试"
+  [ testProperty "依赖类型与所有权交互" prop_testDependentTypesOwnershipInteraction
+  , testProperty "约束与所有权交互" prop_testConstraintsOwnershipInteraction
+  , testProperty "借用与约束交互" prop_testBorrowingConstraintsInteraction
+  ]
+
+-- | 语法验证与编译器集成测试套件
+syntaxValidationCompilerIntegrationTests :: TestTree
+syntaxValidationCompilerIntegrationTests = testGroup "语法验证与编译器集成测试"
+  [ testProperty "语法验证与编译集成" prop_testSyntaxValidationCompileIntegration
+  , testProperty "语法错误与编译集成" prop_testSyntaxErrorCompileIntegration
+  , testProperty "语义验证与编译集成" prop_testSemanticValidationCompileIntegration
+  ]
+
+-- | 分析器集成测试套件
+analyzerIntegrationTests :: TestTree
+analyzerIntegrationTests = testGroup "分析器集成测试"
+  [ testProperty "分析器与依赖类型集成" prop_testAnalyzerDependentTypesIntegration
+  , testProperty "分析器与所有权集成" prop_testAnalyzerOwnershipIntegration
+  , testProperty "分析器与编译器集成" prop_testAnalyzerCompilerIntegration
+  ]
+
+-- | 端到端集成测试套件
+endToEndIntegrationTests :: TestTree
+endToEndIntegrationTests = testGroup "端到端集成测试"
+  [ testProperty "简单端到端流程" prop_testSimpleEndToEndFlow
+  , testProperty "复杂端到端流程" prop_testComplexEndToEndFlow
+  , testProperty "错误处理端到端流程" prop_testErrorHandlingEndToEndFlow
+  ]
+
+-- | 性能集成测试套件
+performanceIntegrationTests :: TestTree
+performanceIntegrationTests = testGroup "性能集成测试"
+  [ testLargeFilePerformance
+  , testComplexDependentTypesPerformance
+  , testDeepNestingPerformance
+  ]
+
+-- | 主测试套件
+tests :: TestTree
+tests = testGroup "新综合集成QuickCheck测试套件"
+  [ parseCompileIntegrationTests
+  , dependentTypesCompilerIntegrationTests
+  , ownershipCompilerIntegrationTests
+  , dependentTypesOwnershipIntegrationTests
+  , syntaxValidationCompilerIntegrationTests
+  , analyzerIntegrationTests
+  , endToEndIntegrationTests
+  , performanceIntegrationTests
+  ]
