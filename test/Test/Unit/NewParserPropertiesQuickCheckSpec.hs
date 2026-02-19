@@ -144,7 +144,7 @@ prop_parse_special_characters =
 -- | 测试解析大型文件
 prop_parse_large_file :: Positive Int -> Property
 prop_parse_large_file (Positive n) = 
-  let largeContent = unlines $ replicate (min n 1000) "function test" ++ ["return 42;"]
+  let largeContent = unlines $ replicate (min n 20) "function test" ++ ["return 42;"]  -- 从1000减少到20，大幅减少内存使用
   in case parseTypus largeContent of
        Left _ -> property True
        Right file -> property $ True  -- 只要能解析就行

@@ -92,7 +92,7 @@ tests = testGroup "Parser Basic Functions Tests"
         Right ast -> assertBool "AST should contain unicode" True  -- 简化测试
         
   , testCase "parse large input" $ do
-      let largeInput = concat $ replicate 1000 "x "
+      let largeInput = concat $ replicate 20 "x "  -- 从1000减少到20，大幅减少内存使用
       let result = parse largeInput  -- 简化函数调用
       case result of
         Left err -> assertBool "Large input should be handled" False

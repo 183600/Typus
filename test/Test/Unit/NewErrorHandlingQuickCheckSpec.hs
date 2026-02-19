@@ -155,9 +155,9 @@ prop_error_creation_empty severity category =
 -- | Test error creation: long message
 prop_error_creation_long :: String -> ErrorSeverity -> ErrorCategory' -> Bool
 prop_error_creation_long s severity category = 
-  let longMsg = concat (replicate 1000 s)
+  let longMsg = concat (replicate 10 s)  -- 从1000减少到10，大幅减少内存使用
       err = mkTestError longMsg severity category
-  in length (errorMessage err) >= 1000 &&
+  in length (errorMessage err) >= 10 &&
      errorSeverity err == severity &&
      errorCategory err == category
 

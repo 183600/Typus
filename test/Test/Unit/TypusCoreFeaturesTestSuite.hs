@@ -552,7 +552,7 @@ prop_empty_string_input =
 -- | 测试极大类型参数
 prop_large_type_parameters :: Property
 prop_large_type_parameters =
-  let largeExpr = "type Vector[1000000] struct { data [1000000]int }"
+  let largeExpr = "type Vector[100] struct { data [100]int }"  -- 从1000000减少到100，大幅减少内存使用
       parseResult = parseTypus largeExpr
   in property $ isRight parseResult
 

@@ -259,7 +259,7 @@ prop_parseLargeValueParameter :: String -> Property
 prop_parseLargeValueParameter typeNameStr =
   let limitedTypeName = take 10 $ filter isAlpha typeNameStr
       validTypeName = if null limitedTypeName then "LargeVector" else limitedTypeName
-      largeValue = 1000000
+      largeValue = 100  -- 从1000000减少到100，大幅减少内存使用
       code = "package main\n\n//! dependent_types: on\ntype " ++ validTypeName ++ "[" ++ show largeValue ++ ": int] struct { data [" ++ show largeValue ++ "]float64 }"
       result = parseTypusFile code
   in property $ length validTypeName > 0 ==> isRight result

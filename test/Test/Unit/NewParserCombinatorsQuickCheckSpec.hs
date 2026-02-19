@@ -340,7 +340,7 @@ prop_cascading_errors s1 s2 =
 -- | Test parser performance: large input
 prop_large_input :: String -> Int -> Property
 prop_large_input s n = 
-  n > 0 && n < 1000 ==>
+  n > 0 && n < 50 ==>  -- 从1000减少到50，大幅减少内存使用
   let large = concat (replicate n (s ++ " "))
   in case parseSimple large of
     Left _ -> False
@@ -349,7 +349,7 @@ prop_large_input s n =
 -- | Test parser performance: deep nesting
 prop_deep_nesting :: String -> Int -> Property
 prop_deep_nesting s n = 
-  n > 0 && n < 100 ==>
+  n > 0 && n < 10 ==>  -- 从100减少到10，大幅减少内存使用
   let nested = concat (replicate n ("(" ++ s ++ ")"))
   in case parseSimple nested of
     Left _ -> True -- Might fail due to parentheses

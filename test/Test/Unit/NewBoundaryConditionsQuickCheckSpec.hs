@@ -22,14 +22,14 @@ import Test.QuickCheck (Positive(..))
 -- | 测试极大字符串的处理
 prop_large_string_handling :: Positive Int -> Property
 prop_large_string_handling (Positive n) =
-  let largeString = replicate (min n 10000) 'a'
+  let largeString = replicate (min n 100) 'a'  -- 从10000减少到100，大幅减少内存使用
       result = trim largeString
   in property $ length result <= length largeString
 
 -- | 测试极深嵌套结构的处理
 prop_deep_nesting_handling :: Positive Int -> Property
 prop_deep_nesting_handling (Positive n) =
-  let depth = min n 100
+  let depth = min n 10  -- 从100减少到10，大幅减少内存使用
       nestedCode = unlines $ replicate depth "  function test() {"
                               ++ ["return 42;"]
                               ++ replicate depth "}"

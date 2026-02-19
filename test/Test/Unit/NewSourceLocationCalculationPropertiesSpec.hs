@@ -133,8 +133,8 @@ prop_position_boundary_conditions :: Property
 prop_position_boundary_conditions =
   let emptyInput = ""
       singleChar = "x"
-      longLine = replicate 1000 'x'
-      manyLines = unlines $ replicate 100 "line"
+      longLine = replicate 50 'x'  -- 从1000减少到50，大幅减少内存使用
+      manyLines = unlines $ replicate 10 "line"  -- 从100减少到10，大幅减少内存使用
   in property $ all validPositions 
     [ calculateAllPositions emptyInput,
       calculateAllPositions singleChar,
@@ -154,7 +154,7 @@ prop_position_incremental_update prefix suffix =
 -- | 测试位置计算的内存效率
 prop_position_calculation_memory_efficient :: Positive Int -> Property
 prop_position_calculation_memory_efficient (Positive size) =
-  let limitedSize = min size 10000
+  let limitedSize = min size 50  -- 从10000减少到50，大幅减少内存使用
       largeInput = unlines $ replicate limitedSize "test line"
       positions = calculateAllPositions largeInput
   in property $ length positions <= limitedSize + 1

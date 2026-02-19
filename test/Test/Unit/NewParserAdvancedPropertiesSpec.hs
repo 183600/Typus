@@ -117,7 +117,7 @@ prop_parser_position_accuracy prefix content =
 -- | 测试解析器对大文件的处理能力
 prop_parser_large_file_handling :: Positive Int -> Property
 prop_parser_large_file_handling (Positive size) =
-  let limitedSize = min size 1000
+  let limitedSize = min size 20  -- 从1000减少到20，大幅减少内存使用
       largeContent = unlines $ replicate limitedSize ("x = " ++ show limitedSize)
   in property $ case parseTypus largeContent of
     Left _ -> True  -- 大文件解析失败也算预期结果

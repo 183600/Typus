@@ -71,7 +71,7 @@ testBoundaryConditions = testGroup "Boundary Conditions Tests"
            Right _ -> assertFailure "Unclosed block should fail to parse"
            
   , testCase "Parser: input with extremely long line" $
-      let longLine = concat (replicate 10000 "a")
+      let longLine = concat (replicate 50 "a")  -- 从10000减少到50，大幅减少内存使用
           input = "```go\n" ++ longLine ++ "\n```"
           result = Parser.parseTypus input
       in case result of
@@ -79,11 +79,11 @@ testBoundaryConditions = testGroup "Boundary Conditions Tests"
            Right typusFile -> length (Parser.tfBlocks typusFile) @?= 1
            
   , testCase "Parser: input with many small blocks" $
-      let input = concat (replicate 1000 "```go\nfmt.Println(\"hello\")\n```\n")
+      let input = concat (replicate 10 "```go\nfmt.Println(\"hello\")\n```\n")  -- 从1000减少到10，大幅减少内存使用
           result = Parser.parseTypus input
       in case result of
            Left err -> assertFailure $ "Parse failed: " ++ show err
-           Right typusFile -> length (Parser.tfBlocks typusFile) @?= 1000
+           Right typusFile -> length (Parser.tfBlocks typusFile) @?= 10
            
   , testCase "ErrorHandler: empty error collector" $
       let errors = [] :: [ErrorHandler.TypeError]

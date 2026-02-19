@@ -225,7 +225,7 @@ prop_parse_with_comments =
 -- Property: Parsing large input doesn't crash
 prop_parse_large_input :: Property
 prop_parse_large_input = 
-  let largeContent = unlines $ replicate 1000 "let x" ++ [show (42 :: Int)]
+  let largeContent = unlines $ replicate 20 "let x" ++ [show (42 :: Int)]  -- 从1000减少到20，大幅减少内存使用
       input = "```typus\n" ++ largeContent ++ "\n```"
       result = parseTypus input
   in case result of

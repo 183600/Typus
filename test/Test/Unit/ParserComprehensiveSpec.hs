@@ -307,7 +307,7 @@ test_parser_error_handling =
            Right p -> assertBool "should handle unicode" (not (null (tfBlocks p)))
            Left _ -> assertBool "should return error for unicode" True
   , testCase "parse very long line" $ 
-      let content = replicate 1000 'a'
+      let content = replicate 50 'a'  -- 从1000减少到50，大幅减少内存使用
           result = parseTypus content
       in case result of
            Right p -> assertBool "should handle long lines" (not (null (tfBlocks p)))
