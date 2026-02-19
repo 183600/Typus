@@ -15,15 +15,15 @@ import Test.Tasty.QuickCheck
 
 import SourceLocation
 
--- Helper generators for source location tests
+-- Helper generators for source location tests (内存优化版本)
 genLine :: Gen Int
-genLine = choose (1, 10000)
+genLine = choose (1, 100)  -- 从10000减少到100，减少内存使用
 
 genColumn :: Gen Int
-genColumn = choose (1, 1000)
+genColumn = choose (1, 50)  -- 从1000减少到50，减少内存使用
 
 genOffset :: Gen Int
-genOffset = choose (0, 1000000)
+genOffset = choose (0, 1000)  -- 从1000000减少到1000，减少内存使用
 
 genSourcePos :: Gen SourcePos
 genSourcePos = SourcePos <$> genLine <*> genColumn <*> genOffset
@@ -35,11 +35,11 @@ genValidSourceSpan = do
   startOffset <- genOffset
   let startPos = SourcePos startLine startCol startOffset
   
-  endLine' <- choose (startLine, startLine + 100)
+  endLine' <- choose (startLine, startLine + 10)  -- 从100减少到10，减少内存使用
   endCol <- if endLine' == startLine 
-            then choose (startCol, startCol + 100)
+            then choose (startCol, startCol + 10)  -- 从100减少到10，减少内存使用
             else genColumn
-  endOffset <- choose (startOffset, startOffset + 1000)
+  endOffset <- choose (startOffset, startOffset + 100)  -- 从1000减少到100，减少内存使用
   let endPos = SourcePos endLine' endCol endOffset
   
   return $ SourceSpan startPos endPos

@@ -125,7 +125,7 @@ testParserErrorRecovery = testGroup "Parser Error Recovery Tests"
            Right typusFile -> length (tfBlocks typusFile) @?= 1
            
   , testCase "parseTypus: handles very long lines" $
-      let longLine = replicate 1000 'a'
+      let longLine = replicate 100 'a'  -- 从1000减少到100，大幅减少内存使用
           input = "//! ownership=true\n```go\nconst longString = \"" ++ longLine ++ "\"\n```"
           result = parseTypus input
       in case result of

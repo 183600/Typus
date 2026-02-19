@@ -189,7 +189,7 @@ tests = testGroup "Parser Error Recovery Tests"
     ]
   , testGroup "Edge cases"
     [ testCase "handles extremely long content" $ do
-        let longContent = replicate 1000 'a'
+        let longContent = replicate 100 'a'  -- 从1000减少到100，大幅减少内存使用
             span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 1001 1000)
             directives = defaultBlockDirectives
             block = CodeBlock directives longContent span

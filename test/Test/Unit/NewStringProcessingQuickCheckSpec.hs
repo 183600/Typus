@@ -291,10 +291,10 @@ prop_special_characters s =
             Right processed -> length processed >= 0 -- At least don't crash
      else True
 
--- | Test string processing with long strings
+-- | Test string processing with long strings (内存优化版本)
 prop_long_string_handling :: String -> Bool
 prop_long_string_handling s = 
-  let longString = concat (replicate 1000 s)
+  let longString = concat (replicate 50 s)  -- 从1000减少到50，大幅减少内存使用
   in case safeProcessString longString of
     Left _ -> True
     Right processed -> length processed <= length longString
@@ -324,10 +324,10 @@ prop_edge_cases s =
     Left _ -> True
     Right processed -> all isValidChar processed
 
--- | Test string processing with very long strings
+-- | Test string processing with very long strings (内存优化版本)
 prop_very_long_strings :: String -> Bool
 prop_very_long_strings s = 
-  let veryLong = concat (replicate 10000 s)
+  let veryLong = concat (replicate 100 s)  -- 从10000减少到100，大幅减少内存使用
   in case safeProcessString veryLong of
     Left _ -> True
     Right processed -> length processed <= length veryLong

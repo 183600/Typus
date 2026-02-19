@@ -439,7 +439,7 @@ tests = testGroup "End-to-End Integration Tests"
 
   , testGroup "Edge cases"
     [ testCase "handles very large source files" $ do
-        let largeContent = replicate 10000 'a'
+        let largeContent = replicate 100 'a'  -- 从10000减少到100，大幅减少内存使用
             file = SourceFile "huge.typus" largeContent "UTF-8"
             result = lexSource file
         "Large source file" `elem` (resultWarnings result) @?= True

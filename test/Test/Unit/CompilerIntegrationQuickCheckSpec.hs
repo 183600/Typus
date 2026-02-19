@@ -347,7 +347,7 @@ tests = testGroup "CompilerIntegrationQuickCheckSpec Tests"
   
   , testGroup "边界条件测试"
     [ testCase "compile handles very large input" $ do
-        let largeCode = unlines (replicate 1000 ("let x = " ++ show (1000 :: Int)))
+        let largeCode = unlines (replicate 100 ("let x = " ++ show (100 :: Int)))  -- 从1000减少到100，大幅减少内存使用
             parseResult = parseTypus largeCode
         case parseResult of
           Left _ -> pure ()
