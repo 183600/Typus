@@ -204,7 +204,7 @@ while true; do
           iflow "修复这个具体的错误：$err
 上下文：项目使用 GHCRTS=\"-M2G -A16m\" stack test --flag \"*:fast\" --flag \"*:-production\" --ghc-options=\"-O0 -rtsopts\" --test-arguments=\"+RTS -M1024m -A16m -RTS\" --jobs=1 进行测试。
 除非该错误位于测试文件中（如 Spec.hs），否则只修改测试用例以外的代码。如果是在测试文件中，请修复测试代码。
-debug时可通过加日志和打断点，运行测试用例时要节省内存。think:high" --yolo || true
+debug时可通过加日志和打断点。think:high" --yolo || true
         fi
       done <<< "$error_logs"
     else
