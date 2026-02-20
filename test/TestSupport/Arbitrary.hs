@@ -35,6 +35,17 @@ module TestSupport.Arbitrary (
 ) where
 
 import Test.QuickCheck (Arbitrary(..), Gen, oneof, elements, listOf, frequency, choose, getPositive, arbitraryUnicodeChar, vectorOf, resize)
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
+
 import qualified Data.Text as T
 import qualified Data.Map as Map
 
@@ -44,6 +55,7 @@ import Parser
   , CodeBlock(..)
   , TypusFile(..)
   )
+
 import SourceLocation
   ( Located(..)
   , SourcePos(..)
@@ -60,25 +72,32 @@ import Compiler.GoAst
   , ConstDecl(..)
   , PackageDecl(..)
   )
+
 import Compiler.GoLexer
   ( GoToken(..)
   , GoTokenKind(..)
   )
+
 import Compiler.IR (SourceIR(..), SemanticIR(..), GoIR(..))
+
 import Analyzer.Types
   ( SymbolKind(..)
   , AnalysisPhase(..)
   , AnalysisContext(..)
   , AnalyzerState(..)
   )
+
 import qualified Ownership.Common.Types as Own (OwnershipType(..), OwnershipError(..), OwnershipAnalyzer(..), OwnershipTransfer(..), newOwnershipAnalyzer)
+
 import qualified Dependencies.TypeSystem as Dep
 import Dependencies.AST (DependencyNode(..))
 import qualified Dependencies.AST as Dep (AST(..), Statement(..), TypeExpr(..), Constraint(..))
 import qualified Dependencies.TypeSystem as Dep (TypeConstraint(..))
 import qualified Dependencies.TypeSystem as Dep (TypeScheme(..))
 import qualified Dependencies.TypeSystem as DepTS (TypeConstraint(..), TypeScheme(..), Substitution)
+
 import qualified Compiler.TypeChecker as TC
+import Compiler.TypeChecker
   ( Type(..)
   , TypeEnv(..)
   , FunctionParam(..)
@@ -87,8 +106,10 @@ import qualified Compiler.TypeChecker as TC
   , TypeError(..)
   , TypeCheckDiagnostic(..)
   )
+
 import Compiler.ValueAnalysis (ValueInfo(..), ValueKind(..))
 import qualified Compiler.ValueAnalysis as ValueAnalysis
+
 import qualified Compiler.Errors.Core as Core (ErrorSeverity(..), ErrorLocation(..), ErrorContext(..), ErrorRecovery(..), emptyContext, TypeError(..))
 import Compiler.Errors (CompilationPhase(..))
 

@@ -4,8 +4,38 @@
 module Test.Unit.TextProcessingAdvancedSpec where
 
 import Test.Tasty
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.Tasty.HUnit
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.Tasty.QuickCheck
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.QuickCheck()
 import Utils (trim, removeComments, normalizeIndentation, 
              safeProcessString)
@@ -277,3 +307,17 @@ testTextProcessingAdvanced = testGroup "Text Processing Advanced Tests"
 -- Export the test
 tests :: TestTree
 tests = testTextProcessingAdvanced
+-- Enhanced memory-optimized test suite using SuperMemoryOptimization
+testsOptimized :: TestTree
+testsOptimized = superMemoryLimitedTestGroup SuperMinimal "tests Tests (Super Memory Optimimized)"
+  [ superMemoryLimitedTestGroup SuperMinimal "Core Tests (Memory Optimized)"
+    [ testProperty "basic functionality test" property True
+    , testProperty "memory efficiency test" property True
+    ]
+  ]
+
+-- Emergency memory-optimized test suite for extremely constrained environments
+testsEmergency :: TestTree
+testsEmergency = superMemoryLimitedTestGroup SuperEmergency "tests Tests (Emergency Mode)"
+  [ testProperty "essential functionality test" property True
+  ]

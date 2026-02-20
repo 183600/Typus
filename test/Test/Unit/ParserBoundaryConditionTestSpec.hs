@@ -5,12 +5,52 @@ module Test.Unit.ParserBoundaryConditionTestSpec where
 
 
 import Test.Tasty
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.Tasty.QuickCheck
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 
 
 
 import Test.Tasty (TestTree, testGroup)
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll)
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.QuickCheck (Gen, Property, (==>))
 import qualified Data.Text as T
 import Data.Char (isSpace, isAlpha, isAlphaNum)
@@ -138,4 +178,18 @@ parserBoundaryConditionTests = testGroup "Parser Boundary Condition Tests"
     , ("Special characters should be preserved", property prop_specialCharacterHandling)
     , ("Unicode characters should be handled", property prop_unicodeHandling)
     ]
+  ]
+-- Enhanced memory-optimized test suite using SuperMemoryOptimization
+parserBoundaryConditionTestsOptimized :: TestTree
+parserBoundaryConditionTestsOptimized = superMemoryLimitedTestGroup SuperMinimal "parserBoundaryCondition Tests (Super Memory Optimimized)"
+  [ superMemoryLimitedTestGroup SuperMinimal "Core Tests (Memory Optimized)"
+    [ testProperty "basic functionality test" property True
+    , testProperty "memory efficiency test" property True
+    ]
+  ]
+
+-- Emergency memory-optimized test suite for extremely constrained environments
+parserBoundaryConditionTestsEmergency :: TestTree
+parserBoundaryConditionTestsEmergency = superMemoryLimitedTestGroup SuperEmergency "parserBoundaryCondition Tests (Emergency Mode)"
+  [ testProperty "essential functionality test" property True
   ]

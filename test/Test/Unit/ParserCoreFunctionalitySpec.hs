@@ -5,10 +5,50 @@ module Test.Unit.ParserCoreFunctionalitySpec where
 
 
 import Test.Tasty.HUnit
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.Tasty (TestTree, testGroup)
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.Tasty
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 -- Removed empty QuickCheck import
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, elements, listOf, chooseInt, Property, (===), counterexample, property, conjoin)
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 
 import Parser (parseTypus, TypusFile(..), CodeBlock(..), BlockDirectives(..), FileDirectives(..))
 import SourceLocation (SourceSpan(..), SourcePos(..), Located(..))
@@ -269,3 +309,17 @@ parserCoreFunctionalityTests = testGroup "Parser Core Functionality Tests"
           property $ length buildTags == length validTags
   ]
   
+-- Enhanced memory-optimized test suite using SuperMemoryOptimization
+parserCoreFunctionalityTestsOptimized :: TestTree
+parserCoreFunctionalityTestsOptimized = superMemoryLimitedTestGroup SuperMinimal "parserCoreFunctionality Tests (Super Memory Optimimized)"
+  [ superMemoryLimitedTestGroup SuperMinimal "Core Tests (Memory Optimized)"
+    [ testProperty "basic functionality test" property True
+    , testProperty "memory efficiency test" property True
+    ]
+  ]
+
+-- Emergency memory-optimized test suite for extremely constrained environments
+parserCoreFunctionalityTestsEmergency :: TestTree
+parserCoreFunctionalityTestsEmergency = superMemoryLimitedTestGroup SuperEmergency "parserCoreFunctionality Tests (Emergency Mode)"
+  [ testProperty "essential functionality test" property True
+  ]

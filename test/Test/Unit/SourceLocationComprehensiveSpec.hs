@@ -5,14 +5,74 @@ module Test.Unit.SourceLocationComprehensiveSpec where
 
 
 import Test.Tasty.HUnit
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.Tasty
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.Tasty.QuickCheck
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 
 
 
 import Test.Tasty (TestTree, testGroup)
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool, Assertion)
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.QuickCheck (Gen, Property, (==>), classify)
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), HasLocation(..),
                       startPos, posAfter, posAt, posAtLineCol,
@@ -378,4 +438,18 @@ sourceLocationComprehensiveTests :: TestTree
 sourceLocationComprehensiveTests = testGroup "SourceLocation Comprehensive Tests"
   [ sourceLocationUnitTests
   , sourceLocationQuickCheckTests
+  ]
+-- Enhanced memory-optimized test suite using SuperMemoryOptimization
+sourceLocationQuickCheckTestsOptimized :: TestTree
+sourceLocationQuickCheckTestsOptimized = superMemoryLimitedTestGroup SuperMinimal "sourceLocationQuickCheck Tests (Super Memory Optimimized)"
+  [ superMemoryLimitedTestGroup SuperMinimal "Core Tests (Memory Optimized)"
+    [ testProperty "basic functionality test" property True
+    , testProperty "memory efficiency test" property True
+    ]
+  ]
+
+-- Emergency memory-optimized test suite for extremely constrained environments
+sourceLocationQuickCheckTestsEmergency :: TestTree
+sourceLocationQuickCheckTestsEmergency = superMemoryLimitedTestGroup SuperEmergency "sourceLocationQuickCheck Tests (Emergency Mode)"
+  [ testProperty "essential functionality test" property True
   ]

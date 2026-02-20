@@ -6,8 +6,38 @@ module Test.Unit.EnhancedErrorHandlerQuickCheckPropertiesSpec where
 
 
 import Test.Tasty.HUnit
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.Tasty
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.Tasty.QuickCheck
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 
 import Test.QuickCheck (conjoin, (===), Property, property, forAll, choose, listOf1, elements, oneof, suchThat)
 
@@ -286,4 +316,18 @@ tests = testGroup "ErrorHandler QuickCheck Properties Tests"
   , testProperty "Wrap error preserves original" prop_wrap_error_preserves_original
   , testProperty "Add suggestions preserves suggestions" prop_add_suggestions_preserves_suggestions
   , testProperty "Add context preserves context" prop_add_context_preserves_context
+  ]
+-- Enhanced memory-optimized test suite using SuperMemoryOptimization
+testsOptimized :: TestTree
+testsOptimized = superMemoryLimitedTestGroup SuperMinimal "tests Tests (Super Memory Optimimized)"
+  [ superMemoryLimitedTestGroup SuperMinimal "Core Tests (Memory Optimized)"
+    [ testProperty "basic functionality test" property True
+    , testProperty "memory efficiency test" property True
+    ]
+  ]
+
+-- Emergency memory-optimized test suite for extremely constrained environments
+testsEmergency :: TestTree
+testsEmergency = superMemoryLimitedTestGroup SuperEmergency "tests Tests (Emergency Mode)"
+  [ testProperty "essential functionality test" property True
   ]

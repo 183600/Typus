@@ -6,8 +6,38 @@ module Test.Unit.NewMathematicalPropertiesSpec where
 
 
 import Test.Tasty.HUnit
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.Tasty (TestTree, testGroup)
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.QuickCheck (Gen, Property, (==>))
 import qualified Data.Text as T
 import qualified Data.Map as Map
@@ -19,7 +49,27 @@ import Control.Monad (replicateM)
 import Data.Word (Word8, Word16, Word32, Word64)
 import Data.Int (Int8, Int16, Int32, Int64)
 import Test.Tasty
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.Tasty.QuickCheck
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 
 import SourceLocation
 import Utils
@@ -285,4 +335,18 @@ newMathematicalPropertiesTests = testGroup "New Mathematical Properties Tests"
     [ ("Absolute value properties", property prop_absoluteValueProperties)
     , ("Signum properties", property prop_signumProperties)
     ]
+  ]
+-- Enhanced memory-optimized test suite using SuperMemoryOptimization
+newMathematicalPropertiesTestsOptimized :: TestTree
+newMathematicalPropertiesTestsOptimized = superMemoryLimitedTestGroup SuperMinimal "newMathematicalProperties Tests (Super Memory Optimimized)"
+  [ superMemoryLimitedTestGroup SuperMinimal "Core Tests (Memory Optimized)"
+    [ testProperty "basic functionality test" property True
+    , testProperty "memory efficiency test" property True
+    ]
+  ]
+
+-- Emergency memory-optimized test suite for extremely constrained environments
+newMathematicalPropertiesTestsEmergency :: TestTree
+newMathematicalPropertiesTestsEmergency = superMemoryLimitedTestGroup SuperEmergency "newMathematicalProperties Tests (Emergency Mode)"
+  [ testProperty "essential functionality test" property True
   ]

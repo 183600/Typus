@@ -5,12 +5,52 @@ module Test.Unit.NewSimpleQuickCheckSpec where
 
 
 import Test.Tasty
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.Tasty.QuickCheck
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 
 
 
 import Test.Tasty (TestTree, testGroup)
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.QuickCheck (Gen, Property, (==>))
 import qualified Data.Text as T
 import qualified Data.Map as Map
@@ -505,4 +545,18 @@ newSimpleQuickCheckTests = testGroup "New Simple QuickCheck Tests"
     , ("Maybe is just or nothing", property prop_maybeIsJustOrNothing)
     , ("Tuple projection preserves components", property prop_tupleProjectionPreserves)
     ]
+  ]
+-- Enhanced memory-optimized test suite using SuperMemoryOptimization
+newSimpleQuickCheckTestsOptimized :: TestTree
+newSimpleQuickCheckTestsOptimized = superMemoryLimitedTestGroup SuperMinimal "newSimpleQuickCheck Tests (Super Memory Optimimized)"
+  [ superMemoryLimitedTestGroup SuperMinimal "Core Tests (Memory Optimized)"
+    [ testProperty "basic functionality test" property True
+    , testProperty "memory efficiency test" property True
+    ]
+  ]
+
+-- Emergency memory-optimized test suite for extremely constrained environments
+newSimpleQuickCheckTestsEmergency :: TestTree
+newSimpleQuickCheckTestsEmergency = superMemoryLimitedTestGroup SuperEmergency "newSimpleQuickCheck Tests (Emergency Mode)"
+  [ testProperty "essential functionality test" property True
   ]

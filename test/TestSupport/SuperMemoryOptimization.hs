@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module TestSupport.SuperMemoryOptimization
   ( withSuperMemoryLimits
   , withSuperEmergencyMemoryLimits
@@ -30,6 +31,7 @@ import Test.Tasty.QuickCheck (QuickCheckMaxSize(..), QuickCheckTests(..), QuickC
 import System.Mem (performGC)
 import Control.Monad (replicateM_, when)
 import Control.Concurrent (threadDelay)
+import Control.Exception (SomeException, try)
 import System.Process (readProcess)
 import Data.List (isPrefixOf, isInfixOf)
 import Text.Read (readMaybe)
@@ -222,7 +224,7 @@ createSuperOptimizedTestSuite level name tests =
         SuperLow -> 5
         SuperModerate -> 6) tests
       
-      optimizedTests = map (withSuperMemoryMonitoring level) essentialTests
+      optimizedTests = zipWith (\i test -> withSuperMemoryMonitoring level ("Test " ++ show i) [test]) [1..] essentialTests
       
   in superMemoryLimitedTestGroup level name optimizedTests
 

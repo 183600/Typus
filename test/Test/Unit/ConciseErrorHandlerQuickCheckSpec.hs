@@ -7,7 +7,27 @@ module Test.Unit.ConciseErrorHandlerQuickCheckSpec where
 
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), choose, elements, vectorOf)
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
+import Test.Tasty.QuickCheck (testProperties, testProperty, property, Arbitrary(..), choose, elements, vectorOf)
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import ErrorHandler
   ( ErrorHandler
   , handleError
@@ -296,3 +316,17 @@ renderErrors_properties (LimitedErrorHandler errs) =
   in if null errors
      then rendered == "" || rendered == "\n"  -- No errors should produce empty or newline-only output
      else not (null rendered)  -- At least some output for errors, regardless of content
+-- Enhanced memory-optimized test suite using SuperMemoryOptimization
+testsOptimized :: TestTree
+testsOptimized = superMemoryLimitedTestGroup SuperMinimal "tests Tests (Super Memory Optimimized)"
+  [ superMemoryLimitedTestGroup SuperMinimal "Core Tests (Memory Optimized)"
+    [ testProperty "basic functionality test" sortBySeverity_properties
+    , testProperty "memory efficiency test" renderErrors_properties
+    ]
+  ]
+
+-- Emergency memory-optimized test suite for extremely constrained environments
+testsEmergency :: TestTree
+testsEmergency = superMemoryLimitedTestGroup SuperEmergency "tests Tests (Emergency Mode)"
+  [ testProperty "essential functionality test" sortBySeverity_properties
+  ]

@@ -6,10 +6,50 @@ module Test.Unit.UtilsComprehensiveSpec where
 
 
 import Test.Tasty.HUnit
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.Tasty (TestTree, testGroup)
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.Tasty
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 -- Removed empty QuickCheck import
-import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
+import Test.Tasty.QuickCheck (testProperties, testProperty, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.QuickCheck (Gen, Property, (==>), classify)
 import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed,
              removeLineComments, removeComments, normalizeIndentation, 
@@ -249,4 +289,18 @@ utilsComprehensiveTests :: TestTree
 utilsComprehensiveTests = testGroup "Utils Comprehensive Tests"
   [ utilsUnitTests
   , utilsQuickCheckTests
+  ]
+-- Enhanced memory-optimized test suite using SuperMemoryOptimization
+utilsQuickCheckTestsOptimized :: TestTree
+utilsQuickCheckTestsOptimized = superMemoryLimitedTestGroup SuperMinimal "utilsQuickCheck Tests (Super Memory Optimimized)"
+  [ superMemoryLimitedTestGroup SuperMinimal "Core Tests (Memory Optimized)"
+    [ testProperty "basic functionality test" prop_trim_removes_whitespace
+    , testProperty "memory efficiency test" prop_trim_idempotent
+    ]
+  ]
+
+-- Emergency memory-optimized test suite for extremely constrained environments
+utilsQuickCheckTestsEmergency :: TestTree
+utilsQuickCheckTestsEmergency = superMemoryLimitedTestGroup SuperEmergency "utilsQuickCheck Tests (Emergency Mode)"
+  [ testProperty "essential functionality test" prop_splitBy_preserves_empty
   ]

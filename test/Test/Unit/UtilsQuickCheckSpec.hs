@@ -30,6 +30,16 @@ import TestSupport.MemoryOptimizedQuickCheck
   , memoryOptimizedListProperty
   )
 
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
+
 -- Helper generators for Utils tests (memory optimized versions)
 genSmallString :: Gen String
 genSmallString = do
@@ -367,7 +377,85 @@ prop_isValidChar_common_whitespace =
   all isValidChar [' ', '\t', '\n', '\r']
 
 utilsQuickCheckTests :: TestTree
-utilsQuickCheckTests = applyQuickCheckMemoryConfig memoryConfig $ testGroup "Utils QuickCheck Tests (Memory Optimized)"
+-- Enhanced memory-optimized test suite using SuperMemoryOptimization
+utilsQuickCheckTests :: TestTree
+utilsQuickCheckTests = superMemoryLimitedTestGroup SuperMinimal "Utils QuickCheck Tests (Super Memory Optimized)"
+  [ testProperties "Trim Functions"
+    [ ("trim removes leading and trailing spaces", property prop_trim_removes_leading_trailing_spaces)
+    , ("trim preserves non-space characters", property prop_trim_preserves_non_space_characters)
+    , ("trim of empty string is empty", property prop_trim_empty_string)
+    , ("trim of all spaces is empty", property prop_trim_all_spaces)
+    , ("trim is idempotent", property prop_trim_idempotent)
+    , ("trim preserves order of non-space characters", property prop_trim_preserves_order)
+    ]
+  , testProperties "Split Functions"
+    [ ("splitBy with empty string returns empty list", property prop_splitBy_empty_string)
+    , ("splitBy with single delimiter returns two empty strings", property prop_splitBy_single_delimiter)
+    , ("splitBy preserves total content when concatenated", property prop_splitBy_preserves_content)
+    , ("splitByCollapsed removes empty parts", property prop_splitByCollapsed_removes_empty)
+    , ("splitByComma is equivalent to splitBy ','", property prop_splitByComma_equals_splitBy)
+    , ("splitByCommaCollapsed removes empty parts", property prop_splitByCommaCollapsed_removes_empty)
+    , ("splitBy with delimiter not in string returns singleton list", property prop_splitBy_delimiter_not_in_string)
+    , ("splitBy with all delimiters returns n+1 empty strings", property prop_splitBy_all_delimiters)
+    , ("splitBy preserves order of parts", property prop_splitBy_preserves_order)
+    , ("splitByCollapsed with no delimiters returns singleton or empty", property prop_splitByCollapsed_no_delimiters)
+    ]
+  , testProperties "Comment Removal Functions"
+    [ ("removeLineComments removes // comments", property prop_removeLineComments_removes_comments)
+    , ("removeLineComments preserves string literals", property prop_removeLineComments_preserves_string_literals)
+    , ("removeLineComments preserves character literals", property prop_removeLineComments_preserves_char_literals)
+    , ("removeComments removes both // and /* */ comments", property prop_removeComments_removes_both_types)
+    , ("removeComments preserves string literals with comment markers", property prop_removeComments_preserves_string_with_comment_markers)
+    , ("removeLineComments preserves newlines", property prop_removeLineComments_preserves_newlines)
+    , ("removeLineComments handles empty lines", property prop_removeLineComments_handles_empty_lines)
+    ]
+  , testProperties "Indentation Functions"
+    [ ("normalizeIndentation preserves relative indentation", property prop_normalizeIndentation_preserves_relative)
+    , ("normalizeIndentation removes common prefix", property prop_normalizeIndentation_removes_common_prefix)
+    , ("forceSingleTabIndentation adds tab to non-empty lines", property prop_forceSingleTabIndentation_adds_tab)
+    , ("fixIndentation is equivalent to normalizeIndentation", property prop_fixIndentation_equals_normalize)
+    , ("normalizeIndentation of single line is identity", property prop_normalizeIndentation_single_line)
+    , ("normalizeIndentation preserves line count", property prop_normalizeIndentation_preserves_line_count)
+    , ("forceSingleTabIndentation trims content", property prop_forceSingleTabIndentation_trims_content)
+    ]
+  , testProperties "String Processing Functions"
+    [ ("breakOn with empty pattern returns (\"\", s)", property prop_breakOn_empty_pattern)
+    , ("breakOn with pattern not in string returns (s, \"\")", property prop_breakOn_pattern_not_in_string)
+    , ("breakOn with pattern in string splits correctly", property prop_breakOn_pattern_in_string)
+    , ("breakOn is consistent with isInfixOf", property prop_breakOn_consistent_with_isInfixOf)
+    , ("safeProcessString filters control characters", property prop_safeProcessString_filters_control)
+    , ("safeProcessString preserves valid characters", property prop_safeProcessString_preserves_valid)
+    , ("safeProcessString handles empty string", property prop_safeProcessString_empty_string)
+    ]
+  , testProperties "Character Validation"
+    [ ("isValidChar returns True for printable characters", property prop_isValidChar_printable)
+    , ("isValidChar returns False for control characters", property prop_isValidChar_control)
+    , ("isValidChar for common whitespace characters", property prop_isValidChar_common_whitespace)
+    ]
+  ]
+
+-- Emergency memory-optimized test suite for extremely constrained environments
+utilsQuickCheckTestsEmergency :: TestTree
+utilsQuickCheckTestsEmergency = superMemoryLimitedTestGroup SuperEmergency "Utils QuickCheck Tests (Emergency Mode)"
+  [ testProperties "Core Trim Functions"
+    [ ("trim removes leading and trailing spaces", property prop_trim_removes_leading_trailing_spaces)
+    , ("trim preserves non-space characters", property prop_trim_preserves_non_space_characters)
+    , ("trim of empty string is empty", property prop_trim_empty_string)
+    ]
+  , testProperties "Core Split Functions"
+    [ ("splitBy with empty string returns empty list", property prop_splitBy_empty_string)
+    , ("splitBy preserves total content when concatenated", property prop_splitBy_preserves_content)
+    , ("splitByComma is equivalent to splitBy ','", property prop_splitByComma_equals_splitBy)
+    ]
+  , testProperties "Core String Processing"
+    [ ("breakOn with empty pattern returns (\"\", s)", property prop_breakOn_empty_pattern)
+    , ("safeProcessString handles empty string", property prop_safeProcessString_empty_string)
+    ]
+  ]
+
+-- Legacy compatibility version
+utilsQuickCheckTestsLegacy :: TestTree
+utilsQuickCheckTestsLegacy = applyQuickCheckMemoryConfig memoryConfig $ testGroup "Utils QuickCheck Tests (Legacy Memory Optimized)"
   [ testProperties "Trim Functions"
     [ ("trim removes leading and trailing spaces", property prop_trim_removes_leading_trailing_spaces)
     , ("trim preserves non-space characters", property prop_trim_preserves_non_space_characters)

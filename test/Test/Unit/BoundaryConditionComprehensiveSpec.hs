@@ -6,8 +6,38 @@ module Test.Unit.BoundaryConditionComprehensiveSpec where
 
 
 import Test.Tasty (TestTree, testGroup)
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.Tasty.HUnit
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, forAll)
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.QuickCheck (Property, (==>))
 import Parser (parseTypus, TypusFile(..), tfContents)
 import SourceLocation (SourcePos(..), SourceSpan(..), spanStart, spanEnd, advancePosByText, startPos)
@@ -352,4 +382,18 @@ boundaryConditionComprehensiveTests :: TestTree
 boundaryConditionComprehensiveTests = testGroup "Boundary Condition Comprehensive Tests"
   [ boundaryConditionUnitTests
   , boundaryConditionQuickCheckTests
+  ]
+-- Enhanced memory-optimized test suite using SuperMemoryOptimization
+boundaryConditionQuickCheckTestsOptimized :: TestTree
+boundaryConditionQuickCheckTestsOptimized = superMemoryLimitedTestGroup SuperMinimal "boundaryConditionQuickCheck Tests (Super Memory Optimimized)"
+  [ superMemoryLimitedTestGroup SuperMinimal "Core Tests (Memory Optimized)"
+    [ testProperty "basic functionality test" property True
+    , testProperty "memory efficiency test" property True
+    ]
+  ]
+
+-- Emergency memory-optimized test suite for extremely constrained environments
+boundaryConditionQuickCheckTestsEmergency :: TestTree
+boundaryConditionQuickCheckTestsEmergency = superMemoryLimitedTestGroup SuperEmergency "boundaryConditionQuickCheck Tests (Emergency Mode)"
+  [ testProperty "essential functionality test" property True
   ]

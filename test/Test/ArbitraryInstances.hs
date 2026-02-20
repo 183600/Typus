@@ -3,6 +3,16 @@
 module Test.ArbitraryInstances where
 
 import Test.Tasty.QuickCheck (Arbitrary(..), oneof, elements, choose, listOf, resize)
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import qualified Data.Text as T
 
 import Compiler (CompilerError(..), CompilationPhase(..))

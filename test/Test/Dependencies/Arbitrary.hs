@@ -6,8 +6,38 @@ module Test.Dependencies.Arbitrary () where
 
 import Test.QuickCheck (Arbitrary(..), oneof, elements, listOf1, choose)
 
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
+
 import Dependencies.AST (AST(..), Statement(..), TypeExpr(..), Constraint(..))
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Dependencies.TypeSystem (TypeVar(..), TypeConstraint(..))
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 
 instance Arbitrary TypeVar where
   arbitrary = elements [TVCon "int", TVCon "string", TVCon "bool", TVVar "T"]

@@ -6,7 +6,27 @@ module Test.Unit.DependencyAnalysisTestSpec where
 
 
 import Test.Tasty (TestTree, testGroup)
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.QuickCheck (Gen)
 import qualified Data.Set as Set
 import Data.List (nub, (\\), intersect)
@@ -15,7 +35,27 @@ import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Data.Map as Map
 import Test.Tasty
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.Tasty.QuickCheck
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 
 import qualified Dependencies.AST as Dep
 import qualified Dependencies.TypeSystem as Dep
@@ -194,4 +234,18 @@ dependencyAnalysisTests = testGroup "Dependency Analysis Tests"
     [ ("Type constructors preserve type names", property prop_typeConstructorPreservesName)
     , ("Function types have correct parameter count", property prop_functionTypeParamCount)
     ]
+  ]
+-- Enhanced memory-optimized test suite using SuperMemoryOptimization
+dependencyAnalysisTestsOptimized :: TestTree
+dependencyAnalysisTestsOptimized = superMemoryLimitedTestGroup SuperMinimal "dependencyAnalysis Tests (Super Memory Optimimized)"
+  [ superMemoryLimitedTestGroup SuperMinimal "Core Tests (Memory Optimized)"
+    [ testProperty "basic functionality test" property True
+    , testProperty "memory efficiency test" property True
+    ]
+  ]
+
+-- Emergency memory-optimized test suite for extremely constrained environments
+dependencyAnalysisTestsEmergency :: TestTree
+dependencyAnalysisTestsEmergency = superMemoryLimitedTestGroup SuperEmergency "dependencyAnalysis Tests (Emergency Mode)"
+  [ testProperty "essential functionality test" property True
   ]

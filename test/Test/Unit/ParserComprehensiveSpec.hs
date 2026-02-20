@@ -8,7 +8,15 @@ import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
 
-
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool, assertFailure, Assertion)
@@ -371,4 +379,43 @@ parserComprehensiveTests :: TestTree
 parserComprehensiveTests = testGroup "Parser Comprehensive Tests"
   [ parserUnitTests
   , parserQuickCheckTests
+  ]
+
+-- Enhanced memory-optimized test suite using SuperMemoryOptimization
+parserComprehensiveTestsOptimized :: TestTree
+parserComprehensiveTestsOptimized = superMemoryLimitedTestGroup SuperMinimal "Parser Comprehensive Tests (Super Memory Optimimized)"
+  [ superMemoryLimitedTestGroup SuperMinimal "Unit Tests (Memory Optimized)"
+    [ testGroup "Edge Cases" test_parser_edge_cases
+    , testGroup "Error Handling" test_parser_error_handling
+    , testGroup "Integration" test_parser_integration
+    ]
+  , superMemoryLimitedTestGroup SuperMinimal "QuickCheck Properties (Memory Optimized)"
+    [ testProperties "Basic Parsing"
+        [ ("parse empty content", property prop_parse_empty_content)
+        , ("parse simple blocks", property prop_parse_simple_blocks)
+        , ("parse preserves structure", property prop_parse_preserves_structure)
+        ]
+    , testProperties "Directive Handling"
+        [ ("default directives", property prop_parse_default_directives)
+        , ("file directives", property prop_parse_file_directives)
+        ]
+    , testProperties "Robustness"
+        [ ("whitespace handling", property prop_parse_whitespace_handling)
+        , ("deterministic parsing", property prop_parse_deterministic)
+        ]
+    ]
+  ]
+
+-- Emergency memory-optimized test suite for extremely constrained environments
+parserComprehensiveTestsEmergency :: TestTree
+parserComprehensiveTestsEmergency = superMemoryLimitedTestGroup SuperEmergency "Parser Comprehensive Tests (Emergency Mode)"
+  [ superMemoryLimitedTestGroup SuperEmergency "Core Tests (Emergency)"
+    [ testProperties "Basic Parsing"
+        [ ("parse empty content", property prop_parse_empty_content)
+        , ("parse simple blocks", property prop_parse_simple_blocks)
+        ]
+    , testProperties "Directive Handling"
+        [ ("default directives", property prop_parse_default_directives)
+        ]
+    ]
   ]

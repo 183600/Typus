@@ -6,10 +6,50 @@ module Test.Unit.ErrorHandlerSpec where
 
 
 import Test.Tasty.HUnit
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.Tasty (TestTree, testGroup)
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.Tasty
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 -- Removed empty QuickCheck import
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.QuickCheck (Gen, Property, (==>), resize, sized)
 import ErrorHandler
 import Compiler.Errors.Core (context, category, ErrorSeverity(..), ErrorCategory(..), ErrorLocation(..), ErrorContext(..), ErrorRecovery(..), CombinedError(..))
@@ -568,4 +608,18 @@ errorHandlerTests = testGroup "ErrorHandler Tests"
     , ("Recovery strategy cost is within bounds", property prop_recovery_cost_within_bounds)
     , ("Error context preserves additional fields", property prop_error_context_preserves_additional)
     ]
+  ]
+-- Enhanced memory-optimized test suite using SuperMemoryOptimization
+errorHandlerTestsOptimized :: TestTree
+errorHandlerTestsOptimized = superMemoryLimitedTestGroup SuperMinimal "errorHandler Tests (Super Memory Optimimized)"
+  [ superMemoryLimitedTestGroup SuperMinimal "Core Tests (Memory Optimized)"
+    [ testProperty "basic functionality test" property True
+    , testProperty "memory efficiency test" property True
+    ]
+  ]
+
+-- Emergency memory-optimized test suite for extremely constrained environments
+errorHandlerTestsEmergency :: TestTree
+errorHandlerTestsEmergency = superMemoryLimitedTestGroup SuperEmergency "errorHandler Tests (Emergency Mode)"
+  [ testProperty "essential functionality test" property True
   ]

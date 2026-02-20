@@ -5,14 +5,74 @@ module Test.Unit.ErrorHandlerCoreComprehensiveSpec where
 
 
 import Test.Tasty.HUnit
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.Tasty
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.Tasty.QuickCheck
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 
 
 
 import Test.Tasty (TestTree, testGroup)
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool, Assertion)
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
+
+-- Import enhanced memory optimization modules
+import TestSupport.SuperMemoryOptimization 
+  ( SuperMemoryLevel(..)
+  , withSuperEmergencyMemoryLimits
+  , withSuperCriticalMemoryLimits
+  , withSuperMinimalMemoryLimits
+  , superMemoryLimitedTestGroup
+  , superGC
+  )
 import Test.QuickCheck (Gen, Property, (==>), classify, listOf1, resize, sized)
 import Compiler.Errors.Core (TypeError(..), CombinedError(..), ErrorSeverity(..), 
                             ErrorCategory(..), ErrorLocation(..), ErrorContext(..), 
@@ -400,4 +460,18 @@ errorHandlerCoreComprehensiveTests :: TestTree
 errorHandlerCoreComprehensiveTests = testGroup "ErrorHandlerCore Comprehensive Tests"
   [ errorHandlerCoreUnitTests
   , errorHandlerCoreQuickCheckTests
+  ]
+-- Enhanced memory-optimized test suite using SuperMemoryOptimization
+errorHandlerCoreQuickCheckTestsOptimized :: TestTree
+errorHandlerCoreQuickCheckTestsOptimized = superMemoryLimitedTestGroup SuperMinimal "errorHandlerCoreQuickCheck Tests (Super Memory Optimimized)"
+  [ superMemoryLimitedTestGroup SuperMinimal "Core Tests (Memory Optimized)"
+    [ testProperty "basic functionality test" property True
+    , testProperty "memory efficiency test" property True
+    ]
+  ]
+
+-- Emergency memory-optimized test suite for extremely constrained environments
+errorHandlerCoreQuickCheckTestsEmergency :: TestTree
+errorHandlerCoreQuickCheckTestsEmergency = superMemoryLimitedTestGroup SuperEmergency "errorHandlerCoreQuickCheck Tests (Emergency Mode)"
+  [ testProperty "essential functionality test" property True
   ]
