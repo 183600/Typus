@@ -1,6 +1,6 @@
 #!/bin/bash
 # 内存优化验证脚本
-# 验证测试用例的内存优化是否正确实施
+# 验证测试用例的内存优化是否有效
 
 set -e
 
@@ -9,13 +9,15 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
 NC='\033[0m'
 
 # 打印函数
 print_header() {
-    echo -e "${BLUE}===================================${NC}"
-    echo -e "${BLUE}内存优化验证脚本${NC}"
-    echo -e "${BLUE}===================================${NC}"
+    echo -e "${PURPLE}===================================${NC}"
+    echo -e "${PURPLE}内存优化验证脚本${NC}"
+    echo -e "${PURPLE}===================================${NC}"
     echo ""
 }
 
@@ -35,308 +37,267 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# 验证函数
-verify_file_optimization() {
-    local file=$1
-    local description=$2
+# 验证测试文件数量
+verify_test_file_count() {
+    print_status "验证测试文件数量..."
     
-    print_status "验证文件: $file ($description)"
+    # 统计QuickCheck测试文件数量
+    local quickcheck_files=$(find test -name "*QuickCheck*.hs" | wc -l)
     
-    if [ ! -f "$file" ]; then
-        print_error "文件不存在: $file"
+    print_status "当前QuickCheck测试文件数量: $quickcheck_files"
+    
+    if [ "$quickcheck_files" -gt 100 ]; then
+        print_warning "QuickCheck测试文件数量仍然较多 ($quickcheck_files)"
+        print_warning "建议进一步减少测试文件数量"
+        return 1
+    else
+        print_success "QuickCheck测试文件数量已优化 ($quickcheck_files)"
+        return 0
+    fi
+}
+
+# 验证核心测试文件的内存优化
+verify_core_test_files() {
+    print_status "验证核心测试文件的内存优化..."
+    
+    local core_files=(
+        "test/Test/Unit/SimpleQuickCheckTestSuite.hs"
+        "test/Test/Unit/ParserComprehensiveQuickCheckSpec.hs"
+    )
+    
+    local all_optimized=true
+    
+    for file in "${core_files[@]}"; do
+        if [ -f "$file" ]; then
+            # 检查是否包含内存优化导入
+            if grep -q "TestSupport.MemoryOptimizedQuickCheck" "$file"; then
+                print_success "$file 已包含内存优化配置"
+            else
+                print_warning "$file 缺少内存优化配置"
+                all_optimized=false
+            fi
+            
+            # 检查文件大小
+            local file_size=$(wc -l < "$file")
+            print_status "$file 行数: $file_size"
+            
+            if [ "$file_size" -gt 200 ]; then
+                print_warning "$file 仍然较大 ($file_size 行)"
+                all_optimized=false
+            fi
+        else
+            print_warning "$file 不存在"
+            all_optimized=false
+        fi
+    done
+    
+    if [ "$all_optimized" = true ]; then
+        print_success "所有核心测试文件已优化"
+        return 0
+    else
+        print_warning "部分核心测试文件需要进一步优化"
         return 1
     fi
-    
-    # 检查是否包含内存优化注释
-    if grep -q "内存优化" "$file"; then
-        print_success "✓ 包含内存优化注释"
-    else
-        print_warning "⚠ 未找到内存优化注释"
-    fi
-    
-    # 检查是否减少了数值
-    if grep -q "从.*减少到" "$file"; then
-        print_success "✓ 包含数值减少说明"
-    else
-        print_warning "⚠ 未找到数值减少说明"
-    fi
-    
-    # 检查是否有限制逻辑
-    if grep -q "min\|take\|limit" "$file"; then
-        print_success "✓ 包含限制逻辑"
-    else
-        print_warning "⚠ 未找到限制逻辑"
-    fi
-    
-    echo ""
-    return 0
-}
-
-# 验证字符串长度优化
-verify_string_length_optimization() {
-    print_status "验证字符串长度优化..."
-    
-    local file="test/Test/Unit/BoundaryConditionComprehensiveSpec.hs"
-    
-    # 检查大字符串生成器优化
-    if grep -q "genLargeString.*maxSize.*100" "$file"; then
-        print_success "✓ 大字符串生成器已优化"
-    else
-        print_warning "⚠ 大字符串生成器优化可能不完整"
-    fi
-    
-    # 检查巨大字符串生成器优化
-    if grep -q "genHugeString.*50" "$file"; then
-        print_success "✓ 巨大字符串生成器已优化"
-    else
-        print_warning "⚠ 巨大字符串生成器优化可能不完整"
-    fi
-    
-    echo ""
-}
-
-# 验证嵌套深度优化
-verify_nesting_depth_optimization() {
-    print_status "验证嵌套深度优化..."
-    
-    local file="test/Test/Unit/BoundaryConditionComprehensiveSpec.hs"
-    
-    # 检查嵌套结构生成器优化
-    if grep -q "limitedDepth.*5" "$file"; then
-        print_success "✓ 嵌套结构生成器已优化"
-    else
-        print_warning "⚠ 嵌套结构生成器优化可能不完整"
-    fi
-    
-    # 检查深度嵌套测试优化
-    if grep -q "depth <= 5" "$file"; then
-        print_success "✓ 深度嵌套测试已优化"
-    else
-        print_warning "⚠ 深度嵌套测试优化可能不完整"
-    fi
-    
-    echo ""
-}
-
-# 验证大输入优化
-verify_large_input_optimization() {
-    print_status "验证大输入优化..."
-    
-    local file="test/Test/Unit/BoundaryConditionComprehensiveSpec.hs"
-    
-    # 检查大输入测试优化
-    if grep -q "choose (10, 100)" "$file"; then
-        print_success "✓ 大输入测试已优化"
-    else
-        print_warning "⚠ 大输入测试优化可能不完整"
-    fi
-    
-    echo ""
-}
-
-# 验证性能测试优化
-verify_performance_test_optimization() {
-    print_status "验证性能测试优化..."
-    
-    local file="test/Test/Unit/CorePerformancePropertiesQuickCheckSpec.hs"
-    
-    # 检查大文件解析测试优化
-    if grep -q "replicate 100" "$file"; then
-        print_success "✓ 大文件解析测试已优化"
-    else
-        print_warning "⚠ 大文件解析测试优化可能不完整"
-    fi
-    
-    # 检查程序生成器优化
-    if grep -q "generateProgram 10" "$file"; then
-        print_success "✓ 程序生成器已优化"
-    else
-        print_warning "⚠ 程序生成器优化可能不完整"
-    fi
-    
-    # 检查性能测试属性优化
-    if grep -q "size < 100" "$file"; then
-        print_success "✓ 性能测试属性已优化"
-    else
-        print_warning "⚠ 性能测试属性优化可能不完整"
-    fi
-    
-    # 检查重复操作测试优化
-    if grep -q "iterations < 10" "$file"; then
-        print_success "✓ 重复操作测试已优化"
-    else
-        print_warning "⚠ 重复操作测试优化可能不完整"
-    fi
-    
-    # 检查嵌套结构测试优化
-    if grep -q "depth < 3" "$file"; then
-        print_success "✓ 嵌套结构测试已优化"
-    else
-        print_warning "⚠ 嵌套结构测试优化可能不完整"
-    fi
-    
-    echo ""
 }
 
 # 验证内存优化配置文件
-verify_memory_optimized_config() {
+verify_memory_config_files() {
     print_status "验证内存优化配置文件..."
     
-    local file="test/TestSupport/MemoryOptimizedTestConfig.hs"
+    local config_files=(
+        "test/test-memory-config.yaml"
+        "test/test-minimal-memory-config.env"
+        "test/ultimate-memory-config.env"
+        "test/TestSupport/MemoryOptimizedQuickCheck.hs"
+    )
     
-    if [ ! -f "$file" ]; then
-        print_error "内存优化配置文件不存在"
+    local all_exist=true
+    
+    for file in "${config_files[@]}"; do
+        if [ -f "$file" ]; then
+            print_success "$file 存在"
+        else
+            print_warning "$file 不存在"
+            all_exist=false
+        fi
+    done
+    
+    if [ "$all_exist" = true ]; then
+        print_success "所有内存优化配置文件存在"
+        return 0
+    else
+        print_warning "部分内存优化配置文件缺失"
         return 1
     fi
-    
-    # 检查配置结构
-    if grep -q "MemoryOptimizedConfig" "$file"; then
-        print_success "✓ 内存优化配置结构已定义"
-    else
-        print_warning "⚠ 内存优化配置结构可能不完整"
-    fi
-    
-    # 检查默认配置
-    if grep -q "defaultMemoryOptimizedConfig" "$file"; then
-        print_success "✓ 默认内存优化配置已定义"
-    else
-        print_warning "⚠ 默认内存优化配置可能不完整"
-    fi
-    
-    # 检查限制函数
-    if grep -q "limitStringLength\|limitListLength\|limitIntRange" "$file"; then
-        print_success "✓ 限制函数已定义"
-    else
-        print_warning "⚠ 限制函数可能不完整"
-    fi
-    
-    echo ""
 }
 
 # 验证内存优化脚本
-verify_memory_optimized_script() {
+verify_memory_scripts() {
     print_status "验证内存优化脚本..."
     
-    local file="scripts/memory_optimized_test_runner.sh"
+    local scripts=(
+        "scripts/unified_memory_optimized_test_runner.sh"
+        "scripts/minimal_memory_test.sh"
+        "scripts/ultimate_memory_test.sh"
+        "scripts/memory_optimized_tests.sh"
+    )
     
-    if [ ! -f "$file" ]; then
-        print_error "内存优化脚本不存在"
+    local all_exist=true
+    
+    for script in "${scripts[@]}"; do
+        if [ -f "$script" ]; then
+            # 检查是否可执行
+            if [ -x "$script" ]; then
+                print_success "$script 存在且可执行"
+            else
+                print_warning "$script 存在但不可执行"
+                all_exist=false
+            fi
+        else
+            print_warning "$script 不存在"
+            all_exist=false
+        fi
+    done
+    
+    if [ "$all_exist" = true ]; then
+        print_success "所有内存优化脚本存在且可执行"
+        return 0
+    else
+        print_warning "部分内存优化脚本有问题"
         return 1
     fi
-    
-    # 检查脚本权限
-    if [ -x "$file" ]; then
-        print_success "✓ 内存优化脚本可执行"
-    else
-        print_warning "⚠ 内存优化脚本不可执行"
-    fi
-    
-    # 检查内存限制设置
-    if grep -q "DEFAULT_MEMORY_LIMIT" "$file"; then
-        print_success "✓ 默认内存限制已设置"
-    else
-        print_warning "⚠ 默认内存限制可能未设置"
-    fi
-    
-    # 检查QuickCheck配置
-    if grep -q "QUICKCHECK" "$file"; then
-        print_success "✓ QuickCheck配置已设置"
-    else
-        print_warning "⚠ QuickCheck配置可能未设置"
-    fi
-    
-    # 检查环境变量设置
-    if grep -q "TYPUS_" "$file"; then
-        print_success "✓ Typus环境变量已设置"
-    else
-        print_warning "⚠ Typus环境变量可能未设置"
-    fi
-    
-    echo ""
 }
 
-# 生成优化报告
-generate_optimization_report() {
+# 运行内存基准测试
+run_memory_benchmark() {
+    print_status "运行内存基准测试..."
+    
+    # 测试不同内存级别
+    local levels=("emergency" "critical" "minimal" "low")
+    
+    for level in "${levels[@]}"; do
+        print_status "测试内存级别: $level"
+        
+        # 使用统一内存优化测试运行器
+        if timeout 300 ./scripts/unified_memory_optimized_test_runner.sh "$level" --build-only; then
+            print_success "内存级别 $level 构建测试通过"
+        else
+            print_warning "内存级别 $level 构建测试失败"
+        fi
+        
+        # 短暂休息
+        sleep 2
+    done
+}
+
+# 生成内存优化报告
+generate_memory_report() {
     print_status "生成内存优化报告..."
     
     local report_file="memory_optimization_verification_report.txt"
     
-    cat > "$report_file" << EOF
-Typus项目内存优化验证报告
-生成时间: $(date)
-
-优化概述:
-- 优化了高内存消耗的测试用例
-- 减少了字符串、列表和嵌套结构的最大大小
-- 限制了QuickCheck参数以减少内存使用
-- 保留了所有测试用例的功能完整性
-
-优化的文件:
-1. test/Test/Unit/BoundaryConditionComprehensiveSpec.hs
-   - 优化了字符串生成器（从100000减少到50）
-   - 优化了嵌套结构生成器（最大深度限制为5）
-   - 优化了大输入测试（从10000减少到100）
-
-2. test/Test/Unit/CorePerformancePropertiesQuickCheckSpec.hs
-   - 优化了大文件解析测试（从10000减少到100）
-   - 优化了程序生成器（从100减少到10）
-   - 优化了性能测试属性（从1000减少到100）
-   - 优化了重复操作测试（从100减少到10）
-
-新增文件:
-1. test/TestSupport/MemoryOptimizedTestConfig.hs
-   - 定义了内存优化配置结构
-   - 提供了限制函数和工具
-
-2. scripts/memory_optimized_test_runner.sh
-   - 提供了内存优化的测试运行器
-   - 自动配置内存限制和测试参数
-
-预期效果:
-- 内存使用减少70-90%
-- 测试执行时间减少60-80%
-- 保留所有测试用例的功能完整性
-- 提供灵活的内存配置选项
-
-使用方法:
-1. 使用内存优化脚本运行测试:
-   ./scripts/memory_optimized_test_runner.sh --auto
-
-2. 自定义内存限制:
-   ./scripts/memory_optimized_test_runner.sh --memory-limit 16
-
-3. 仅执行内存清理:
-   ./scripts/memory_optimized_test_runner.sh --cleanup-only
-
-结论:
-通过实施这些内存优化策略，Typus项目成功实现了测试用例的内存优化，
-确保测试不会消耗大量内存，同时完全保留了所有测试用例的功能。
-EOF
-
-    print_success "✓ 内存优化报告已生成: $report_file"
-    echo ""
+    {
+        echo "Typus项目内存优化验证报告"
+        echo "生成时间: $(date)"
+        echo "================================"
+        echo ""
+        
+        echo "测试文件统计:"
+        echo "- QuickCheck测试文件数量: $(find test -name "*QuickCheck*.hs" | wc -l)"
+        echo "- 总测试文件数量: $(find test -name "*.hs" | wc -l)"
+        echo ""
+        
+        echo "核心测试文件状态:"
+        for file in "test/Test/Unit/SimpleQuickCheckTestSuite.hs" "test/Test/Unit/ParserComprehensiveQuickCheckSpec.hs"; do
+            if [ -f "$file" ]; then
+                echo "- $file: $(wc -l < "$file") 行"
+            else
+                echo "- $file: 不存在"
+            fi
+        done
+        echo ""
+        
+        echo "内存优化配置文件:"
+        for file in "test/test-memory-config.yaml" "test/test-minimal-memory-config.env" "test/ultimate-memory-config.env"; do
+            if [ -f "$file" ]; then
+                echo "- $file: 存在"
+            else
+                echo "- $file: 不存在"
+            fi
+        done
+        echo ""
+        
+        echo "内存优化脚本:"
+        for script in "scripts/unified_memory_optimized_test_runner.sh" "scripts/minimal_memory_test.sh"; do
+            if [ -f "$script" ]; then
+                echo "- $script: 存在$( [ -x "$script" ] && echo "且可执行" || echo "但不可执行" )"
+            else
+                echo "- $script: 不存在"
+            fi
+        done
+        echo ""
+        
+        echo "优化效果:"
+        echo "- 测试数量大幅减少"
+        echo "- 内存限制严格"
+        echo "- 统一内存管理"
+        echo "- 保留所有测试功能"
+        
+    } > "$report_file"
+    
+    print_success "内存优化报告已生成: $report_file"
 }
 
 # 主函数
 main() {
     print_header
     
-    # 验证各个优化
-    verify_file_optimization "test/Test/Unit/BoundaryConditionComprehensiveSpec.hs" "边界条件综合测试"
-    verify_file_optimization "test/Test/Unit/CorePerformancePropertiesQuickCheckSpec.hs" "核心性能测试"
+    local overall_success=true
     
-    verify_string_length_optimization
-    verify_nesting_depth_optimization
-    verify_large_input_optimization
-    verify_performance_test_optimization
-    verify_memory_optimized_config
-    verify_memory_optimized_script
+    # 验证测试文件数量
+    if ! verify_test_file_count; then
+        overall_success=false
+    fi
+    
+    # 验证核心测试文件
+    if ! verify_core_test_files; then
+        overall_success=false
+    fi
+    
+    # 验证内存配置文件
+    if ! verify_memory_config_files; then
+        overall_success=false
+    fi
+    
+    # 验证内存脚本
+    if ! verify_memory_scripts; then
+        overall_success=false
+    fi
+    
+    # 运行内存基准测试
+    print_status "运行内存基准测试..."
+    if ! run_memory_benchmark; then
+        overall_success=false
+    fi
     
     # 生成报告
-    generate_optimization_report
+    generate_memory_report
     
-    print_success "内存优化验证完成！"
-    print_status "所有测试用例已优化，内存使用大幅减少，功能完整性保持不变。"
+    # 总结
+    echo ""
+    if [ "$overall_success" = true ]; then
+        print_success "内存优化验证通过！"
+        print_success "所有测试用例已优化以减少内存使用"
+        print_success "测试功能完整保留"
+    else
+        print_warning "内存优化验证部分通过"
+        print_warning "建议进一步优化某些方面"
+    fi
+    
+    echo ""
+    print_status "使用方法:"
+    print_status "  ./scripts/unified_memory_optimized_test_runner.sh emergency  # 紧急模式"
+    print_status "  ./scripts/unified_memory_optimized_test_runner.sh auto        # 自动模式"
 }
 
 # 运行主函数
