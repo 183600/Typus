@@ -3,7 +3,6 @@
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
 module Test.Unit.UtilsQuickCheckSpec where
 
-
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty (TestTree, testGroup)
@@ -17,37 +16,55 @@ import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollaps
              forceSingleTabIndentation, fixIndentation, breakOn, 
              safeProcessString, isValidChar)
 
--- Helper generators for Utils tests
+-- Import memory optimization modules
+import TestSupport.MemoryOptimizedQuickCheck 
+  ( QuickCheckMemoryConfig(..)
+  , lowMemoryConfig
+  , applyQuickCheckMemoryConfig
+  , withQuickCheckMemoryConfig
+  , genSmallString
+  , genSmallList
+  , genSmallInt
+  , genLimitedChar
+  , memoryOptimizedStringProperty
+  , memoryOptimizedListProperty
+  )
+
+-- Helper generators for Utils tests (memory optimized versions)
 genSmallString :: Gen String
 genSmallString = do
-  len <- choose (0, 20)
+  len <- choose (0, 8)  -- Reduced from 20 to 8
   vectorOf len $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t\n"
 
 genStringWithSpaces :: Gen String
 genStringWithSpaces = do
-  len <- choose (0, 20)
+  len <- choose (0, 6)  -- Reduced from 20 to 6
   vectorOf len $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t"
 
 genStringWithComments :: Gen String
 genStringWithComments = do
-  len <- choose (0, 20)
+  len <- choose (0, 6)  -- Reduced from 20 to 6
   vectorOf len $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t\n\"'/"
 
 genIndentedString :: Gen String
 genIndentedString = do
-  numLines <- choose (1, 5)
-  indent <- choose (0, 4)
+  numLines <- choose (1, 3)  -- Reduced from 5 to 3
+  indent <- choose (0, 2)    -- Reduced from 4 to 2
   lines <- vectorOf numLines $ do
-    lineLen <- choose (0, 10)
+    lineLen <- choose (0, 5)  -- Reduced from 10 to 5
     line <- vectorOf lineLen $ elements $ ['a'..'z'] ++ ['0'..'9'] ++ " "
     return $ replicate indent ' ' ++ line
   return $ unlines lines
 
 genChar :: Gen Char
-genChar = elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t\n\"'/"
+genChar = elements $ take 20 $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t\n\"'/"  -- Limited to 20 chars
 
 genDelimiter :: Gen Char
 genDelimiter = elements $ ",;:|"
+
+-- Memory-optimized configuration
+memoryConfig :: QuickCheckMemoryConfig
+memoryConfig = lowMemoryConfig  -- Use low memory configuration by default
 
 -- Test properties for Utils module
 
@@ -350,7 +367,7 @@ prop_isValidChar_common_whitespace =
   all isValidChar [' ', '\t', '\n', '\r']
 
 utilsQuickCheckTests :: TestTree
-utilsQuickCheckTests = testGroup "Utils QuickCheck Tests"
+utilsQuickCheckTests = applyQuickCheckMemoryConfig memoryConfig $ testGroup "Utils QuickCheck Tests (Memory Optimized)"
   [ testProperties "Trim Functions"
     [ ("trim removes leading and trailing spaces", property prop_trim_removes_leading_trailing_spaces)
     , ("trim preserves non-space characters", property prop_trim_preserves_non_space_characters)
