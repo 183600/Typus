@@ -33,7 +33,7 @@ data MemoryLevel =
   | Moderate     -- ^ Moderate memory limits (2GB equivalent)
   deriving (Show, Eq)
 
--- | Apply minimal memory limits to a test tree for extreme memory constraints - 极度优化
+-- | Apply minimal memory limits to a test tree for extreme memory constraints - 超级激进优化
 withMinimalMemoryLimits :: TestTree -> TestTree
 withMinimalMemoryLimits test = 
   localOption (QuickCheckMaxSize 1) $    -- 最小值

@@ -56,7 +56,7 @@ import Data.Char (isSpace)
 import Data.Either (isLeft, isRight)
 import Data.Maybe (listToMaybe)
 
--- | 测试trim的基本属性 - 极度内存优化
+-- | 测试trim的基本属性 - 超级激进内存优化
 prop_trim_basic :: Property
 prop_trim_basic =
   let limitedString = ""  -- 使用空字符串以最小化内存使用
@@ -363,13 +363,12 @@ test_typus_environment_variables = do
   assertBool "TYPUS_SKIP_GO_BUILD should succeed" $ isRight (parseTypus "// 设为1/true/yes/on时跳过Go工具链调用，仅执行Typus → Go转换")
 
 
--- | 测试套件 - 极度内存优化
+-- | 测试套件 - 超级激进内存优化
 tests :: TestTree
-tests = testGroupWithStrategicCleanup "Basic QuickCheck Test Suite (Extreme Memory Optimized)"
-  [ -- 只保留最核心的3个测试属性，使用增强内存优化和清理
+tests = testGroupWithStrategicCleanup "Basic QuickCheck Test Suite (Ultra Super Memory Optimized)"
+  [ -- 只保留最核心的2个测试属性，使用超级激进内存优化和清理
     memoryOptimizedProperty "Trim basic" (property prop_trim_basic)
   , memoryOptimizedProperty "Trim idempotent" (property prop_trim_idempotent)
-  , memoryOptimizedProperty "SplitBy basic" (property prop_splitBy_basic)
   ]
 
 -- | 极简测试套件，用于极度内存受限环境

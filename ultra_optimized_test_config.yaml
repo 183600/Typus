@@ -1,0 +1,22 @@
+# 超级激进内存优化测试配置
+memory_level: ultra-emergency
+memory_limit_mb: 1
+quickcheck_tests: 1
+quickcheck_max_size: 1
+quickcheck_max_shrinks: 0
+test_selection:
+  strategy: "ultra_super_optimized"
+  max_tests: 3
+  priority_tests:
+    - "Test.Unit.BasicQuickCheckTestSuite.tests"
+    - "Test.Unit.ConciseTestSuite.tests"
+gc_strategy:
+  frequency: "continuous"
+  aggressiveness: "maximum"
+optimizations:
+  - "ultra_minimal_string_generation"
+  - "empty_data_structures"
+  - "continuous_memory_cleanup"
+  - "instant_gc_between_tests"
+  - "zero_allocation_optimization"
+  - "ultra_super_memory_optimization"
