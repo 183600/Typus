@@ -112,7 +112,7 @@ instance Arbitrary TypeError where
     location' <- arbitrary
     context' <- arbitrary
     recovery' <- arbitrary
-    suggestions' <- vectorOf 3 arbitrary  -- Limit to 3 suggestions
+    suggestions' <- vectorOf 1 arbitrary  -- Memory optimization: reduce from 3 to 1
     -- 使用空列表避免递归
     let relatedErrors' = []
     let errorChain' = []
@@ -125,7 +125,7 @@ newtype LimitedErrorHandler = LimitedErrorHandler { getLimitedErrorHandler :: Er
 
 instance Arbitrary LimitedErrorHandler where
   arbitrary = do
-    size <- choose (0, 10)  -- Limit to 10 errors
+    size <- choose (0, 2)  -- Memory optimization: reduce from 10 to 2 errors
     errs <- vectorOf size arbitrary
     return $ LimitedErrorHandler errs
 

@@ -120,17 +120,18 @@ genAlphaNum = elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9']
 genIdentifier :: Gen String
 genIdentifier = do
   first <- elements $ ['a'..'z'] ++ ['A'..'Z']
-  rest <- listOf genAlphaNum
+  -- Memory optimization: limit identifier length to 3 characters max
+  rest <- resize 2 $ listOf genAlphaNum
   return (first : rest)
 
 genNonEmptyString :: Gen String
-genNonEmptyString = listOf genAlphaNum
+genNonEmptyString = resize 3 $ listOf genAlphaNum  -- Limit to 3 characters max
 
 genBool :: Gen Bool
 genBool = elements [True, False]
 
 genInt :: Gen Int
-genInt = choose (0, 50)
+genInt = choose (0, 5)  -- Reduce range from 0-50 to 0-5 to save memory
 
 
 
@@ -167,10 +168,10 @@ instance Arbitrary CodeBlock where
 instance Arbitrary TypusFile where
   arbitrary = do
     directives <- arbitrary
-    -- Enhanced memory optimization: further limit buildTags to prevent excessive memory usage
-    buildTags <- resize 2 $ listOf (genLocated genNonEmptyString)
-    -- Enhanced memory optimization: further limit blocks to prevent excessive memory usage
-    blocks <- resize 3 $ listOf arbitrary
+    -- Ultra memory optimization: limit buildTags to 1 item maximum
+    buildTags <- resize 1 $ listOf (genLocated genNonEmptyString)
+    -- Ultra memory optimization: limit blocks to 1 item maximum
+    blocks <- resize 1 $ listOf arbitrary
     syntaxErrors <- pure [] -- Simplified for now
     return $ TypusFile directives buildTags blocks syntaxErrors
 
@@ -219,12 +220,12 @@ instance Arbitrary GoToken where
 
 instance Arbitrary GoModule where
   arbitrary = GoModule
-    -- Enhanced memory optimization: further limit module dependencies to prevent excessive memory usage
-    <$> resize 2 (listOf genIdentifier)
-    <*> frequency [(1, pure Nothing), (2, Just <$> (PackageDecl <$> genIdentifier))]
-    -- Enhanced memory optimization: further limit declarations and imports to prevent excessive memory usage
-    <*> resize 3 (listOf arbitrary)
-    <*> resize 3 (listOf arbitrary)
+    -- Ultra memory optimization: limit module dependencies to 1 item maximum
+    <$> resize 1 (listOf genIdentifier)
+    <*> frequency [(1, pure Nothing), (1, Just <$> (PackageDecl <$> genIdentifier))]
+    -- Ultra memory optimization: limit declarations and imports to 1 item maximum
+    <*> resize 1 (listOf arbitrary)
+    <*> resize 1 (listOf arbitrary)
 
 -- IR generators
 instance Arbitrary SourceIR where

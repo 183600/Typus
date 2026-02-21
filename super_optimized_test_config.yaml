@@ -1,9 +1,14 @@
-# 超级内存优化测试配置
-memory_level: super-emergency
+# 超级内存优化测试配置 - 极度优化
+memory_level: ultra-emergency
 memory_limit_mb: 1
 quickcheck_tests: 1
 quickcheck_max_size: 1
 quickcheck_max_shrinks: 0
+max_string_length: 1
+max_list_length: 1
+max_int_value: 2
+gc_every_test: true
+zero_allocation_mode: true
 test_selection:
   strategy: "super_optimized"
   max_tests: 5

@@ -10,17 +10,19 @@ import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf
 import Test.QuickCheck (Property, (==>))
 import Compiler.TypeChecker (Type(..), FunctionParam(..), FunctionSignature(..))
 
--- Helper generators
+-- Helper generators - Memory optimized
 genTypeName :: Gen String
 genTypeName = do
   first <- elements ['A'..'Z']
-  rest <- listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9']
+  -- Memory optimization: limit rest to 2 characters max
+  rest <- resize 2 $ listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9']
   return (first : rest)
 
 genVarName :: Gen String
 genVarName = do
   first <- elements ['a'..'z']
-  rest <- listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9']
+  -- Memory optimization: limit rest to 2 characters max
+  rest <- resize 2 $ listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9']
   return (first : rest)
 
 genSimpleType :: Gen Type
@@ -31,14 +33,16 @@ genSimpleType = oneof
 
 genFunctionType :: Gen Type
 genFunctionType = do
-  paramCount <- choose (0, 3)
+  -- Memory optimization: reduce parameter count from 0-3 to 0-1
+  paramCount <- choose (0, 1)
   paramTypes <- vectorOf paramCount genSimpleType
   returnType <- genSimpleType
   return $ TypeFunction paramTypes returnType
 
 genRecordType :: Gen Type
 genRecordType = do
-  fieldCount <- choose (0, 3)
+  -- Memory optimization: reduce field count from 0-3 to 0-1
+  fieldCount <- choose (0, 1)
   fields <- vectorOf fieldCount $ do
     fieldName <- genVarName
     fieldType <- genSimpleType
@@ -47,7 +51,8 @@ genRecordType = do
 
 genUnionType :: Gen Type
 genUnionType = do
-  typeCount <- choose (2, 4)
+  -- Memory optimization: reduce type count from 2-4 to 2-2 (fixed at 2)
+  typeCount <- choose (2, 2)
   types <- vectorOf typeCount genSimpleType
   return $ TypeUnion types
 

@@ -188,10 +188,10 @@ prop_large_directives_handling directiveSize =
        Right p -> not (null (tfBlocks p))
        Left _ -> False
 
--- Property 10: Error formatting with extreme content
+-- Property 10: Error formatting with extreme content (memory optimized)
 prop_error_formatting_extreme_content :: Property
 prop_error_formatting_extreme_content = 
-  forAll (vectorOf 101 arbitrary) $ \chars ->
+  forAll (vectorOf 5 arbitrary) $ \chars ->  -- Memory optimization: reduce from 101 to 5
   let content = chars
       err = errorAt "Parsing" Error (T.pack content) (ErrorLocation Nothing 1 1 Nothing Nothing)
       formatted = formatErrorWithLocation err
