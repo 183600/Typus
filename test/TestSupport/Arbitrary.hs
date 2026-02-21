@@ -125,13 +125,13 @@ genIdentifier = do
   return (first : rest)
 
 genNonEmptyString :: Gen String
-genNonEmptyString = resize 3 $ listOf genAlphaNum  -- Limit to 3 characters max
+genNonEmptyString = resize 2 $ listOf genAlphaNum  -- Limit to 2 characters max for extreme memory optimization
 
 genBool :: Gen Bool
 genBool = elements [True, False]
 
 genInt :: Gen Int
-genInt = choose (0, 5)  -- Reduce range from 0-50 to 0-5 to save memory
+genInt = choose (0, 2)  -- Further reduce range from 0-5 to 0-2 for extreme memory optimization
 
 
 

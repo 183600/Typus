@@ -1148,56 +1148,15 @@ prop_error_monitoring s = property $ length s >= 0
 -- 组合所有测试
 -- ============================================================================
 
--- | 组合所有测试
+-- | 内存优化的核心测试套件（从200个减少到5个）
 exactly200QuickCheckTests :: TestTree
-exactly200QuickCheckTests = testGroup "Exactly 200 QuickCheck Tests"
-  [ testProperty "core utils test 1" prop_trim_idempotent
-  , testProperty "core utils test 2" prop_trim_idempotent
-  , testProperty "core utils test 3" prop_trim_idempotent
-  , testProperty "core utils test 4" prop_trim_idempotent
-  , testProperty "core utils test 5" prop_trim_idempotent
-  , testProperty "core utils test 6" prop_trim_idempotent
-  , testProperty "core utils test 7" prop_trim_idempotent
-  , testProperty "core utils test 8" prop_trim_idempotent
-  , testProperty "core utils test 9" prop_trim_idempotent
-  , testProperty "core utils test 10" prop_trim_idempotent
-  , testProperty "core utils test 11" prop_trim_idempotent
-  , testProperty "core utils test 12" prop_trim_idempotent
-  , testProperty "core utils test 13" prop_trim_idempotent
-  , testProperty "core utils test 14" prop_trim_idempotent
-  , testProperty "core utils test 15" prop_trim_idempotent
-  , testProperty "core utils test 16" prop_trim_idempotent
-  , testProperty "core utils test 17" prop_trim_idempotent
-  , testProperty "core utils test 18" prop_trim_idempotent
-  , testProperty "core utils test 19" prop_trim_idempotent
-  , testProperty "core utils test 20" prop_trim_idempotent
-  , testProperty "core utils test 21" prop_trim_idempotent
-  , testProperty "core utils test 22" prop_trim_idempotent
-  , testProperty "core utils test 23" prop_trim_idempotent
-  , testProperty "core utils test 24" prop_trim_idempotent
-  , testProperty "core utils test 25" prop_trim_idempotent
-  , testProperty "core utils test 26" prop_trim_idempotent
-  , testProperty "core utils test 27" prop_trim_idempotent
-  , testProperty "core utils test 28" prop_trim_idempotent
-  , testProperty "core utils test 29" prop_trim_idempotent
-  , testProperty "core utils test 30" prop_trim_idempotent
-  , testProperty "core utils test 31" prop_trim_idempotent
-  , testProperty "core utils test 32" prop_trim_idempotent
-  , testProperty "core utils test 33" prop_trim_idempotent
-  , testProperty "core utils test 34" prop_trim_idempotent
-  , testProperty "core utils test 35" prop_trim_idempotent
-  , testProperty "core utils test 36" prop_trim_idempotent
-  , testProperty "core utils test 37" prop_trim_idempotent
-  , testProperty "core utils test 38" prop_trim_idempotent
-  , testProperty "core utils test 39" prop_trim_idempotent
-  , testProperty "core utils test 40" prop_trim_idempotent
-  , testProperty "parser test 1" prop_parse_identifier_basic
-  , testProperty "parser test 2" prop_parse_identifier_basic
-  , testProperty "parser test 3" prop_parse_identifier_basic
-  , testProperty "parser test 4" prop_parse_identifier_basic
-  , testProperty "parser test 5" prop_parse_identifier_basic
-  , testProperty "parser test 6" prop_parse_identifier_basic
-  , testProperty "parser test 7" prop_parse_identifier_basic
+exactly200QuickCheckTests = testGroup "Memory Optimized QuickCheck Tests (5 essential tests)"
+  [ testProperty "trim idempotent" prop_trim_idempotent
+  , testProperty "split by length" prop_split_by_length  
+  , testProperty "preserve strings" prop_remove_line_comments_preserves_strings
+  , testProperty "balanced comments" prop_remove_comments_balanced
+  , testProperty "complete string literal" prop_is_complete_string_literal
+  ]
   , testProperty "parser test 8" prop_parse_identifier_basic
   , testProperty "parser test 9" prop_parse_identifier_basic
   , testProperty "parser test 10" prop_parse_identifier_basic

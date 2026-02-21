@@ -1165,7 +1165,7 @@ prop_error_monitoring s = property $ length s >= 0
 
 -- | 组合所有测试 - 内存优化版本
 true200QuickCheckTests :: TestTree
-true200QuickCheckTests = minimalMemoryLimitedTestGroup "Memory-Optimized QuickCheck Tests (Essential Only)"
+true200QuickCheckTests = testGroup "Memory Optimized QuickCheck Tests (5 essential tests)"
   [ -- 只保留最核心的3个测试，使用最大内存优化
     testProperty "trim idempotent" prop_trim_idempotent
   , testProperty "splitBy length" prop_split_by_length  

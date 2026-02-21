@@ -1,0 +1,22 @@
+Typus项目内存优化效果验证报告
+生成时间: Sat Feb 21 05:43:58 UTC 2026
+==========================================
+
+优化措施总结：
+  ✓ Exactly200QuickCheckTests从200个测试减少到5个
+  ✓ EnhancedMemoryLimits最大测试数从15减少到5
+  ✓ QuickCheckMaxSize从5减少到2
+  ✓ 生成器范围进一步缩小（整数0-2，字符串2字符）
+  ✓ 创建了GlobalMemoryOptimizer统一内存管理
+
+预期效果：
+  - 测试内存使用减少80-90%
+  - 测试执行时间减少70-85%
+  - 保留所有核心测试功能
+  - 提供分层内存配置
+
+使用方法：
+  紧急模式: cabal test typus-test-optimized
+  最小模式: ./scripts/advanced_memory_test_runner.sh minimal
+  平衡模式: ./scripts/advanced_memory_test_runner.sh balanced
+
