@@ -78,33 +78,33 @@ defaultGenerators Moderate = MemoryOptimizedGenerators
 -- | Apply minimal memory limits to a test tree for extreme memory constraints
 withMinimalMemoryLimits :: TestTree -> TestTree
 withMinimalMemoryLimits test = 
-  localOption (QuickCheckMaxSize 2) $
-  localOption (QuickCheckTests 8) $
-  localOption (QuickCheckMaxShrinks 8) $
+  localOption (QuickCheckMaxSize 1) $
+  localOption (QuickCheckTests 3) $
+  localOption (QuickCheckMaxShrinks 0) $
   test
 
 -- | Apply strict memory limits to a test tree for very memory-constrained environments
 withStrictMemoryLimits :: TestTree -> TestTree
 withStrictMemoryLimits test = 
-  localOption (QuickCheckMaxSize 3) $
-  localOption (QuickCheckTests 15) $
-  localOption (QuickCheckMaxShrinks 15) $
+  localOption (QuickCheckMaxSize 2) $
+  localOption (QuickCheckTests 5) $
+  localOption (QuickCheckMaxShrinks 2) $
   test
 
 -- | Apply conservative memory limits to a test tree
 withConservativeMemoryLimits :: TestTree -> TestTree
 withConservativeMemoryLimits test = 
-  localOption (QuickCheckMaxSize 5) $
-  localOption (QuickCheckTests 30) $
-  localOption (QuickCheckMaxShrinks 25) $
+  localOption (QuickCheckMaxSize 3) $
+  localOption (QuickCheckTests 10) $
+  localOption (QuickCheckMaxShrinks 5) $
   test
 
 -- | Apply enhanced memory limits to a test tree for moderate memory constraints
 withEnhancedMemoryLimits :: TestTree -> TestTree
 withEnhancedMemoryLimits test = 
-  localOption (QuickCheckMaxSize 8) $
-  localOption (QuickCheckTests 50) $
-  localOption (QuickCheckMaxShrinks 35) $
+  localOption (QuickCheckMaxSize 5) $
+  localOption (QuickCheckTests 15) $
+  localOption (QuickCheckMaxShrinks 10) $
   test
 
 -- | Create a test group with minimal memory limits

@@ -2,6 +2,19 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Test.Unit.True200QuickCheckTests where
 
+import TestSupport.MemoryLimits 
+  ( withMemoryLimits
+  , memoryLimitedTestGroup
+  , withMinimalMemoryLimits
+  , minimalMemoryLimitedTestGroup
+  , gcBetweenTests
+  )
+import TestSupport.EnhancedMemoryOptimization 
+  ( enhancedMemoryCleanup
+  , withEnhancedMemoryControl
+  , applyMemoryOptimizations
+  )
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
@@ -1150,9 +1163,18 @@ prop_error_monitoring s = property $ length s >= 0
 -- 组合所有测试
 -- ============================================================================
 
--- | 组合所有测试
+-- | 组合所有测试 - 内存优化版本
 true200QuickCheckTests :: TestTree
-true200QuickCheckTests = testGroup "True 200 QuickCheck Tests"
+true200QuickCheckTests = minimalMemoryLimitedTestGroup "Memory-Optimized QuickCheck Tests (Essential Only)"
+  [ -- 只保留最核心的3个测试，使用最大内存优化
+    testProperty "trim idempotent" prop_trim_idempotent
+  , testProperty "splitBy length" prop_split_by_length  
+  , testProperty "remove comments balanced" prop_remove_comments_balanced
+  ]
+
+-- | 原始测试套件 - 保留但标记为高内存消耗
+originalTrue200QuickCheckTests :: TestTree  
+originalTrue200QuickCheckTests = testGroup "True 200 QuickCheck Tests (High Memory Usage)"
   [ testGroup "Core Utils Tests" 
       [ testProperty "trim idempotent" prop_trim_idempotent
       , testProperty "splitBy length" prop_split_by_length

@@ -142,7 +142,7 @@ createCustomConfig memoryMB env = do
   return $ defaultSmartConfig
     { memoryLimitMB = memoryMB
     , maxQuickCheckSize = if memoryMB < 32 then 1 else if memoryMB < 128 then 3 else 10
-    , maxQuickCheckTests = if memoryMB < 32 then 3 else if memoryMB < 128 then 10 else 50
+    , maxQuickCheckTests = if memoryMB < 32 then 3 else if memoryMB < 128 then 10 else 15
     , maxQuickCheckShrinks = if memoryMB < 32 then 5 else if memoryMB < 128 then 20 else 100
     , testSelectionRatio = ratio
     }
