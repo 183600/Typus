@@ -1,0 +1,49 @@
+# 极度优化的内存测试配置 - 最小内存使用
+memory:
+  limit_mb: 8  # 进一步减少到8MB，极端优化
+  batch_size: 1  # 单个测试批处理，最小内存占用
+  gc_frequency: 1  # 每次测试后GC
+  test_selection_ratio: 0.05  # 只选择5%的测试
+  conservative_mode: true  # 启用保守模式
+  aggressive_gc: true  # 启用激进的垃圾回收
+  emergency_mode: true  # 启用紧急模式
+  ultra_optimization: true  # 启用超级优化
+  extreme_optimization: true  # 启用极端优化
+
+execution:
+  strategy: sequential  # 顺序执行，避免并行内存开销
+  max_concurrent_tests: 1  # 禁用并发
+  timeout_seconds: 180  # 减少超时时间
+
+monitoring:
+  enable_memory_monitoring: true
+  log_memory_usage: false  # 禁用日志以减少内存
+  memory_check_interval: 250  # 更频繁的内存检查
+
+optimization:
+  enable_test_reuse: true
+  enable_memory_prediction: true
+  adaptive_scaling: false  # 禁用自适应缩放
+  exclude_debug_tests: true  # 排除debug测试
+  max_quickcheck_tests: 1  # 每个属性只测试1次
+  max_quickcheck_size: 1  # 最小测试数据大小
+  max_shrinks: 0  # 禁用收缩以减少计算开销
+  
+test_selection:
+  priority: critical_only  # 只运行关键测试
+  exclude_patterns:
+    - "debug"  # 排除所有debug文件
+    - "200QuickCheck"  # 排除大型QuickCheck文件
+    - "Exact200"  # 排除大型测试文件
+    - "True200"  # 排除大型测试文件
+    - "Final200"  # 排除大型测试文件
+  include_patterns:
+    - "UltraMemoryOptimized"  # 只包含极度优化的测试
+    - "Essential"  # 只包含核心测试
+  max_total_tests: 10  # 最多运行10个测试
+  
+environment:
+  type: extreme_minimal
+  detected_memory_mb: unknown
+  heap_size_limit: "8MB"
+  stack_size_limit: "1MB"

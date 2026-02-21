@@ -603,3 +603,32 @@ test-suite typus-test-optimized
         process
     default-language: Haskell2010
 
+-- 极度最小化测试套件 - 只运行最关键的10个测试，最小内存使用
+test-suite typus-test-extreme-minimal
+    type:             exitcode-stdio-1.0
+    build-tool-depends: typus:typus
+    main-is:          runners/ExtremeMinimalTestRunner.hs
+    hs-source-dirs:   test
+    default-extensions: NoMonomorphismRestriction
+    ghc-options:      -Wall -Wcompat
+                      -Wno-unused-top-binds -Wno-unused-matches 
+                      -Wno-orphans -Wno-name-shadowing
+                      -Wno-type-defaults -Wno-unused-local-binds
+                      -Wno-unused-imports
+                      -O0
+                      -rtsopts
+                      -with-rtsopts=-M8m
+    other-modules:
+        Test.Unit.UltraMemoryOptimizedQuickCheckTests,
+        TestSupport.MemoryLimits,
+        TestSupport.EnhancedMemoryLimits
+    build-depends:
+        base >=4.7 && <5,
+        typus,
+        tasty >= 1.4 && <2,
+        tasty-quickcheck >= 0.10 && <1,
+        QuickCheck >= 2.14 && <3,
+        text >= 1.2.0 && <3,
+        containers >= 0.6 && <1
+    default-language: Haskell2010
+
