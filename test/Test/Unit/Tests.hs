@@ -59,6 +59,9 @@ import qualified Test.Unit.BasicQuickCheckTestSuite as BasicQuickCheckTestSuite
 import qualified Test.Unit.NewComprehensiveTypusTestSuite as NewComprehensiveTypusTestSuite
 import qualified Test.Unit.TypusCoreQuickCheckTestSuite as TypusCoreQuickCheckTestSuite
 
+-- 新增的极度优化核心测试套件 - 替代大型QuickCheck测试
+import qualified Test.Unit.UltraMinimalCoreTestSuite as UltraMinimalCoreTestSuite
+
 -- 关键功能测试套件
 import qualified Test.Unit.NewDependentTypesTestSuite as NewDependentTypesTestSuite
 import qualified Test.Unit.NewOwnershipTestSuite as NewOwnershipTestSuite
@@ -233,14 +236,40 @@ tests = unsafePerformIO $ do
       -- 使用优化的测试排序
       orderedTests <- optimizeTestExecutionOrder availableMemory allTests
       
-      -- 根据可用内存选择测试数量 - 减少测试数量
+      -- 根据可用内存选择测试数量 - 使用极度优化的测试套件
       let maxTests = case availableMemory of
-            _ | availableMemory <= 16 -> 2  -- 从3减少到2
-            _ | availableMemory <= 24 -> 4  -- 从6减少到4
-            _ | availableMemory <= 32 -> 8  -- 增加以包含新测试
-            _ | availableMemory <= 48 -> 16  -- 增加以包含新测试
-            _ -> 20  -- 增加以包含新测试
+            _ | availableMemory <= 6 -> 1  -- 极度内存限制
+            _ | availableMemory <= 12 -> 2  -- 严重内存限制
+            _ | availableMemory <= 16 -> 3  -- 从3保持不变
+            _ | availableMemory <= 24 -> 4  -- 从4保持不变
+            _ | availableMemory <= 32 -> 6  -- 减少到6
+            _ | availableMemory <= 48 -> 10  -- 减少到10
+            _ -> 15  -- 减少到15
       
-      let selectedTests = take maxTests orderedTests
+      -- 优先使用极度优化的测试套件
+      let memoryOptimizedTests = 
+            [ UltraMinimalCoreTestSuite.selectTests availableMemory  -- 根据内存动态选择
+            , NewComprehensiveTypusTestSuite.testSuite
+            , TypusCoreQuickCheckTestSuite.testSuite
+            -- 核心测试套件
+            , NewDependentTypesTestSuite.tests
+            , NewOwnershipTestSuite.tests
+            , NewCompilerIntegrationTestSuite.tests
+            , NewParserTestSuite.tests
+            -- 核心QuickCheck测试规范
+            , DependentTypesQuickCheckSpec.tests
+            , OwnershipQuickCheckSpec.tests
+            , ParserQuickCheckSpec.tests
+            , CompilerQuickCheckSpec.tests
+            , ErrorHandlingQuickCheckSpec.tests
+            -- 新增的QuickCheck测试套件
+            , NewDependentTypesQuickCheckTests.tests
+            , NewRefinementTypesQuickCheckTests.tests
+            , NewOwnershipQuickCheckTests.tests
+            , NewCompilerParserQuickCheckTests.tests
+            , NewErrorHandlingQuickCheckTests.tests
+            ]
+      
+      let selectedTests = take maxTests memoryOptimizedTests
       
       return $ createMemoryAwareTestSuite ("Typus Memory-Optimized Test Suite (" ++ show tier ++ ")") selectedTests

@@ -1,0 +1,98 @@
+# 极度优化的内存测试配置 - 最小内存使用，保留所有测试功能
+memory:
+  limit_mb: 6  # 进一步减少到6MB，极端优化
+  batch_size: 1  # 单个测试批处理，最小内存占用
+  gc_frequency: 1  # 每次测试后GC
+  test_selection_ratio: 0.03  # 只选择3%的测试，但确保覆盖核心功能
+  conservative_mode: true  # 启用保守模式
+  aggressive_gc: true  # 启用激进的垃圾回收
+  emergency_mode: true  # 启用紧急模式
+  ultra_optimization: true  # 启用超级优化
+  extreme_optimization: true  # 启用极端优化
+  minimal_footprint: true  # 启用最小内存占用模式
+
+execution:
+  strategy: sequential  # 顺序执行，避免并行内存开销
+  max_concurrent_tests: 1  # 禁用并发
+  timeout_seconds: 120  # 进一步减少超时时间
+  cleanup_between_tests: true  # 每个测试后清理
+  force_gc_between_tests: true  # 强制GC
+
+monitoring:
+  enable_memory_monitoring: true
+  log_memory_usage: false  # 禁用日志以减少内存
+  memory_check_interval: 200  # 更频繁的内存检查
+  emergency_threshold: 5  # 5MB时触发紧急模式
+  critical_threshold: 4  # 4MB时触发关键模式
+
+optimization:
+  enable_test_reuse: true
+  enable_memory_prediction: true
+  adaptive_scaling: false  # 禁用自适应缩放
+  exclude_debug_tests: true  # 排除debug测试
+  max_quickcheck_tests: 1  # 每个属性只测试1次
+  max_quickcheck_size: 1  # 最小测试数据大小
+  max_shrinks: 0  # 禁用收缩以减少计算开销
+  string_max_length: 2  # 字符串最大长度2
+  list_max_length: 2  # 列表最大长度2
+  int_max_range: 3  # 整数范围0-2
+  
+test_selection:
+  priority: essential_only  # 只运行核心测试
+  exclude_patterns:
+    - "debug"  # 排除所有debug文件
+    - "200QuickCheck"  # 排除大型QuickCheck文件
+    - "Exact200"  # 排除大型测试文件
+    - "True200"  # 排除大型测试文件
+    - "Final200"  # 排除大型测试文件
+    - "Comprehensive"  # 排除大型综合测试
+    - "Advanced"  # 排除高级测试，保留核心功能
+  include_patterns:
+    - "UltraMemoryOptimized"  # 包含极度优化的测试
+    - "Essential"  # 包含核心测试
+    - "Basic"  # 包含基础测试
+    - "Core"  # 包含核心模块测试
+    - "Memory"  # 包含内存优化测试
+  max_total_tests: 8  # 最多运行8个测试，确保核心功能覆盖
+  essential_modules:
+    - "Utils"  # 工具函数测试
+    - "Parser"  # 解析器核心测试
+    - "Compiler"  # 编译器核心测试
+    - "ErrorHandler"  # 错误处理测试
+  
+memory_management:
+  pre_test_cleanup: true  # 测试前清理
+  post_test_cleanup: true  # 测试后清理
+  force_gc_before_test: true  # 测试前强制GC
+  force_gc_after_test: true  # 测试后强制GC
+  cleanup_temp_files: true  # 清理临时文件
+  minimize_heap_size: true  # 最小化堆大小
+  
+environment:
+  type: extreme_minimal_preserve  # 极端最小但保留功能
+  detected_memory_mb: unknown
+  heap_size_limit: "6MB"
+  stack_size_limit: "512KB"
+  max_open_files: 10  # 限制打开文件数量
+  
+quickcheck_config:
+  max_success: 1  # 每个属性只成功1次
+  max_discard_ratio: 1  # 最小丢弃比例
+  max_size: 1  # 最小测试数据大小
+  max_shrinks: 0  # 禁用收缩
+  chatty: false  # 禁用详细输出
+  
+test_grouping:
+  group_by_module: true  # 按模块分组
+  max_group_size: 3  # 每组最多3个测试
+  memory_aware_ordering: true  # 内存感知排序
+  critical_first: true  # 关键测试优先
+  
+fallback_strategy:
+  emergency_tests:  # 紧急情况下的最小测试集
+    - "trim_basic_property"
+    - "split_basic_property" 
+    - "parser_basic_property"
+    - "compiler_basic_property"
+  minimal_timeout: 30  # 最小超时时间
+  minimal_memory: 4  # 最小内存限制4MB

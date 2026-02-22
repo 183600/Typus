@@ -456,6 +456,7 @@ test-suite typus-test
         Test.Unit.Tests,
         Test.Unit.UltraMemoryOptimizedQuickCheckTests,
         Test.Unit.UltraMemoryOptimizedTestSuite,
+        Test.Unit.UltraMinimalCoreTestSuite,
         Test.Unit.UtilsCoreQuickCheckSpec,
         Test.Unit.AdditionalQuickCheckTests,
         Test.Unit.AdvancedIntegrationQuickCheckTests,
