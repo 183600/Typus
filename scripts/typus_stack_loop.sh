@@ -140,7 +140,7 @@ attempt_bump_and_tag() {
 
 trap 'echo; echo "已终止."; exit 0' INT TERM
 
-# iflow "确保测试用例不会消耗大量内存，尽量不要删除测试用例 think:high" --yolo || true
+iflow "确保测试用例不会消耗大量内存，尽量不要删除测试用例 think:high" --yolo || true
 
 while true; do
   echo "===================="
@@ -171,7 +171,7 @@ while true; do
     iflow "给这个项目增加一些stack test测试用例，不要超过200个，在这些新测试用例里面，如果需要添加使用QuickCheck的测试用例就添加，确保所有新测试用例都符合README.md的内容 think:high" --yolo || true
     iflow '删除项目根目录多余的.md文件或者.txt文件（像TEST_ENHANCEMENT_SUMMARY.md和test_wall_production.txt这样的） think:high' --yolo || true
     iflow '确保所有测试用的文件都在专门用来存放测试文件的目录 think:high' --yolo || true
-    iflow '优化这个项目的内存占用，确保不影响功能 think:high' --yolo || true
+    iflow '优化这个项目的内存占用，确保不影响功能，并且尽量不要删除测试用例 think:high' --yolo || true
 
     # 门禁：防止 iflow 生成乱码路径被提交
     guard_bad_paths || exit $?
