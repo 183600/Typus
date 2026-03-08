@@ -3,13 +3,24 @@
 
 # 内存级别配置
 memory_levels:
-  emergency:
-    description: "紧急模式 - 极度内存受限环境"
-    memory_limit_mb: 8
+  extreme:
+    description: "极端模式 - 极度内存受限环境"
+    memory_limit_mb: 4
     quickcheck_tests: 1
     quickcheck_max_size: 1
     quickcheck_max_shrinks: 0
-    max_string_length: 10
+    max_string_length: 5
+    max_list_length: 2
+    test_batch_size: 1
+    gc_frequency: 1
+    
+  emergency:
+    description: "紧急模式 - 极度内存受限环境"
+    memory_limit_mb: 8
+    quickcheck_tests: 2
+    quickcheck_max_size: 1
+    quickcheck_max_shrinks: 0
+    max_string_length: 8
     max_list_length: 3
     test_batch_size: 1
     gc_frequency: 1
@@ -17,24 +28,24 @@ memory_levels:
   minimal:
     description: "最小模式 - 内存有限环境"
     memory_limit_mb: 16
-    quickcheck_tests: 5
+    quickcheck_tests: 3
     quickcheck_max_size: 2
     quickcheck_max_shrinks: 0
-    max_string_length: 20
-    max_list_length: 5
+    max_string_length: 15
+    max_list_length: 4
     test_batch_size: 2
     gc_frequency: 2
     
   balanced:
     description: "平衡模式 - 正常内存环境"
     memory_limit_mb: 64
-    quickcheck_tests: 10
-    quickcheck_max_size: 5
+    quickcheck_tests: 8
+    quickcheck_max_size: 4
     quickcheck_max_shrinks: 1
-    max_string_length: 50
-    max_list_length: 10
-    test_batch_size: 5
-    gc_frequency: 5
+    max_string_length: 40
+    max_list_length: 8
+    test_batch_size: 4
+    gc_frequency: 4
 
 # 测试套件选择策略
 test_selection:

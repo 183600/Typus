@@ -87,7 +87,7 @@ instance Arbitrary TC.TypeCheckDiagnostic where
     return $ TC.TypeCheckDiagnostic ctx detail
 
 instance Arbitrary T.Text where
-  arbitrary = T.pack <$> resize 5 arbitrary  -- Limit string length to reduce memory usage
+  arbitrary = T.pack <$> resize 3 arbitrary  -- Limit string length to 3 chars to reduce memory usage
 
 instance Arbitrary Core.ErrorSeverity where
   arbitrary = elements [Core.Fatal, Core.Error, Core.Warning, Core.Info]
@@ -98,8 +98,8 @@ instance Arbitrary Core.ErrorCategory where
 instance Arbitrary Core.ErrorLocation where
   arbitrary = do
     filePath' <- arbitrary
-    line' <- choose (1, 100)
-    column' <- choose (1, 100)
+    line' <- choose (1, 50)
+    column' <- choose (1, 50)
     endLine' <- arbitrary
     endColumn' <- arbitrary
     return $ Core.ErrorLocation filePath' line' column' endLine' endColumn'

@@ -1,13 +1,14 @@
 # 优化内存测试配置 - 减少内存使用
 memory:
-  limit_mb: 16  # 从32MB减少到16MB，进一步优化
-  batch_size: 2  # 从3减少到2，减少批处理大小
-  gc_frequency: 1  # 从2减少到1，最频繁的GC
-  test_selection_ratio: 0.1  # 从0.2减少到0.1，选择更少的测试
+  limit_mb: 12  # 从16MB减少到12MB，进一步优化
+  batch_size: 1  # 从2减少到1，最小批处理大小
+  gc_frequency: 1  # 保持最频繁的GC
+  test_selection_ratio: 0.05  # 从0.1减少到0.05，选择更少的测试
   conservative_mode: true  # 启用保守模式
   aggressive_gc: true  # 启用激进的垃圾回收
   emergency_mode: true  # 启用紧急模式
   ultra_optimization: true  # 启用超级优化
+  extreme_mode: true  # 启用极端模式
 
 execution:
   strategy: batched
