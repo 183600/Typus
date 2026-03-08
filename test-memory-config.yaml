@@ -1,0 +1,29 @@
+# 优化内存测试配置 - 减少内存使用
+memory:
+  limit_mb: 16  # 从32MB减少到16MB，进一步优化
+  batch_size: 2  # 从3减少到2，减少批处理大小
+  gc_frequency: 1  # 从2减少到1，最频繁的GC
+  test_selection_ratio: 0.1  # 从0.2减少到0.1，选择更少的测试
+  conservative_mode: true  # 启用保守模式
+  aggressive_gc: true  # 启用激进的垃圾回收
+  emergency_mode: true  # 启用紧急模式
+  ultra_optimization: true  # 启用超级优化
+
+execution:
+  strategy: batched
+  max_concurrent_tests: 1
+  timeout_seconds: 240  # 从300减少到240
+
+monitoring:
+  enable_memory_monitoring: true
+  log_memory_usage: false
+  memory_check_interval: 500  # 从1000减少到500，更频繁的检查
+
+optimization:
+  enable_test_reuse: true
+  enable_memory_prediction: true
+  adaptive_scaling: false  # 禁用自适应缩放以减少开销
+  
+environment:
+  type: memory_optimized
+  detected_memory_mb: unknown
