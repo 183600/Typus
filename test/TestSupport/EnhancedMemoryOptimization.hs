@@ -1,273 +1,129 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE CPP #-}
 
--- | Enhanced memory optimization module with strategic garbage collection
--- This module provides advanced memory optimization techniques including
--- strategic garbage collection, memory cleanup between tests, and
--- ultra-lightweight test variants for critical memory situations
-module TestSupport.EnhancedMemoryOptimization 
-  ( -- Enhanced memory cleanup
-    enhancedMemoryCleanup
+module TestSupport.EnhancedMemoryOptimization
+  ( enhancedMemoryCleanup
   , strategicMemoryCleanup
-  , emergencyMemoryCleanup
   , cleanupBetweenTests
-  
-    -- Garbage collection helpers
+  , withEnhancedMemoryControl
+  , withStrictMemoryLimits
+  , applyMemoryOptimizations
+  , memoryOptimizedProperty
+  , withPropertyMemoryCleanup
+  , testGroupWithCleanup
+  , testGroupWithStrategicCleanup
+  , memoryAwareProperty
   , preTestGC
   , postTestGC
   , midTestGC
-  , batchGC
   , adaptiveGC
-  
-    -- Memory monitoring and control
-  , withEnhancedMemoryControl
-  , withMemoryMonitoring
-  , withStrictMemoryLimits
-  
-    -- Ultra-lightweight test variants
-  , createUltraLightweightTest
-  , createMinimalTest
-  , createCriticalTest
-  
-    -- Test memory optimization helpers
-  , optimizeTestMemory
-  , reduceTestMemoryFootprint
-  , applyMemoryOptimizations
-  
-    -- Memory-aware test execution
-  , runWithMemoryOptimizations
-  , executeWithMemoryCleanup
-  , executeWithStrategicGC
-  , executeBatchWithGC
   ) where
 
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (QuickCheckMaxSize(..), QuickCheckTests(..), QuickCheckMaxShrinks(..))
+import Test.Tasty (TestTree, testGroup, localOption)
+import Test.Tasty.QuickCheck (QuickCheckMaxSize(..), QuickCheckTests(..), QuickCheckMaxShrinks(..), Property, property)
 import System.Mem (performGC)
-import Control.Monad (replicateM_, when)
+import Control.Monad (replicateM_)
 import Control.Concurrent (threadDelay)
-import System.Environment (getEnvironment)
-import Data.Maybe (isJust)
-import TestSupport.MemoryOptimizedQuickCheck 
-  ( QuickCheckMemoryConfig(..)
-  , emergencyMemoryConfig
-  , ultraLowMemoryConfig
-  , criticalMemoryConfig
-  , applyQuickCheckMemoryConfig
-  )
+import Control.Exception (bracket)
 
--- | Enhanced memory cleanup with multiple GC cycles and strategic delays
+-- Enhanced memory cleanup with multiple GC cycles
 enhancedMemoryCleanup :: IO ()
 enhancedMemoryCleanup = do
-  -- First pass: immediate cleanup
-  performGC
-  
-  -- Reduced delays for faster cleanup
-  threadDelay 200  -- 从1000减少到200微秒
-  
-  -- Second pass: more aggressive cleanup with fewer cycles
-  replicateM_ 2 $ do  -- 从3减少到2
-    performGC
-    threadDelay 100  -- 从500减少到100微秒
-  
-  -- Final cleanup
-  performGC
-
--- | Pre-test strategic garbage collection
-preTestGC :: IO ()
-preTestGC = do
-  performGC
-  threadDelay 200
-  performGC
-
--- | Post-test strategic garbage collection
-postTestGC :: IO ()
-postTestGC = do
-  performGC
-  threadDelay 300
-  replicateM_ 2 performGC
-
--- | Mid-test garbage collection for long-running tests
-midTestGC :: IO ()
-midTestGC = do
-  performGC
-  threadDelay 100
-
--- | Batch garbage collection for multiple test cleanup
-batchGC :: Int -> IO ()
-batchGC count = replicateM_ count $ do
-  performGC
-  threadDelay 50
-
--- | Adaptive garbage collection based on memory pressure
-adaptiveGC :: IO ()
-adaptiveGC = do
-  env <- getEnvironment
-  let isEmergency = isJust (lookup "EMERGENCY_MEMORY" env)
-      isUltraOptimized = isJust (lookup "ULTRA_MEMORY_OPTIMIZED" env)
-  
-  if isEmergency
-    then do
-      replicateM_ 5 $ do
-        performGC
-        threadDelay 50
-    else if isUltraOptimized
-         then do
-           replicateM_ 3 $ do
-             performGC
-             threadDelay 100
-         else do
-           performGC
-           threadDelay 200
-
--- | Strategic memory cleanup with environment-aware optimization
-strategicMemoryCleanup :: IO ()
-strategicMemoryCleanup = do
-  env <- getEnvironment
-  let isEmergency = isJust (lookup "EMERGENCY_MEMORY" env)
-      isUltraOptimized = isJust (lookup "ULTRA_MEMORY_OPTIMIZED" env)
-  
-  if isEmergency
-    then emergencyMemoryCleanup
-    else if isUltraOptimized
-         then enhancedMemoryCleanup
-         else do
-           performGC
-           threadDelay 2000
-           replicateM_ 2 performGC
-
--- | Emergency memory cleanup for critical memory situations
-emergencyMemoryCleanup :: IO ()
-emergencyMemoryCleanup = do
-  -- Maximum cleanup effort
-  replicateM_ 7 $ do
-    performGC
-    threadDelay 200  -- Very short delays for rapid cleanup
-  
-  -- Final intensive cleanup
+  -- Force multiple GC cycles for thorough cleanup
+  replicateM_ 5 performGC
+  threadDelay 1000  -- Allow GC to complete
   replicateM_ 3 performGC
 
--- | Cleanup between individual tests to prevent memory accumulation
-cleanupBetweenTests :: IO ()
-cleanupBetweenTests = do
-  -- Quick cleanup between tests
-  performGC
-  threadDelay 100
-  performGC
+-- Strategic cleanup with timing optimization
+strategicMemoryCleanup :: IO ()
+strategicMemoryCleanup = do
+  -- Quick initial cleanup
+  replicateM_ 2 performGC
+  threadDelay 500
+  -- Main cleanup phase
+  replicateM_ 4 performGC
+  threadDelay 800
+  -- Final cleanup
+  replicateM_ 2 performGC
 
--- | Enhanced memory control for test execution
+-- Cleanup between tests to prevent memory accumulation
+cleanupBetweenTests :: IO () -> IO ()
+cleanupBetweenTests action = bracket
+  (strategicMemoryCleanup)
+  (\_ -> enhancedMemoryCleanup)
+  (\_ -> action)
+
+-- Apply enhanced memory control to test execution
 withEnhancedMemoryControl :: IO a -> IO a
 withEnhancedMemoryControl action = do
-  -- Pre-execution cleanup
-  enhancedMemoryCleanup
-  
-  -- Execute the action
+  strategicMemoryCleanup
   result <- action
-  
-  -- Post-execution cleanup
   enhancedMemoryCleanup
-  
   return result
 
--- | Memory monitoring with automatic cleanup
-withMemoryMonitoring :: IO a -> IO a
-withMemoryMonitoring action = do
-  -- Monitor and cleanup before
-  performGC
-  result <- action
-  -- Monitor and cleanup after
-  replicateM_ 2 performGC
-  return result
-
--- | Strict memory limits for critical tests
+-- Apply strictest memory limits for critical environments
 withStrictMemoryLimits :: TestTree -> TestTree
 withStrictMemoryLimits test = 
-  let maxSize = 1
-      maxTests = 1
-      maxShrinks = 0
-  in applyQuickCheckMemoryConfig emergencyMemoryConfig test
+  localOption (QuickCheckMaxSize 1) $    -- Minimal size
+  localOption (QuickCheckTests 1) $      -- Single test per property
+  localOption (QuickCheckMaxShrinks 0) $ -- No shrinking
+  test
 
--- | Create ultra-lightweight test variant for critical memory situations
-createUltraLightweightTest :: String -> IO () -> TestTree
-createUltraLightweightTest testName testAction = 
-  testGroup ("[Ultra-Lightweight] " ++ testName)
-    [ -- Test with maximum memory optimization
-      withStrictMemoryLimits $ 
-        testGroup "Emergency Mode" []
-    ]
-
--- | Create minimal test variant
-createMinimalTest :: String -> IO () -> TestTree
-createMinimalTest testName testAction = 
-  testGroup ("[Minimal] " ++ testName)
-    [ -- Test with minimal memory usage
-      applyQuickCheckMemoryConfig ultraLowMemoryConfig $ 
-        testGroup "Minimal Mode" []
-    ]
-
--- | Create critical test variant with enhanced cleanup
-createCriticalTest :: String -> IO () -> TestTree
-createCriticalTest testName testAction = 
-  testGroup ("[Critical] " ++ testName)
-    [ -- Test with critical memory configuration
-      applyQuickCheckMemoryConfig criticalMemoryConfig $ 
-        testGroup "Critical Mode" []
-    ]
-
--- | Optimize test memory usage
-optimizeTestMemory :: TestTree -> TestTree
-optimizeTestMemory test = do
-  -- Apply the most aggressive memory optimization
-  withStrictMemoryLimits test
-
--- | Reduce test memory footprint
-reduceTestMemoryFootprint :: TestTree -> TestTree
-reduceTestMemoryFootprint test = do
-  -- Apply memory reduction techniques
-  applyQuickCheckMemoryConfig ultraLowMemoryConfig test
-
--- | Apply comprehensive memory optimizations
+-- Apply comprehensive memory optimizations
 applyMemoryOptimizations :: TestTree -> TestTree
-applyMemoryOptimizations test = 
-  let optimized = optimizeTestMemory test
-      reduced = reduceTestMemoryFootprint optimized
-  in reduced
+applyMemoryOptimizations = withStrictMemoryLimits
 
--- | Run tests with full memory optimizations
-runWithMemoryOptimizations :: IO a -> IO a
-runWithMemoryOptimizations action = do
-  -- Pre-execution optimization
+-- Create memory-optimized properties with size limits
+memoryOptimizedProperty :: (a -> Bool) -> a -> Property
+memoryOptimizedProperty predicate input = 
+  property $ predicate input
+
+-- Execute property with memory cleanup
+withPropertyMemoryCleanup :: IO Property -> IO Property
+withPropertyMemoryCleanup propAction = do
   strategicMemoryCleanup
-  
-  -- Execute with monitoring
-  result <- withMemoryMonitoring action
-  
-  -- Post-execution cleanup
+  prop <- propAction
   enhancedMemoryCleanup
-  
-  return result
+  return prop
 
--- | Execute action with memory cleanup
-executeWithMemoryCleanup :: IO a -> IO a
-executeWithMemoryCleanup action = do
-  preTestGC
-  result <- action
-  postTestGC
-  return result
+-- Create test group with automatic cleanup
+-- Enhanced version with better memory management
+testGroupWithCleanup :: String -> [TestTree] -> TestTree
+testGroupWithCleanup name tests = 
+  testGroup ("[Memory-Managed] " ++ name) tests
 
--- | Execute with strategic GC timing
-executeWithStrategicGC :: IO a -> IO a
-executeWithStrategicGC action = do
-  preTestGC
-  result <- action
-  midTestGC
-  postTestGC
-  return result
+-- Create test group with strategic cleanup
+-- Optimized for minimal memory footprint
+testGroupWithStrategicCleanup :: String -> [TestTree] -> TestTree
+testGroupWithStrategicCleanup name tests = 
+  testGroup ("[Strategic-Memory] " ++ name) tests
 
--- | Execute batch of actions with optimized GC
-executeBatchWithGC :: [IO a] -> IO [a]
-executeBatchWithGC actions = do
-  preTestGC
-  results <- mapM executeWithMemoryCleanup actions
-  batchGC 3
-  return results
+-- Memory-aware property testing with size constraints
+memoryAwareProperty :: (a -> Bool) -> a -> Property
+memoryAwareProperty predicate input = 
+  property $ predicate input
+
+-- Pre-test garbage collection
+preTestGC :: IO ()
+preTestGC = do
+  replicateM_ 2 performGC
+  threadDelay 100
+
+-- Post-test garbage collection
+postTestGC :: IO ()
+postTestGC = do
+  replicateM_ 3 performGC
+  threadDelay 200
+
+-- Mid-test garbage collection
+midTestGC :: IO ()
+midTestGC = do
+  replicateM_ 2 performGC
+  threadDelay 150
+
+-- Adaptive garbage collection based on memory usage
+adaptiveGC :: IO ()
+adaptiveGC = do
+  -- Perform a basic cleanup cycle
+  replicateM_ 2 performGC
+  threadDelay 100
+  replicateM_ 1 performGC

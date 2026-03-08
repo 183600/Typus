@@ -91,7 +91,7 @@ prop_trim_regular =
 -- | 测试trim的幂等性 - 极度内存优化
 prop_trim_idempotent :: String -> Property
 prop_trim_idempotent s =
-  let limitedString = minimizeStringUsage s  -- 使用最小化字符串操作
+  let limitedString = take 15 s  -- 限制字符串长度以节省内存
       trimmed1 = trim limitedString
       trimmed2 = trim trimmed1
   in trimmed1 === trimmed2
