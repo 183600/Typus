@@ -49,6 +49,49 @@ withUltraMemoryLimits test =
   localOption (QuickCheckMaxShrinks 0) $ -- 禁用收缩以节省内存
   test
 
+-- | Dynamic memory limits based on available system memory - 新增：基于系统内存的动态限制
+withDynamicMemoryLimits :: TestTree -> IO TestTree
+withDynamicMemoryLimits test = do
+  availableMemoryMB <- getAvailableMemoryMB
+  let memoryLevel = classifyMemoryLevel availableMemoryMB
+  return $ applyMemoryLevelLimits memoryLevel test
+
+-- | Classify memory level based on available memory - 新增：内存级别分类
+classifyMemoryLevel :: Int -> MemoryLevel
+classifyMemoryLevel availableMB
+  | availableMB < 16 = Minimal
+  | availableMB < 32 = Ultra
+  | availableMB < 64 = Aggressive
+  | availableMB < 128 = Moderate
+  | otherwise = Moderate
+
+-- | Apply memory level specific limits - 新增：应用内存级别特定限制
+applyMemoryLevelLimits :: MemoryLevel -> TestTree -> TestTree
+applyMemoryLevelLimits memoryLevel test = case memoryLevel of
+  Minimal -> 
+    localOption (QuickCheckMaxSize 1) $
+    localOption (QuickCheckTests 1) $
+    localOption (QuickCheckMaxShrinks 0) test
+  Ultra ->
+    localOption (QuickCheckMaxSize 2) $
+    localOption (QuickCheckTests 2) $
+    localOption (QuickCheckMaxShrinks 0) test
+  Aggressive ->
+    localOption (QuickCheckMaxSize 3) $
+    localOption (QuickCheckTests 3) $
+    localOption (QuickCheckMaxShrinks 1) test
+  Moderate ->
+    localOption (QuickCheckMaxSize 5) $
+    localOption (QuickCheckTests 5) $
+    localOption (QuickCheckMaxShrinks 2) test
+
+-- | Get available memory in MB (placeholder implementation) - 新增：获取可用内存
+getAvailableMemoryMB :: IO Int
+getAvailableMemoryMB = do
+  -- This is a simplified implementation
+  -- In a real system, you would parse /proc/meminfo or use system calls
+  return 512  -- Default to 512MB for safety
+
 -- | Apply moderate memory limits to a test tree - 极度优化
 withMemoryLimits :: TestTree -> TestTree
 withMemoryLimits test = 

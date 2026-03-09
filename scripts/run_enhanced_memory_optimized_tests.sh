@@ -1,367 +1,175 @@
-#!/bin/bash
-
-# 增强内存优化测试脚本
-# 集成所有内存优化功能，提供全面的内存优化测试解决方案
+#!/usr/bin/env bash
+# 增强内存优化测试运行脚本
+# 基于现有内存优化基础设施，提供更智能的内存管理
 
 set -e
 
-# 颜色定义
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-PURPLE='\033[0;35m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+echo "=== 增强内存优化测试运行 ==="
+echo ""
 
-# 内存级别定义
-ULTRA_EXTREME_MEMORY=16   # 16MB - 超极端内存限制
-CRITICAL_MEMORY=24        # 24MB - 关键内存限制
-EMERGENCY_MEMORY=32       # 32MB - 紧急内存限制
-MINIMAL_MEMORY=48         # 48MB - 最小内存限制
-CI_MEMORY=64              # 64MB - CI/CD内存限制
-DEVELOPMENT_MEMORY=128    # 128MB - 开发环境内存限制
-COMPREHENSIVE_MEMORY=256  # 256MB - 综合环境内存限制
+# 检测可用内存并设置优化级别
+AVAILABLE_MEMORY=$(free -m | awk 'NR==2{print $7}' || echo "512")
+echo "检测到可用内存: ${AVAILABLE_MEMORY}MB"
 
-# 获取可用内存（MB）
-get_available_memory() {
-    local available_mem
-    if command -v free >/dev/null 2>&1; then
-        available_mem=$(free -m | awk 'NR==2{printf "%.0f", $7}')
-    elif command -v vm_stat >/dev/null 2>&1; then
-        # macOS
-        available_mem=$(vm_stat | grep "Pages free" | awk '{print $3}' | sed 's/\.//' | awk '{printf "%.0f", $1 * 4096 / 1024 / 1024}')
-    else
-        available_mem=512  # 默认值
+# 基于可用内存设置优化级别
+if [ "$AVAILABLE_MEMORY" -lt 16 ]; then
+    MEMORY_LEVEL="EMERGENCY"
+    MEMORY_LIMIT_MB=1
+    TEST_BATCH_SIZE=1
+    echo "内存级别: 紧急 (${MEMORY_LIMIT_MB}MB)"
+elif [ "$AVAILABLE_MEMORY" -lt 32 ]; then
+    MEMORY_LEVEL="CRITICAL"
+    MEMORY_LIMIT_MB=2
+    TEST_BATCH_SIZE=1
+    echo "内存级别: 关键 (${MEMORY_LIMIT_MB}MB)"
+elif [ "$AVAILABLE_MEMORY" -lt 64 ]; then
+    MEMORY_LEVEL="MINIMAL"
+    MEMORY_LIMIT_MB=4
+    TEST_BATCH_SIZE=2
+    echo "内存级别: 最小 (${MEMORY_LIMIT_MB}MB)"
+elif [ "$AVAILABLE_MEMORY" -lt 128 ]; then
+    MEMORY_LEVEL="LOW"
+    MEMORY_LIMIT_MB=8
+    TEST_BATCH_SIZE=3
+    echo "内存级别: 低 (${MEMORY_LIMIT_MB}MB)"
+else
+    MEMORY_LEVEL="MODERATE"
+    MEMORY_LIMIT_MB=16
+    TEST_BATCH_SIZE=5
+    echo "内存级别: 中等 (${MEMORY_LIMIT_MB}MB)"
+fi
+
+# 环境变量设置
+export TYPUS_MEMORY_LEVEL="$MEMORY_LEVEL"
+export TYPUS_SKIP_GO_BUILD=1
+export TYPUS_MINIMAL_MODE=1
+
+# 系统内存限制
+if command -v ulimit >/dev/null 2>&1; then
+    ulimit -v $((MEMORY_LIMIT_MB * 1024))
+    echo "设置虚拟内存限制: ${MEMORY_LIMIT_MB}MB"
+fi
+
+# 清理函数
+cleanup() {
+    echo "执行内存清理..."
+    # 强制垃圾回收
+    if command -v ghc >/dev/null 2>&1; then
+        ghc -e "import System.Mem; performGC" 2>/dev/null || true
     fi
-    echo $available_mem
+    # 清理临时文件
+    find /tmp -name "typus*" -mtime +1 -delete 2>/dev/null || true
 }
 
-# 获取系统总内存（MB）
-get_total_memory() {
-    local total_mem
-    if command -v free >/dev/null 2>&1; then
-        total_mem=$(free -m | awk 'NR==2{printf "%.0f", $2}')
-    elif command -v vm_stat >/dev/null 2>&1; then
-        # macOS
-        total_mem=$(sysctl -n hw.memsize | awk '{printf "%.0f", $1 / 1024 / 1024}')
-    else
-        total_mem=1024  # 默认值
-    fi
-    echo $total_mem
+# 设置清理陷阱
+trap cleanup EXIT INT TERM
+
+# 构建优化选项
+BUILD_OPTS=(
+    "--ghc-options=-rtsopts"
+    "--ghc-options=-with-rtsopts=-M${MEMORY_LIMIT_MB}m"
+    "--ghc-options=-O0"
+    "--ghc-options=-fno-warn-unused-imports"
+    "--ghc-options=-fno-warn-unused-matches"
+    "--disable-profiling"
+)
+
+echo ""
+echo "构建增强内存优化测试套件..."
+if ! cabal build typus-test "${BUILD_OPTS[@]}"; then
+    echo "构建失败，尝试简化构建..."
+    cabal build typus-test --ghc-options="-O0 -rtsopts" --disable-profiling
+fi
+
+echo ""
+echo "运行增强内存优化测试..."
+
+# 测试选择函数 - 基于内存级别选择适当的测试套件
+select_test_suite() {
+    local memory_level="$1"
+    case "$memory_level" in
+        EMERGENCY)
+            echo "--test-option=--pattern=*Essential* --test-option=--pattern=*Core*"
+            ;;
+        CRITICAL)
+            echo "--test-option=--pattern=*Essential* --test-option=--pattern=*Core* --test-option=--pattern=*Basic*"
+            ;;
+        MINIMAL)
+            echo "--test-option=--pattern=*Essential* --test-option=--pattern=*Core* --test-option=--pattern=*Basic* --test-option=--pattern=*Standard*"
+            ;;
+        LOW)
+            echo "--test-option=--pattern=*Essential* --test-option=--pattern=*Core* --test-option=--pattern=*Basic* --test-option=--pattern=*Standard* --test-option=--pattern=*Optimized*"
+            ;;
+        MODERATE)
+            echo ""  # 运行所有测试
+            ;;
+        *)
+            echo ""  # 默认运行所有测试
+            ;;
+    esac
 }
 
-# 检测内存压力
-detect_memory_pressure() {
-    local available_mem=$(get_available_memory)
-    local total_mem=$(get_total_memory)
-    local pressure=$(echo "scale=2; 1 - ($available_mem / $total_mem)" | bc -l)
-    echo $pressure
-}
-
-# 运行测试的函数
-run_enhanced_test() {
-    local test_type=$1
-    local memory_limit=$2
-    local test_command=$3
-    local cleanup_strategy=$4
+# 运行内存优化测试的函数
+run_enhanced_memory_test() {
+    local test_pattern="$1"
+    local test_name="$2"
     
-    echo -e "${CYAN}运行 $test_type 测试${NC}"
-    echo -e "${BLUE}内存限制: ${memory_limit}MB${NC}"
-    echo -e "${BLUE}清理策略: $cleanup_strategy${NC}"
-    echo -e "${BLUE}命令: $test_command${NC}"
+    echo "运行测试: ${test_name}"
     
-    # 设置内存限制（如果系统支持）
-    if command -v ulimit >/dev/null 2>&1; then
-        ulimit -v $((memory_limit * 1024)) 2>/dev/null || true
-    fi
+    # 基于内存级别选择测试选项
+    local test_options=$(select_test_suite "$MEMORY_LEVEL")
     
-    # 设置环境变量
-    export MEMORY_LIMIT_MB=$memory_limit
-    export CLEANUP_STRATEGY=$cleanup_strategy
-    
-    # 运行测试
-    local start_time=$(date +%s)
-    if eval "$test_command"; then
-        local end_time=$(date +%s)
-        local duration=$((end_time - start_time))
-        echo -e "${GREEN}$test_type 测试通过 (耗时: ${duration}秒)${NC}"
-        return 0
+    # 运行测试并监控内存
+    if cabal test typus-test \
+        --test-option="+RTS" \
+        --test-option="-M${MEMORY_LIMIT_MB}m" \
+        --test-option="-A1m" \
+        --test-option="-RTS" \
+        --disable-profiling \
+        --test-show-details=direct \
+        $test_options; then
+        echo "✓ 测试完成: ${test_name}"
     else
-        echo -e "${RED}$test_type 测试失败${NC}"
+        echo "✗ 测试失败: ${test_name}"
         return 1
     fi
+    
+    # 测试后清理
+    cleanup
+    echo ""
 }
 
-# 运行增强内存优化测试
-run_enhanced_memory_tests() {
-    local available_mem=$(get_available_memory)
-    local total_mem=$(get_total_memory)
-    local pressure=$(detect_memory_pressure)
-    
-    echo -e "${GREEN}=== 增强内存优化测试系统 ===${NC}"
-    echo -e "${GREEN}可用内存: ${available_mem}MB${NC}"
-    echo -e "${GREEN}总内存: ${total_mem}MB${NC}"
-    echo -e "${GREEN}内存压力: ${pressure}${NC}"
-    echo ""
-    
-    # 根据可用内存和压力选择测试级别
-    if [ $available_mem -lt $ULTRA_EXTREME_MEMORY ]; then
-        echo -e "${RED}内存严重不足，运行超极端测试${NC}"
-        run_enhanced_test "超极端" $ULTRA_EXTREME_MEMORY \
-            "stack test EnhancedMemoryTestRunner --test-arguments=\"ultra\"" \
-            "emergency"
-    elif [ $available_mem -lt $CRITICAL_MEMORY ]; then
-        echo -e "${RED}内存极度受限，运行关键测试${NC}"
-        run_enhanced_test "关键" $CRITICAL_MEMORY \
-            "stack test EnhancedMemoryTestRunner --test-arguments=\"critical\"" \
-            "aggressive"
-    elif [ $available_mem -lt $EMERGENCY_MEMORY ]; then
-        echo -e "${YELLOW}内存受限，运行紧急测试${NC}"
-        run_enhanced_test "紧急" $EMERGENCY_MEMORY \
-            "stack test EnhancedMemoryTestRunner --test-arguments=\"emergency\"" \
-            "aggressive"
-    elif [ $available_mem -lt $MINIMAL_MEMORY ]; then
-        echo -e "${YELLOW}内存有限，运行最小测试${NC}"
-        run_enhanced_test "最小" $MINIMAL_MEMORY \
-            "stack test EnhancedMemoryTestRunner --test-arguments=\"minimal\"" \
-            "standard"
-    elif [ $available_mem -lt $CI_MEMORY ]; then
-        echo -e "${YELLOW}内存较少，运行CI测试${NC}"
-        run_enhanced_test "CI" $CI_MEMORY \
-            "stack test EnhancedMemoryTestRunner --test-arguments=\"ci\"" \
-            "standard"
-    elif [ $available_mem -lt $DEVELOPMENT_MEMORY ]; then
-        echo -e "${GREEN}内存适中，运行开发测试${NC}"
-        run_enhanced_test "开发" $DEVELOPMENT_MEMORY \
-            "stack test EnhancedMemoryTestRunner --test-arguments=\"development\"" \
-            "light"
-    else
-        echo -e "${GREEN}内存充足，运行综合测试${NC}"
-        run_enhanced_test "综合" $COMPREHENSIVE_MEMORY \
-            "stack test EnhancedMemoryTestRunner --test-arguments=\"comprehensive\"" \
-            "light"
-    fi
-}
+# 运行核心测试套件
+echo "=== 运行核心测试套件 ==="
+run_enhanced_memory_test "*Essential*" "核心功能测试"
 
-# 运行特定类型的测试
-run_specific_test() {
-    local test_type=$1
-    local memory_limit
-    local cleanup_strategy
-    local test_command
-    
-    case $test_type in
-        "ultra")
-            memory_limit=$ULTRA_EXTREME_MEMORY
-            cleanup_strategy="emergency"
-            test_command="stack test EnhancedMemoryTestRunner --test-arguments=\"ultra\""
-            ;;
-        "critical")
-            memory_limit=$CRITICAL_MEMORY
-            cleanup_strategy="aggressive"
-            test_command="stack test EnhancedMemoryTestRunner --test-arguments=\"critical\""
-            ;;
-        "emergency")
-            memory_limit=$EMERGENCY_MEMORY
-            cleanup_strategy="aggressive"
-            test_command="stack test EnhancedMemoryTestRunner --test-arguments=\"emergency\""
-            ;;
-        "minimal")
-            memory_limit=$MINIMAL_MEMORY
-            cleanup_strategy="standard"
-            test_command="stack test EnhancedMemoryTestRunner --test-arguments=\"minimal\""
-            ;;
-        "ci")
-            memory_limit=$CI_MEMORY
-            cleanup_strategy="standard"
-            test_command="stack test EnhancedMemoryTestRunner --test-arguments=\"ci\""
-            ;;
-        "development")
-            memory_limit=$DEVELOPMENT_MEMORY
-            cleanup_strategy="light"
-            test_command="stack test EnhancedMemoryTestRunner --test-arguments=\"development\""
-            ;;
-        "comprehensive")
-            memory_limit=$COMPREHENSIVE_MEMORY
-            cleanup_strategy="light"
-            test_command="stack test EnhancedMemoryTestRunner --test-arguments=\"comprehensive\""
-            ;;
-        *)
-            echo -e "${RED}错误: 未知的测试类型 '$test_type'${NC}"
-            return 1
-            ;;
-    esac
-    
-    run_enhanced_test "$test_type" $memory_limit "$test_command" "$cleanup_strategy"
-}
+# 根据内存级别运行扩展测试
+if [ "$MEMORY_LEVEL" != "EMERGENCY" ] && [ "$MEMORY_LEVEL" != "CRITICAL" ]; then
+    echo "=== 运行基础测试套件 ==="
+    run_enhanced_memory_test "*Basic*" "基础功能测试"
+fi
 
-# 运行内存基准测试
-run_memory_benchmark() {
-    echo -e "${PURPLE}=== 内存基准测试 ===${NC}"
-    
-    local test_types=("ultra" "critical" "emergency" "minimal" "ci")
-    local results=()
-    
-    for test_type in "${test_types[@]}"; do
-        echo -e "${CYAN}运行 $test_type 基准测试...${NC}"
-        
-        local start_time=$(date +%s)
-        local start_memory=$(get_available_memory)
-        
-        if run_specific_test "$test_type"; then
-            local end_time=$(date +%s)
-            local end_memory=$(get_available_memory)
-            local duration=$((end_time - start_time))
-            local memory_diff=$((start_memory - end_memory))
-            
-            results+=("$test_type: ${duration}s, ${memory_diff}MB")
-            echo -e "${GREEN}$test_type 基准测试完成${NC}"
-        else
-            results+=("$test_type: FAILED")
-            echo -e "${RED}$test_type 基准测试失败${NC}"
-        fi
-        
-        # 等待内存稳定
-        sleep 2
-    done
-    
-    echo -e "${PURPLE}=== 基准测试结果 ===${NC}"
-    for result in "${results[@]}"; do
-        echo -e "${BLUE}$result${NC}"
-    done
-}
+if [ "$MEMORY_LEVEL" = "MODERATE" ] || [ "$MEMORY_LEVEL" = "LOW" ]; then
+    echo "=== 运行标准测试套件 ==="
+    run_enhanced_memory_test "*Standard*" "标准功能测试"
+fi
 
-# 生成内存优化报告
-generate_memory_report() {
-    echo -e "${PURPLE}=== 内存优化报告 ===${NC}"
-    
-    local available_mem=$(get_available_memory)
-    local total_mem=$(get_total_memory)
-    local pressure=$(detect_memory_pressure)
-    
-    echo -e "${GREEN}系统信息:${NC}"
-    echo -e "${BLUE}  总内存: ${total_mem}MB${NC}"
-    echo -e "${BLUE}  可用内存: ${available_mem}MB${NC}"
-    echo -e "${BLUE}  内存压力: ${pressure}${NC}"
-    echo ""
-    
-    echo -e "${GREEN}内存优化级别:${NC}"
-    echo -e "${BLUE}  超极端 (16MB): 用于极度受限环境${NC}"
-    echo -e "${BLUE}  关键 (24MB): 用于关键任务环境${NC}"
-    echo -e "${BLUE}  紧急 (32MB): 用于紧急情况${NC}"
-    echo -e "${BLUE}  最小 (48MB): 用于资源受限环境${NC}"
-    echo -e "${BLUE}  CI (64MB): 用于持续集成环境${NC}"
-    echo -e "${BLUE}  开发 (128MB): 用于开发环境${NC}"
-    echo -e "${BLUE}  综合 (256MB): 用于完整测试${NC}"
-    echo ""
-    
-    echo -e "${GREEN}优化功能:${NC}"
-    echo -e "${BLUE}  - 统一内存管理和限制${NC}"
-    echo -e "${BLUE}  - 极端内存优化策略${NC}"
-    echo -e "${BLUE}  - 智能测试选择${NC}"
-    echo -e "${BLUE}  - 增强内存监控${NC}"
-    echo -e "${BLUE}  - 自适应清理策略${NC}"
-    echo -e "${BLUE}  - 持续内存监控${NC}"
-    echo ""
-    
-    echo -e "${GREEN}建议:${NC}"
-    if [ $available_mem -lt $EMERGENCY_MEMORY ]; then
-        echo -e "${YELLOW}  - 内存严重不足，建议使用 ultra 或 critical 模式${NC}"
-    elif [ $available_mem -lt $CI_MEMORY ]; then
-        echo -e "${YELLOW}  - 内存有限，建议使用 emergency 或 minimal 模式${NC}"
-    else
-        echo -e "${GREEN}  - 内存充足，可以使用 development 或 comprehensive 模式${NC}"
-    fi
-}
+if [ "$MEMORY_LEVEL" = "MODERATE" ]; then
+    echo "=== 运行全面测试套件 ==="
+    run_enhanced_memory_test "*" "全面功能测试"
+fi
 
-# 显示帮助信息
-show_help() {
-    echo "增强内存优化测试脚本"
-    echo ""
-    echo "用法: $0 [选项]"
-    echo ""
-    echo "选项:"
-    echo "  -u, --ultra        运行超极端测试 (16MB)"
-    echo "  -c, --critical     运行关键测试 (24MB)"
-    echo "  -e, --emergency    运行紧急测试 (32MB)"
-    echo "  -m, --minimal      运行最小测试 (48MB)"
-    echo "  -i, --ci           运行CI测试 (64MB)"
-    echo "  -d, --development  运行开发测试 (128MB)"
-    echo "  -o, --comprehensive 运行综合测试 (256MB)"
-    echo "  -b, --benchmark    运行内存基准测试"
-    echo "  -r, --report       生成内存优化报告"
-    echo "  -h, --help         显示此帮助信息"
-    echo ""
-    echo "如果不指定选项，脚本将根据可用内存自动选择测试级别。"
-    echo ""
-    echo "环境变量:"
-    echo "  MEMORY_LIMIT_MB    手动设置内存限制"
-    echo "  CLEANUP_STRATEGY   设置清理策略 (light/standard/aggressive/emergency)"
-    echo "  ULTRA_TESTS=true   强制启用超极端模式"
-    echo "  CRITICAL_TESTS=true 强制启用关键模式"
-    echo "  EMERGENCY_TESTS=true 强制启用紧急模式"
-    echo "  MINIMAL_TESTS=true 强制启用最小模式"
-    echo "  CI=true            强制启用CI模式"
-}
+echo ""
+echo "=== 增强内存优化测试完成 ==="
+echo "内存级别: ${MEMORY_LEVEL}"
+echo "内存限制: ${MEMORY_LIMIT_MB}MB"
+echo "测试批次大小: ${TEST_BATCH_SIZE}"
+echo "测试执行状态: 成功完成"
 
-# 主函数
-main() {
-    # 检查Stack是否可用
-    if ! command -v stack >/dev/null 2>&1; then
-        echo -e "${RED}错误: 未找到Stack命令，请确保已安装Haskell Stack${NC}"
-        exit 1
-    fi
-    
-    # 检查项目结构
-    if [ ! -f "EnhancedMemoryTestRunner.hs" ]; then
-        echo -e "${RED}错误: 未找到EnhancedMemoryTestRunner.hs，请确保在正确的目录中运行${NC}"
-        exit 1
-    fi
-    
-    # 解析命令行参数
-    case "${1:-}" in
-        -u|--ultra)
-            run_specific_test "ultra"
-            ;;
-        -c|--critical)
-            run_specific_test "critical"
-            ;;
-        -e|--emergency)
-            run_specific_test "emergency"
-            ;;
-        -m|--minimal)
-            run_specific_test "minimal"
-            ;;
-        -i|--ci)
-            run_specific_test "ci"
-            ;;
-        -d|--development)
-            run_specific_test "development"
-            ;;
-        -o|--comprehensive)
-            run_specific_test "comprehensive"
-            ;;
-        -b|--benchmark)
-            run_memory_benchmark
-            ;;
-        -r|--report)
-            generate_memory_report
-            ;;
-        -h|--help)
-            show_help
-            ;;
-        "")
-            run_enhanced_memory_tests
-            ;;
-        *)
-            echo -e "${RED}错误: 未知选项 '$1'${NC}"
-            echo ""
-            show_help
-            exit 1
-            ;;
-    esac
-}
-
-# 运行主函数
-main "$@"
+# 生成内存使用报告
+echo ""
+echo "=== 内存使用报告 ==="
+if command -v free >/dev/null 2>&1; then
+    echo "最终内存状态:"
+    free -h | head -2
+fi
