@@ -1,0 +1,154 @@
+# 增强测试内存优化配置
+# 专注于在不删除测试用例的情况下减少内存使用
+
+memory_optimization:
+  strategy: "preserve_all_tests"
+  optimization_levels:
+    - name: "ultra_conservative"
+      memory_limit_mb: 8
+      description: "超保守内存优化 - 极端低内存环境"
+      quickcheck:
+        tests: 1
+        max_size: 1
+        max_shrinks: 0
+      data_limits:
+        max_string_length: 2
+        max_list_length: 1
+        max_int_value: 3
+      rts_options: "-M8m -A256k -n32k -H512k -qg -G1"
+      
+    - name: "conservative"
+      memory_limit_mb: 16
+      description: "保守内存优化 - 低内存环境"
+      quickcheck:
+        tests: 2
+        max_size: 2
+        max_shrinks: 1
+      data_limits:
+        max_string_length: 3
+        max_list_length: 2
+        max_int_value: 5
+      rts_options: "-M16m -A512k -n64k -H1m -qg -G1"
+      
+    - name: "balanced"
+      memory_limit_mb: 32
+      description: "平衡内存优化 - 标准低内存环境"
+      quickcheck:
+        tests: 5
+        max_size: 3
+        max_shrinks: 2
+      data_limits:
+        max_string_length: 5
+        max_list_length: 3
+        max_int_value: 10
+      rts_options: "-M32m -A1m -n128k -H2m -qg -G1"
+      
+    - name: "optimized"
+      memory_limit_mb: 64
+      description: "优化内存 - 正常环境"
+      quickcheck:
+        tests: 10
+        max_size: 5
+        max_shrinks: 3
+      data_limits:
+        max_string_length: 8
+        max_list_length: 5
+        max_int_value: 20
+      rts_options: "-M64m -A2m -n256k -H4m -qg -G1"
+
+adaptive_memory_management:
+  enabled: true
+  memory_check_interval: 5
+  thresholds:
+    high: 0.75
+    critical: 0.85
+  actions:
+    - memory_usage: 0.75
+      action: "reduce_quickcheck_tests"
+      new_tests: 5
+    - memory_usage: 0.80
+      action: "reduce_data_sizes"
+      max_string_length: 3
+      max_list_length: 2
+    - memory_usage: 0.85
+      action: "emergency_mode"
+      quickcheck_tests: 1
+      max_size: 1
+
+test_selection:
+  preserve_all: true
+  priority_groups:
+    - name: "essential"
+      description: "核心功能测试 - 必须运行"
+      modules:
+        - "Test.Unit.CoreFunctionalitySpec"
+        - "Test.Unit.CoreParserSpec"
+        - "Test.Unit.CoreCompilerSpec"
+        - "Test.Unit.CoreErrorHandlerSpec"
+      
+    - name: "core"
+      description: "核心模块测试 - 重要功能"
+      modules:
+        - "Test.Unit.CoreDependenciesSpec"
+        - "Test.Unit.CoreOwnershipSpec"
+        - "Test.Unit.CoreSourceLocationSpec"
+        - "Test.Unit.CoreUtilsSpec"
+      
+    - name: "standard"
+      description: "标准测试 - 完整覆盖"
+      modules:
+        - "Test.Unit.CompilerSpec"
+        - "Test.Unit.ParserSpec"
+        - "Test.Unit.IntegrationSpec"
+      
+    - name: "comprehensive"
+      description: "全面测试 - 可选运行"
+      modules:
+        - "Test.Unit.ComprehensiveTestSuite"
+        - "Test.Unit.EnhancedTestSuite"
+        - "Test.Unit.ExtendedQuickCheckTestSuite"
+
+memory_monitoring:
+  enabled: true
+  metrics:
+    - "heap_usage"
+    - "gc_frequency"
+    - "memory_leaks"
+  alerts:
+    - threshold: 0.8
+      action: "log_warning"
+    - threshold: 0.9
+      action: "reduce_test_parameters"
+    - threshold: 0.95
+      action: "emergency_gc"
+
+performance_optimizations:
+  build_options:
+    - "--ghc-options=-O0"
+    - "--ghc-options=-rtsopts"
+    - "--ghc-options=-fno-warn-unused-imports"
+  runtime_optimizations:
+    - "disable_parallel_execution"
+    - "batch_test_execution"
+    - "frequent_gc"
+  file_handling:
+    - "stream_file_processing"
+    - "limit_file_sizes"
+    - "cleanup_temp_files"
+
+validation:
+  test_coverage:
+    essential: 1.0
+    core: 0.9
+    standard: 0.8
+    comprehensive: 0.7
+  memory_efficiency:
+    max_memory_usage_mb: 128
+    gc_efficiency_threshold: 0.8
+    memory_leak_tolerance: 0
+
+logging:
+  level: "info"
+  memory_usage_logging: true
+  gc_logging: true
+  test_progress_logging: true
