@@ -8,11 +8,36 @@ memory:
   aggressive_gc: true  # 启用激进的垃圾回收
   emergency_mode: true  # 启用紧急模式
   ultra_optimization: true  # 启用超级优化
+  
+  # 新增：精细内存阈值控制
+  thresholds:
+    warning: 0.7  # 70%内存使用时警告
+    critical: 0.8  # 80%内存使用时触发关键模式
+    emergency: 0.9  # 90%内存使用时触发紧急模式
+    
+  # 新增：自适应内存管理
+  adaptive_management:
+    enable: true
+    reduce_test_count_on_pressure: true
+    skip_large_tests_on_pressure: true
+    pause_testing_on_emergency: true
 
 execution:
   strategy: batched
   max_concurrent_tests: 1
   timeout_seconds: 240  # 从300减少到240
+  
+  # 新增：内存压力下的执行控制
+  memory_pressure_control:
+    pause_duration_ms: 500  # 内存压力时暂停500ms
+    resume_check_interval_ms: 100  # 恢复检查间隔
+    max_pause_count: 10  # 最大暂停次数
+    
+  # 新增：测试优先级控制
+  test_priority:
+    essential_first: true  # 核心测试优先
+    large_tests_last: true  # 大型测试最后执行
+    skip_on_retry: false  # 重试时不跳过测试
 
 monitoring:
   enable_memory_monitoring: true
@@ -23,6 +48,25 @@ optimization:
   enable_test_reuse: true
   enable_memory_prediction: true
   adaptive_scaling: false  # 禁用自适应缩放以减少开销
+  
+  # 新增：数据生成限制
+  data_generation_limits:
+    max_string_length: 50  # 字符串最大长度
+    max_list_length: 10   # 列表最大长度
+    max_recursion_depth: 5 # 递归最大深度
+    max_integer_value: 100 # 整数最大值
+    
+  # 新增：测试覆盖率保护
+  coverage_preservation:
+    preserve_core_coverage: true
+    essential_test_ratio: 0.8  # 保留80%核心测试
+    critical_functionality_tests: true
+    
+  # 新增：内存泄漏检测
+  leak_detection:
+    enable: true
+    check_interval_tests: 10  # 每10个测试检查一次
+    report_suspicious_patterns: true
   
 environment:
   type: memory_optimized

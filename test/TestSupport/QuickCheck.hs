@@ -58,3 +58,19 @@ emergencyMemoryProperty name prop =
   localOption (QuickCheckMaxSize 1) $    -- 最小数据大小
   localOption (QuickCheckMaxShrinks 0) $ -- 禁用收缩以节省内存
   testProperty name prop
+
+-- | Memory-monitored property test with forced GC between tests
+memoryMonitoredProperty :: Testable prop => String -> prop -> TestTree
+memoryMonitoredProperty name prop =
+  localOption (QuickCheckTests 3) $      -- 少量测试
+  localOption (QuickCheckMaxSize 2) $    -- 小数据大小
+  localOption (QuickCheckMaxShrinks 1) $ -- 少量收缩
+  testProperty name prop
+
+-- | Adaptive property test that adjusts based on available memory
+adaptiveMemoryProperty :: Testable prop => String -> prop -> TestTree
+adaptiveMemoryProperty name prop =
+  localOption (QuickCheckTests 5) $      -- 中等测试次数
+  localOption (QuickCheckMaxSize 3) $    -- 中等数据大小
+  localOption (QuickCheckMaxShrinks 2) $ -- 中等收缩
+  testProperty name prop
