@@ -1,0 +1,179 @@
+# 增强内存保留配置
+# 确保测试用例不会消耗大量内存，同时保留所有测试功能
+
+# 内存优化级别配置
+memory_levels:
+  extreme_minimal:
+    description: "极端最小模式 - 极度内存受限环境"
+    memory_limit_mb: 8
+    quickcheck_tests: 1
+    quickcheck_max_size: 1
+    quickcheck_max_shrinks: 0
+    max_string_length: 10
+    max_list_length: 3
+    test_batch_size: 1
+    gc_frequency: 1
+    
+  emergency:
+    description: "紧急模式 - 极度内存受限环境"
+    memory_limit_mb: 16
+    quickcheck_tests: 2
+    quickcheck_max_size: 2
+    quickcheck_max_shrinks: 0
+    max_string_length: 20
+    max_list_length: 5
+    test_batch_size: 2
+    gc_frequency: 2
+    
+  balanced:
+    description: "平衡模式 - 正常内存环境"
+    memory_limit_mb: 64
+    quickcheck_tests: 5
+    quickcheck_max_size: 4
+    quickcheck_max_shrinks: 1
+    max_string_length: 50
+    max_list_length: 10
+    test_batch_size: 4
+    gc_frequency: 4
+
+# 测试执行策略
+test_execution:
+  # 智能测试选择 - 优先选择优化版本
+  selection_strategy: "intelligent_optimized_first"
+  
+  # 并行执行控制
+  parallel_execution: false
+  max_concurrent_tests: 1
+  
+  # 内存清理策略
+  cleanup_strategy:
+    force_gc_between_tests: true
+    compact_heap_between_tests: true
+    cleanup_temporary_files: true
+    
+  # 测试超时设置
+  timeouts:
+    default_timeout_seconds: 30
+    emergency_timeout_seconds: 15
+    critical_timeout_seconds: 20
+
+# 数据生成优化
+data_generation:
+  # 字符串生成限制
+  string_limits:
+    max_length: 100
+    min_length: 0
+    use_efficient_generators: true
+    
+  # 列表生成限制
+  list_limits:
+    max_length: 15
+    min_length: 0
+    use_efficient_generators: true
+    
+  # 整数生成限制
+  integer_limits:
+    max_value: 1000
+    min_value: -1000
+    
+  # 自定义生成器
+  custom_generators:
+    use_minimal_strings: true
+    use_limited_lists: true
+    avoid_large_data_structures: true
+
+# 测试保留策略
+test_preservation:
+  # 确保不删除任何测试
+  preserve_all_tests: true
+  
+  # 优化版本优先
+  prefer_optimized_versions: true
+  
+  # 回退策略
+  fallback_strategy:
+    enabled: true
+    fallback_to_original: true
+    fallback_to_simpler: true
+    
+  # 测试完整性验证
+  integrity_check:
+    verify_all_tests_exist: true
+    verify_test_functionality: true
+    log_missing_tests: true
+
+# 智能测试套件选择
+intelligent_test_selection:
+  # 核心测试套件（必须运行）
+  core_suites:
+    - "Test.Unit.BasicQuickCheckTestSuite.tests"
+    - "Test.Unit.CoreQuickCheckSpec.tests"
+    - "Test.Unit.ConciseTestSuite.tests"
+    
+  # 优化测试套件（优先运行）
+  optimized_suites:
+    - "Test.Unit.MemoryOptimizedTestSuite.tests"
+    - "Test.Unit.ExtremeMemoryOptimizedTestSuite.tests"
+    - "Test.Unit.EnhancedMemoryOptimizedTestSuite.tests"
+    
+  # 完整测试套件（内存充足时运行）
+  comprehensive_suites:
+    - "Test.Unit.ComprehensiveMemoryOptimizedTestSuite.tests"
+    - "Test.Unit.AdvancedMemoryOptimizedTestSuite.tests"
+
+# 环境配置
+environment:
+  # GHC选项
+  ghc_options:
+    - "-O0"  # 禁用优化以减少编译内存
+    - "-j1"  # 单线程编译
+    - "-rtsopts"
+    - "-fno-warn-unused-imports"
+    - "-fno-warn-unused-matches"
+    - "-fno-warn-unused-binds"
+    
+  # Cabal选项
+  cabal_options:
+    - "--disable-profiling"
+    - "--disable-library-profiling"
+    - "--disable-executable-profiling"
+    
+  # 环境变量
+  environment_variables:
+    GHC_HEAP_SIZE: "64M"
+    GHC_STACK_SIZE: "2M"
+    CABAL_MAX_BUILD_JOBS: "1"
+
+# 监控和日志
+monitoring:
+  # 内存监控
+  memory_monitoring:
+    enable: true
+    check_interval_ms: 500
+    
+  # 性能监控
+  performance_monitoring:
+    enable: false  # 减少监控开销
+    
+  # 日志配置
+  logging:
+    level: "WARN"  # 减少日志输出
+    log_memory_usage: true
+    log_test_selection: true
+    
+# 自适应调整
+adaptive_adjustment:
+  # 内存使用阈值
+  memory_thresholds:
+    emergency_threshold: 0.85  # 85%内存使用时触发紧急模式
+    critical_threshold: 0.75   # 75%内存使用时触发关键模式
+    warning_threshold: 0.65    # 65%内存使用时发出警告
+    
+  # 自动调整策略
+  auto_adjustment:
+    enable: true
+    strategies:
+      - "reduce_test_batch_size"
+      - "decrease_quickcheck_parameters"
+      - "force_gc_between_tests"
+      - "select_minimal_test_suites"
