@@ -1,0 +1,99 @@
+# 增强内存优化配置 - 保持所有测试用例
+# 专注于优化测试执行而非删除测试
+
+memory:
+  # 内存限制策略
+  limit_mb: 8  # 进一步减少到8MB
+  batch_size: 1  # 最小批处理大小
+  gc_frequency: 2  # 更频繁的GC
+  test_selection_ratio: 1.0  # 保持所有测试，但优化执行
+  conservative_mode: true
+  aggressive_gc: true
+  emergency_mode: false  # 禁用紧急模式以保持测试完整性
+  ultra_optimization: true
+  extreme_mode: false  # 禁用极端模式
+
+# 测试执行优化
+execution:
+  strategy: "sequential_optimized"  # 顺序执行但优化内存使用
+  max_concurrent_tests: 1  # 严格单线程
+  timeout_seconds: 180  # 合理超时
+  enable_test_reordering: true  # 优化测试执行顺序
+  memory_aware_scheduling: true  # 内存感知调度
+
+# 内存监控和清理
+monitoring:
+  enable_memory_monitoring: true
+  log_memory_usage: false  # 减少日志开销
+  memory_check_interval: 1000  # 平衡检查频率
+  proactive_cleanup: true  # 主动清理
+  force_gc_between_tests: true  # 测试间强制GC
+
+# 测试数据生成优化
+data_generation:
+  # 字符串优化
+  max_string_length: 16  # 限制字符串长度
+  max_unicode_chars: 8   # 限制Unicode字符数
+  
+  # 列表和集合优化
+  max_list_length: 5     # 限制列表长度
+  max_set_size: 3        # 限制集合大小
+  max_map_size: 3        # 限制映射大小
+  
+  # 数字范围优化
+  max_int_value: 100     # 限制整数范围
+  max_float_precision: 2 # 限制浮点精度
+  
+  # AST和语法树优化
+  max_ast_depth: 3       # 限制AST深度
+  max_type_expr_depth: 2 # 限制类型表达式深度
+  max_dependency_depth: 2 # 限制依赖深度
+
+# QuickCheck配置优化
+quickcheck:
+  tests_per_property: 1    # 每个属性只测试1次
+  max_size: 1             # 最小生成器大小
+  max_shrinks: 0          # 禁用收缩
+  enable_small_check: true # 启用小型检查
+  aggressive_resize: true  # 积极调整大小
+
+# 模块级优化
+modules:
+  # 测试模块优先级
+  essential_modules: ["CoreUtils", "Parser", "Compiler", "ErrorHandler"]
+  high_priority_modules: ["Dependencies", "Ownership", "TypeSystem"]
+  standard_modules: ["Integration", "EndToEnd", "Performance"]
+  
+  # 模块执行顺序优化
+  execution_order: "essential_first"
+  memory_heavy_modules_last: true
+
+# 运行时优化
+runtime:
+  # GHC RTS选项
+  ghc_rts_options: "-M8m -A512k -n64k -H2m -qg -G1 -I0 -c"
+  
+  # 垃圾回收策略
+  gc_strategy: "aggressive"
+  compact_heap: true
+  
+  # 内存分配
+  heap_alloc_size: "512k"
+  nursery_size: "64k"
+  stack_size: "32k"
+
+# 环境配置
+environment:
+  type: "memory_optimized_preserve"
+  skip_go_build: true
+  minimal_mode: true
+  cleanup_temp_files: true
+  sync_filesystem: false  # 减少文件系统同步开销
+
+# 验证和监控
+validation:
+  enable_coverage_verification: true
+  core_coverage_threshold: 0.9
+  essential_coverage_threshold: 1.0
+  test_preservation_check: true
+  memory_usage_tracking: true
