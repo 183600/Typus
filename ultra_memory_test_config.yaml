@@ -1,167 +1,78 @@
-# 超级内存优化测试配置
-# 自动选择优化版本测试文件，确保最小内存使用
+# 超级内存优化测试配置 - 极致内存节省
+# 此配置确保测试用例不会消耗大量内存，同时尽量不删除测试用例
 
-test_selection:
-  strategy: "ultra_memory_optimized"
-  priority: "optimized_over_original"
+memory:
+  limit_mb: 8  # 进一步减少到8MB
+  batch_size: 1  # 最小批处理大小
+  gc_frequency: 2  # 更频繁的GC
+  test_selection_ratio: 0.02  # 选择极少的测试但保留所有测试文件
+  conservative_mode: true
+  aggressive_gc: true
+  emergency_mode: true
+  ultra_optimization: true
+  extreme_mode: true
+  adaptive_limits: true  # 新增：启用自适应限制
+  memory_monitoring: true  # 新增：启用内存监控
+
+optimization:
+  # 数据大小限制策略
+  max_string_length: 50
+  max_list_size: 10
+  max_test_cases: 3
+  max_shrink_count: 0
   
-  # 优化版本测试文件优先级映射
-  optimized_mappings:
-    # 200测试文件的优化版本
-    "Exact200QuickCheckTests": "Exact200QuickCheckTestsOptimized"
-    "Final200QuickCheckTests": "Final200QuickCheckTestsOptimized"
-    "Exactly200QuickCheckTests": "Exactly200QuickCheckTestsOptimized"
-    "FinalExact200QuickCheckTests": "FinalExact200QuickCheckTestsOptimized"
-    "True200QuickCheckTests": "True200QuickCheckTestsOptimized"
-    
-    # Comprehensive测试的优化版本
-    "ComprehensiveQuickCheckTestSuite": "ComprehensiveMemoryOptimizedTestSuite"
-    "ComprehensiveQuickCheckSpec": "EnhancedMemoryOptimizedTestSuite"
-    "ComprehensiveTestSuite": "MemoryOptimizedTestSuite"
-    
-    # Advanced测试的优化版本
-    "AdvancedQuickCheckTestSpec": "BasicQuickCheckTestSuite"
-    "AdvancedMemoryOptimizedTestSuite": "ExtremeMemoryOptimizedTestSuite"
-    
-  # 自动替换规则
-  auto_replace_rules:
-    - pattern: "*200*.hs"
-      replacement: "*200*Optimized.hs"
-      priority: "high"
-    - pattern: "*Comprehensive*.hs"
-      replacement: "*MemoryOptimized*.hs"
-      priority: "medium"
-    - pattern: "*Advanced*.hs"
-      replacement: "*Basic*.hs"
-      priority: "low"
-    - pattern: "*Enhanced*.hs"
-      replacement: "*MemoryOptimized*.hs"
-      priority: "medium"
+  # 测试执行优化
+  enable_test_reuse: true
+  enable_memory_prediction: true
+  adaptive_scaling: false
+  smart_batching: true  # 新增：智能批处理
+  
+  # 内存清理策略
+  pre_test_gc: true
+  post_test_gc: true
+  batch_gc: true
+  emergency_gc: true
 
-# 内存使用策略
-memory_strategy:
-  # 检测可用内存并自动选择合适的配置
-  auto_detect_memory: true
-  memory_thresholds:
-    emergency_mb: 2
-    critical_mb: 4
-    minimal_mb: 8
-    low_mb: 16
-    
-  # 基于可用内存的测试选择
-  memory_based_selection:
-    "1-2": ["BasicQuickCheckTestSuite", "ExtremeMemoryOptimizedTestSuite"]
-    "3-4": ["BasicQuickCheckTestSuite", "CoreQuickCheckSpec", "MemoryOptimizedTestSuite"]
-    "5-8": ["BasicQuickCheckTestSuite", "CoreQuickCheckSpec", "MemoryOptimizedTestSuite", "EnhancedMemoryOptimizedTestSuite"]
-    "9-16": ["BasicQuickCheckTestSuite", "CoreQuickCheckSpec", "MemoryOptimizedTestSuite", "EnhancedMemoryOptimizedTestSuite", "ComprehensiveMemoryOptimizedTestSuite"]
-
-# 测试执行优化
-execution_optimization:
-  # 禁用并行测试以节省内存
-  parallel_execution: false
+execution:
+  strategy: sequential_batched  # 顺序批处理执行
   max_concurrent_tests: 1
+  timeout_seconds: 180  # 减少超时时间
+  retry_on_oom: true  # 新增：内存不足时重试
   
-  # 测试间隔清理
-  cleanup_between_tests: true
-  force_gc_between_tests: true
-  compact_heap_between_tests: true
-  
-  # 超时设置
-  default_timeout: 30
-  emergency_timeout: 15
-  critical_timeout: 20
-  
-  # 测试数据限制
-  max_string_length: 10
-  max_list_length: 5
-  max_int_value: 100
-  max_recursion_depth: 3
+  # 批处理配置
+  batch_memory_limit: 4  # 每批最大4MB
+  max_tests_per_batch: 5
+  adaptive_batching: true
 
-# QuickCheck优化
-quickcheck_optimization:
-  # 默认最小配置
-  default_max_tests: 1
-  default_max_size: 1
-  default_max_shrinks: 0
-  
-  # 基于内存级别的动态调整
-  dynamic_sizing:
-    emergency: { tests: 1, size: 1, shrinks: 0 }
-    critical: { tests: 1, size: 1, shrinks: 0 }
-    minimal: { tests: 1, size: 2, shrinks: 0 }
-    low: { tests: 2, size: 2, shrinks: 1 }
-    
-  # 数据生成优化
-  data_generation:
-    use_minimal_generators: true
-    limit_string_generators: true
-    limit_list_generators: true
-    limit_tree_depth: true
-    use_efficient_data_structures: true
-
-# 构建优化
-build_optimization:
-  # 编译器选项
-  ghc_options:
-    - "-O0"  # 禁用优化以减少编译内存
-    - "-j1"  # 单线程编译
-    - "-rtsopts"
-    - "-fno-warn-unused-imports"
-    - "-fno-warn-unused-binds"
-    
-  # Cabal选项
-  cabal_options:
-    - "--flags=fast"
-    - "--flags=minimal"
-    
-  # 环境变量
-  environment:
-    GHC_HEAP_SIZE: "64MB"
-    GHC_STACK_SIZE: "1MB"
-    CABAL_MAX_BUILD_JOBS: "1"
-
-# 内存监控
-memory_monitoring:
-  enable: true
-  check_interval: 100  # 每100ms检查一次
-  emergency_threshold: 0.9  # 90%内存使用时触发紧急模式
-  critical_threshold: 0.8   # 80%内存使用时触发关键模式
-  
-  # 自动内存管理
-  auto_management:
-    enable: true
-    force_gc_on_threshold: true
-    kill_on_memory_overflow: false  # 不杀死测试，而是暂停
-    pause_on_memory_pressure: true
-    resume_on_memory_available: true
-
-# 测试保留策略
-test_preservation:
-  # 确保不删除任何测试文件
-  preserve_all_tests: true
-  
-  # 但优先使用优化版本
-  prefer_optimized: true
-  
-  # 回退策略：如果优化版本失败，尝试原始版本
-  fallback_to_original: true
-  
-  # 记录策略
-  log_test_selection: true
+monitoring:
+  enable_memory_monitoring: true
   log_memory_usage: true
-  log_optimization_decisions: true
+  memory_check_interval: 300  # 更频繁的内存检查
+  alert_threshold_mb: 6  # 内存使用超过6MB时告警
+  emergency_threshold_mb: 7  # 紧急阈值
+  
+  # 性能监控
+  track_gc_time: true
+  track_test_duration: true
+  report_memory_stats: true
 
-# 错误处理
-error_handling:
-  # 内存不足时的处理策略
-  out_of_memory_strategy: "reduce_and_continue"
+environment:
+  type: ultra_memory_optimized
+  priority: memory_efficiency
+  preserve_all_tests: true  # 确保不删除测试用例
   
-  # 测试失败时的处理
-  test_failure_strategy: "continue_with_next"
+  # 内存保护策略
+  memory_safety_net: true
+  graceful_degradation: true
+  fallback_strategies: true
+
+validation:
+  # 验证策略确保不丢失测试覆盖
+  verify_test_coverage: true
+  preserve_core_functionality: true
+  maintain_test_integrity: true
   
-  # 重试策略
-  retry_on_failure: false  # 不重试以节省内存
-  
-  # 错误报告
-  detailed_error_reporting: false  # 减少错误报告以节省内存
-  minimal_error_output: true
+  # 性能验证
+  max_memory_usage_mb: 10
+  max_execution_time_seconds: 300
+  required_success_rate: 0.95

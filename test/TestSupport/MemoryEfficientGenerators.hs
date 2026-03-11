@@ -1,257 +1,147 @@
-{-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wall #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
 
--- | Memory-efficient test data generators for Typus test suites
--- This module provides optimized data generators that minimize memory usage
 module TestSupport.MemoryEfficientGenerators
-  ( -- Memory-efficient string generators
-    generateMicroStrings
-  , generateUltraLightStrings
-  , generateEnhancedStrings
-  , -- Memory-efficient list generators
-    generateMicroLists
-  , generateUltraLightLists
-  , generateEnhancedLists
-  , -- Memory-efficient tree generators
-    generateMicroTrees
-  , generateUltraLightTrees
-  , generateEnhancedTrees
-  , -- Memory-efficient AST generators
-    generateMiniAST
-  , generateCompactAST
-  , generateEfficientAST
-  , -- Utility functions
-    limitStringSize
-  , limitListSize
-  , limitRecursion
-  , createMemoryEfficientArbitrary
-  , -- Generator configurations
-    GeneratorConfig(..)
-  , microGeneratorConfig
-  , ultraLightGeneratorConfig
-  , enhancedGeneratorConfig
+  ( smallString
+  , boundedList
+  , smallInt
+  , constrainedText
+  , limitedArbitrary
+  , memorySafeArbitrary
+  , resizeSmall
+  , generateSmall
+  , smallProperty
+  , boundedProperty
   ) where
 
-import Test.Tasty.QuickCheck (Gen, Arbitrary(..), sized, scale, oneof, elements, arbitrary)
-import Control.Monad (replicateM)
+import Test.QuickCheck (Arbitrary(..), Gen, Property, Testable, arbitrary, choose, elements, forAll, listOf, listOf1, oneof, property, resize)
+import qualified Data.Text as T
+import Data.Char (isAlphaNum)
+import Data.List (intercalate)
 
--- | Configuration for memory-efficient generators
-data GeneratorConfig = GeneratorConfig
-  { maxStringLength :: Int        -- ^ Maximum string length
-  , maxListLength :: Int          -- ^ Maximum list length
-  , maxTreeDepth :: Int           -- ^ Maximum tree depth
-  , maxASTNodes :: Int            -- ^ Maximum AST nodes
-  , usePrintableChars :: Bool     -- ^ Use only printable characters
-  , useSimpleTypes :: Bool        -- ^ Use simple types only
-  , enableLazyGeneration :: Bool  -- ^ Enable lazy generation
-  , maxRecursionDepth :: Int      -- ^ Maximum recursion depth
-  } deriving (Show, Eq)
+-- | Generate small strings (max 32 characters) to reduce memory usage
+smallString :: Gen String
+smallString = resize 32 arbitrary
 
--- | Micro generator configuration (minimal memory usage) - 进一步优化
-microGeneratorConfig :: GeneratorConfig
-microGeneratorConfig = GeneratorConfig
-  { maxStringLength = 1
-  , maxListLength = 1
-  , maxTreeDepth = 1
-  , maxASTNodes = 1
-  , usePrintableChars = True
-  , useSimpleTypes = True
-  , enableLazyGeneration = False  -- 禁用惰性生成以减少内存持有
-  , maxRecursionDepth = 1
-  }
+-- | Generate bounded lists with small size (max 10 elements)
+boundedList :: Gen a -> Gen [a]
+boundedList gen = resize 10 $ listOf gen
 
--- | Ultra light generator configuration (very low memory usage)
-ultraLightGeneratorConfig :: GeneratorConfig
-ultraLightGeneratorConfig = GeneratorConfig
-  { maxStringLength = 2
-  , maxListLength = 2
-  , maxTreeDepth = 2
-  , maxASTNodes = 2
-  , usePrintableChars = True
-  , useSimpleTypes = True
-  , enableLazyGeneration = True
-  , maxRecursionDepth = 2
-  }
+-- | Generate small integers (range: -100 to 100)
+smallInt :: Gen Int
+smallInt = choose (-100, 100)
 
--- | Enhanced generator configuration (low memory usage)
-enhancedGeneratorConfig :: GeneratorConfig
-enhancedGeneratorConfig = GeneratorConfig
-  { maxStringLength = 3
-  , maxListLength = 2
-  , maxTreeDepth = 2
-  , maxASTNodes = 3
-  , usePrintableChars = True
-  , useSimpleTypes = True
-  , enableLazyGeneration = True
-  , maxRecursionDepth = 2
-  }
+-- | Generate constrained text with limited length (max 50 characters)
+constrainedText :: Gen T.Text
+constrainedText = T.pack <$> resize 50 arbitrary
 
--- | Standard generator configuration (balanced memory usage)
-standardGeneratorConfig :: GeneratorConfig
-standardGeneratorConfig = GeneratorConfig
-  { maxStringLength = 4
-  , maxListLength = 3
-  , maxTreeDepth = 3
-  , maxASTNodes = 4
-  , usePrintableChars = True
-  , useSimpleTypes = False
-  , enableLazyGeneration = True
-  , maxRecursionDepth = 3
-  }
+-- | Create a memory-safe arbitrary instance with size limits
+limitedArbitrary :: (Arbitrary a) => Gen a
+limitedArbitrary = resize 10 arbitrary
 
--- | Simple data types for testing
-data SimpleTree = Leaf String | Node SimpleTree SimpleTree
-  deriving (Show, Eq)
+-- | Memory-safe arbitrary with aggressive size limits
+memorySafeArbitrary :: (Arbitrary a) => Gen a
+memorySafeArbitrary = resize 5 arbitrary
 
-data SimpleAST = Literal String | Var String | Op SimpleAST SimpleAST
-  deriving (Show, Eq)
+-- | Helper to resize generators to small sizes
+resizeSmall :: Gen a -> Gen a
+resizeSmall = resize 8
 
--- | Generate micro-sized strings (1 char max) - 内存优化版本
-generateMicroStrings :: Gen String
-generateMicroStrings = sized $ \n -> do
-  let size = min 1 (max 0 n)
-      -- 使用更小的字符集，减少内存占用
-      microChars = ['a', 'b', 'c']  -- 仅使用3个字符
-  replicateM size $ elements microChars
+-- | Generate small values with aggressive limits
+generateSmall :: (Arbitrary a) => Gen a
+generateSmall = resize 3 arbitrary
 
--- | Generate ultra light strings (2 chars max)
-generateUltraLightStrings :: Gen String
-generateUltraLightStrings = sized $ \n -> do
-  let size = min 2 (max 0 n)
-  replicateM size $ elements $ take 16 ['a'..'z']
+-- | Create properties with small generated data
+smallProperty :: (Show a, Testable prop) => Gen a -> (a -> prop) -> Property
+smallProperty gen prop = forAll (resizeSmall gen) prop
 
--- | Generate enhanced strings (3 chars max)
-generateEnhancedStrings :: Gen String
-generateEnhancedStrings = sized $ \n -> do
-  let size = min 3 (max 0 n)
-  replicateM size $ elements $ take 24 ['a'..'z']
+-- | Create properties with bounded generated data
+boundedProperty :: (Show a, Testable prop) => Gen a -> (a -> prop) -> Property
+boundedProperty gen prop = forAll (resize 5 gen) prop
 
--- | Generate micro-sized lists (0-1 elements max) - 内存优化版本
-generateMicroLists :: Gen a -> Gen [a]
-generateMicroLists gen = sized $ \n -> do
-  let size = min 1 (max 0 n)
-  -- 使用严格的列表生成，避免惰性求值的内存开销
-  if size == 0
-  then return []
-  else do
-    elem <- gen
-    return [elem]  -- 明确返回单元素列表
+-- | Generate small alphanumeric strings (max 20 characters)
+smallAlphaNumString :: Gen String
+smallAlphaNumString = resize 20 $ listOf (choose ('a', 'z'))
 
--- | Generate ultra light lists (0-2 elements max)
-generateUltraLightLists :: Gen a -> Gen [a]
-generateUltraLightLists gen = sized $ \n -> do
-  let size = min 2 (max 0 n)
-  replicateM size gen
+-- | Generate small positive integers (range: 1 to 50)
+smallPositiveInt :: Gen Int
+smallPositiveInt = choose (1, 50)
 
--- | Generate enhanced lists (0-2 elements max)
-generateEnhancedLists :: Gen a -> Gen [a]
-generateEnhancedLists gen = sized $ \n -> do
-  let size = min 2 (max 0 n)
-  replicateM size gen
+-- | Generate small natural numbers (range: 0 to 100)
+smallNatural :: Gen Int
+smallNatural = choose (0, 100)
 
--- | Generate micro-sized trees (depth 1, leaf only)
-generateMicroTrees :: Gen SimpleTree
-generateMicroTrees = 
-  Leaf <$> generateMicroStrings
+-- | Generate identifiers with limited length
+smallIdentifier :: Gen String
+smallIdentifier = do
+  first <- choose ('a', 'z')
+  rest <- resize 7 $ listOf (choose ('a', 'z'))
+  return (first : rest)
 
--- | Generate ultra light trees (depth 1-2, mostly leaves)
-generateUltraLightTrees :: Gen SimpleTree
-generateUltraLightTrees = oneof
-  [ Leaf <$> generateMicroStrings
-  , Leaf <$> generateUltraLightStrings
-  , Node <$> generateMicroTrees <*> generateMicroTrees
-  ]
+-- | Generate file paths with limited depth
+smallFilePath :: Gen String
+smallFilePath = do
+  segments <- resize 2 $ listOf1 smallIdentifier
+  return $ intercalate "/" segments
 
--- | Generate enhanced trees (depth 2, conservative)
-generateEnhancedTrees :: Gen SimpleTree
-generateEnhancedTrees = oneof
-  [ Leaf <$> generateMicroStrings
-  , Leaf <$> generateUltraLightStrings
-  , Node <$> generateMicroTrees <*> generateMicroTrees
-  ]
+-- | Generate module names with limited depth
+smallModuleName :: Gen String
+smallModuleName = do
+  segments <- resize 2 $ listOf1 smallIdentifier
+  return $ intercalate "." segments
 
--- | Generate mini AST (1 node max)
-generateMiniAST :: Gen SimpleAST
-generateMiniAST = oneof
-  [ Literal <$> generateMicroStrings
-  , Var <$> generateMicroStrings
-  ]
+-- | Generate simple expressions with limited depth
+simpleExpression :: Gen String
+simpleExpression = do
+  var <- smallIdentifier
+  op <- elements ["+", "-", "*", "/"]
+  num <- smallInt
+  return $ var ++ " " ++ op ++ " " ++ show num
 
--- | Generate compact AST (1-2 nodes max)
-generateCompactAST :: Gen SimpleAST
-generateCompactAST = oneof
-  [ Literal <$> generateMicroStrings
-  , Var <$> generateMicroStrings
-  , Literal <$> generateUltraLightStrings
-  ]
+-- | Generate type annotations with limited complexity
+simpleTypeAnnotation :: Gen String
+simpleTypeAnnotation = do
+  var <- smallIdentifier
+  typ <- elements ["Int", "String", "Bool", "Float"]
+  return $ var ++ " : " ++ typ
 
--- | Generate efficient AST (1-2 nodes max)
-generateEfficientAST :: Gen SimpleAST
-generateEfficientAST = oneof
-  [ Literal <$> generateMicroStrings
-  , Var <$> generateMicroStrings
-  , Literal <$> generateUltraLightStrings
-  , Var <$> generateUltraLightStrings
-  ]
+-- | Generate imports with limited complexity
+simpleImport :: Gen String
+simpleImport = do
+  moduleName <- smallModuleName
+  return $ "import " ++ moduleName
 
--- | Limit string size based on configuration
-limitStringSize :: GeneratorConfig -> String -> String
-limitStringSize config s = take (maxStringLength config) s
+-- | Generate function definitions with limited complexity
+simpleFunction :: Gen String
+simpleFunction = do
+  name <- smallIdentifier
+  param <- smallIdentifier
+  body <- simpleExpression
+  return $ "func " ++ name ++ "(" ++ param ++ ") {" ++ body ++ "}"
 
--- | Limit list size based on configuration
-limitListSize :: GeneratorConfig -> [a] -> [a]
-limitListSize config xs = take (maxListLength config) xs
+-- | Generate variable declarations with limited complexity
+simpleVariable :: Gen String
+simpleVariable = do
+  name <- smallIdentifier
+  value <- smallInt
+  return $ "var " ++ name ++ " = " ++ show value
 
--- | Limit recursion based on configuration
-limitRecursion :: GeneratorConfig -> Int -> Int
-limitRecursion config depth = min depth (maxRecursionDepth config)
+-- | Generate small test programs
+smallTestProgram :: Gen String
+smallTestProgram = do
+  imports <- resize 2 $ listOf simpleImport
+  vars <- resize 3 $ listOf simpleVariable
+  funcs <- resize 2 $ listOf simpleFunction
+  let lines = imports ++ vars ++ funcs
+  return $ unlines lines
 
--- | Create memory-efficient Arbitrary instance
-createMemoryEfficientArbitrary :: GeneratorConfig -> Gen a -> Gen a
-createMemoryEfficientArbitrary config gen = 
-  if enableLazyGeneration config
-  then sized $ \_ -> scale (const (maxTreeDepth config)) gen
-  else scale (const (maxTreeDepth config)) gen
+-- | Generate memory-efficient test data for parser tests
+memoryEfficientParserInput :: Gen String
+memoryEfficientParserInput = resize 100 smallTestProgram
 
--- | 极端内存优化的字符串生成器（仅使用单个字符）
-generateExtremeStrings :: Gen String
-generateExtremeStrings = elements ["a", "b", "c"]  -- 预定义的极小字符串集合
+-- | Generate memory-efficient test data for compiler tests
+memoryEfficientCompilerInput :: Gen String
+memoryEfficientCompilerInput = resize 80 smallTestProgram
 
--- | 极端内存优化的列表生成器（空列表或单元素）
-generateExtremeLists :: Gen a -> Gen [a]
-generateExtremeLists gen = oneof [return [], fmap return gen]
-
--- | 极端内存优化的树生成器（仅叶子节点）
-generateExtremeTrees :: Gen SimpleTree
-generateExtremeTrees = Leaf <$> generateExtremeStrings
-
--- | 极端内存优化的AST生成器（仅字面量）
-generateExtremeAST :: Gen SimpleAST
-generateExtremeAST = Literal <$> generateExtremeStrings
-
--- | 极端内存配置（用于极度受限的环境）
-extremeGeneratorConfig :: GeneratorConfig
-extremeGeneratorConfig = GeneratorConfig
-  { maxStringLength = 1
-  , maxListLength = 1
-  , maxTreeDepth = 1
-  , maxASTNodes = 1
-  , usePrintableChars = True
-  , useSimpleTypes = True
-  , enableLazyGeneration = False
-  , maxRecursionDepth = 1
-  }
-
--- | Memory-efficient Arbitrary instances
-instance Arbitrary SimpleTree where
-  arbitrary = generateMicroTrees
-
-instance Arbitrary SimpleAST where
-  arbitrary = generateMiniAST
-
--- | Note: We don't redefine Arbitrary String or [a] since QuickCheck already provides them.
--- Use generateMicroStrings, generateMicroLists directly if you need memory-efficient generation.
-
--- | Utility functions for common test data types
+-- | Generate memory-efficient test data for type system tests
+memoryEfficientTypeSystemInput :: Gen String
+memoryEfficientTypeSystemInput = resize 60 smallTestProgram
