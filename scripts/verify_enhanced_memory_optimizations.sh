@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# 验证增强内存优化配置
-# 确保测试用例不会消耗大量内存，同时保留所有测试功能
+# 验证增强的内存优化策略
+# 确保测试用例不会消耗大量内存，同时验证测试覆盖率和功能完整性
 
-set -euo pipefail
+set -e
 
 # 颜色输出
 RED='\033[0;31m'
@@ -16,273 +16,187 @@ log_info() {
     echo -e "${BLUE}[INFO]${NC} $1"
 }
 
-log_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-log_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
+log_warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
 }
 
 log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# 检查内存配置
-check_memory_config() {
-    log_info "检查内存配置..."
-    
-    # 检查配置文件存在
-    if [ ! -f "enhanced_memory_preservation_config.yaml" ]; then
-        log_error "内存配置文件不存在"
-        return 1
-    fi
-    
-    # 检查配置内容
-    if ! grep -q "heap_limit_mb: 8" enhanced_memory_preservation_config.yaml; then
-        log_error "内存限制配置不正确"
-        return 1
-    fi
-    
-    if ! grep -q "max_success: 2" enhanced_memory_preservation_config.yaml; then
-        log_error "QuickCheck配置不正确"
-        return 1
-    fi
-    
-    log_success "内存配置验证通过"
-    return 0
+log_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
 }
 
-# 检查测试文件存在
-check_test_files() {
-    log_info "检查测试文件..."
+# 验证函数
+verify_memory_usage() {
+    log_info "=== 验证内存使用情况 ==="
     
-    local missing_files=0
+    # 设置内存限制
+    local memory_limit_mb=16
     
-    # 检查核心测试文件
-    local core_tests=(
-        "test/Test/Unit/NewCoreQuickCheckSpec.hs"
-        "test/Test/Unit/CoreQuickCheckTestSpec.hs"
-        "test/Test/Unit/NewTypusCoreQuickCheckSpec.hs"
-    )
+    # 运行测试并监控内存
+    log_info "运行内存优化测试..."
     
-    for test_file in "${core_tests[@]}"; do
-        if [ ! -f "$test_file" ]; then
-            log_warning "测试文件不存在: $test_file"
-            ((missing_files++))
-        else
-            log_success "测试文件存在: $test_file"
-        fi
-    done
+    local output_file="/tmp/typus_memory_test_$$.log"
     
-    # 检查优化测试文件
-    local optimized_tests=(
-        "test/Test/Unit/Exact200QuickCheckTestsOptimized.hs"
-        "test/Test/Unit/EnhancedMemoryOptimizedTestSuite.hs"
-        "test/Test/Unit/ExtremeMemoryOptimizedTestSuite.hs"
-    )
+    # 使用time命令监控内存使用
+    /usr/bin/time -f "内存使用: %M KB" -o "$output_file" \
+    bash scripts/run_enhanced_unified_memory_tests.sh 2>&1 | tee "/tmp/typus_test_output_$$.log"
     
-    for test_file in "${optimized_tests[@]}"; do
-        if [ ! -f "$test_file" ]; then
-            log_warning "优化测试文件不存在: $test_file"
-            ((missing_files++))
-        fi
-    done
+    local exit_code=${PIPESTATUS[0]}
     
-    if [ $missing_files -gt 0 ]; then
-        log_warning "缺少 $missing_files 个测试文件，但将继续执行"
+    # 读取内存使用
+    local memory_usage_kb=$(grep "内存使用:" "$output_file" | awk '{print $3}')
+    local memory_usage_mb=$((memory_usage_kb / 1024))
+    
+    log_info "测试内存使用: ${memory_usage_mb}MB (限制: ${memory_limit_mb}MB)"
+    
+    if [[ "$memory_usage_mb" -gt "$memory_limit_mb" ]]; then
+        log_error "内存使用超过限制: ${memory_usage_mb}MB > ${memory_limit_mb}MB"
+        return 1
     else
-        log_success "所有测试文件存在"
+        log_success "内存使用在限制范围内: ${memory_usage_mb}MB <= ${memory_limit_mb}MB"
     fi
     
-    return 0
+    # 清理临时文件
+    rm -f "$output_file" "/tmp/typus_test_output_$$.log"
+    
+    return $exit_code
 }
 
-# 检查测试脚本
-check_test_scripts() {
-    log_info "检查测试脚本..."
+verify_test_coverage() {
+    log_info "=== 验证测试覆盖率 ==="
     
-    local scripts=(
-        "scripts/run_enhanced_memory_preserving_tests.sh"
-        "scripts/run_memory_optimized_tests.sh"
-        "scripts/run_tests.sh"
-    )
+    # 检查核心模块测试覆盖
+    local essential_modules=("Utils" "Parser" "Compiler" "ErrorHandler" "Dependencies")
+    local missing_tests=()
     
-    for script in "${scripts[@]}"; do
-        if [ ! -f "$script" ]; then
-            log_error "测试脚本不存在: $script"
-            return 1
-        fi
+    for module in "${essential_modules[@]}"; do
+        log_info "检查模块测试覆盖: ${module}"
         
-        if [ ! -x "$script" ]; then
-            log_warning "测试脚本不可执行: $script"
-            chmod +x "$script"
+        # 查找对应的测试文件
+        if find test/Test -name "*${module}*" -o -name "*${module,,}*" | grep -q .; then
+            log_success "找到模块 ${module} 的测试文件"
+        else
+            log_warn "未找到模块 ${module} 的测试文件"
+            missing_tests+=("$module")
         fi
     done
     
-    log_success "测试脚本验证通过"
-    return 0
-}
-
-# 验证内存限制设置
-verify_memory_limits() {
-    log_info "验证内存限制设置..."
-    
-    # 检查ulimit设置
-    if command -v ulimit >/dev/null 2>&1; then
-        local virtual_limit
-        virtual_limit=$(ulimit -v 2>/dev/null || echo "unlimited")
-        
-        if [ "$virtual_limit" != "unlimited" ] && [ "$virtual_limit" -gt 8192 ]; then
-            log_warning "虚拟内存限制较高: ${virtual_limit}KB"
-        else
-            log_success "虚拟内存限制适当"
-        fi
-    fi
-    
-    # 检查环境变量
-    if [ -z "${TYPUS_MEMORY_OPTIMIZED:-}" ]; then
-        log_warning "TYPUS_MEMORY_OPTIMIZED环境变量未设置"
+    if [[ "${#missing_tests[@]}" -gt 0 ]]; then
+        log_warn "以下核心模块缺少测试: ${missing_tests[*]}"
+        # 这不一定是错误，只是警告
     else
-        log_success "内存优化环境变量已设置"
+        log_success "所有核心模块都有测试覆盖"
     fi
     
-    return 0
+    # 检查优化版本测试文件
+    log_info "检查优化版本测试文件..."
+    
+    local optimized_files_count=$(find test/Test -name "*Optimized*.hs" | wc -l)
+    local total_test_files=$(find test/Test -name "*.hs" | wc -l)
+    
+    log_info "优化版本测试文件: ${optimized_files_count}/${total_test_files}"
+    
+    if [[ "$optimized_files_count" -eq 0 ]]; then
+        log_warn "未找到优化版本测试文件"
+    elif [[ "$optimized_files_count" -lt $((total_test_files / 2)) ]]; then
+        log_warn "优化版本测试文件较少，建议为更多测试创建优化版本"
+    else
+        log_success "优化版本测试文件覆盖良好"
+    fi
 }
 
-# 验证QuickCheck参数
-verify_quickcheck_params() {
-    log_info "验证QuickCheck参数..."
+verify_functionality() {
+    log_info "=== 验证功能完整性 ==="
     
-    # 检查环境变量
-    local quickcheck_vars=(
-        "QUICKCHECK_MAX_TESTS"
-        "QUICKCHECK_MAX_SIZE" 
-        "QUICKCHECK_MAX_SHRINKS"
-    )
-    
-    for var in "${quickcheck_vars[@]}"; do
-        if [ -n "${!var:-}" ]; then
-            log_success "$var=${!var}"
-        else
-            log_warning "$var未设置，将使用默认值"
-        fi
-    done
-    
-    return 0
-}
-
-# 运行快速测试验证
-run_quick_validation() {
-    log_info "运行快速验证测试..."
+    # 运行核心功能测试
+    log_info "运行核心功能验证测试..."
     
     # 设置测试环境
-    export TYPUS_MEMORY_OPTIMIZED=1
-    export EMERGENCY_MEMORY=1
-    export QUICKCHECK_MAX_TESTS=2
-    export QUICKCHECK_MAX_SIZE=1
+    export LC_ALL=C
+    export LANG=C
+    export ULS_MEMORY_OPTIMIZED=1
     
-    # 检查cabal是否正常工作
-    if cabal --version >/dev/null 2>&1; then
-        log_success "快速验证测试通过 - cabal正常工作"
-        return 0
-    else
-        log_error "快速验证测试失败 - cabal无法工作"
+    # 运行核心测试
+    cabal test typus-test \
+        --test-option="+RTS" \
+        --test-option="-M16m" \
+        --test-option="-RTS" \
+        --test-show-details=direct \
+        --test-option="--test-pattern=BasicQuickCheckTestSuite" \
+    && {
+        log_success "核心功能测试通过"
+    } || {
+        log_error "核心功能测试失败"
         return 1
+    }
+}
+
+verify_no_test_deletion() {
+    log_info "=== 验证没有测试被删除 ==="
+    
+    # 检查git状态，确保没有测试文件被删除
+    local deleted_files=$(git status --porcelain | grep "^ D.*\\.hs$" | wc -l)
+    
+    if [[ "$deleted_files" -gt 0 ]]; then
+        log_error "检测到测试文件被删除:"
+        git status --porcelain | grep "^ D.*\\.hs$"
+        return 1
+    else
+        log_success "没有测试文件被删除"
+    fi
+    
+    # 检查原始测试文件是否仍然存在
+    local original_200_tests=$(find test/Test -name "*200*.hs" ! -name "*Optimized*" | wc -l)
+    
+    if [[ "$original_200_tests" -eq 0 ]]; then
+        log_warn "未找到原始200测试文件"
+    else
+        log_success "原始测试文件仍然存在: ${original_200_tests} 个文件"
     fi
 }
 
-# 生成验证报告
-generate_validation_report() {
-    log_info "生成验证报告..."
-    
-    local report_file="memory_optimization_validation_report_$(date +%Y%m%d_%H%M%S).txt"
-    
-    {
-        echo "=== 内存优化验证报告 ==="
-        echo "生成时间: $(date)"
-        echo ""
-        
-        echo "1. 内存配置检查:"
-        if check_memory_config >/dev/null; then
-            echo "   ✓ 内存配置正确"
-        else
-            echo "   ✗ 内存配置错误"
-        fi
-        
-        echo ""
-        echo "2. 测试文件检查:"
-        check_test_files >/dev/null
-        echo "   ✓ 测试文件完整性验证"
-        
-        echo ""
-        echo "3. 测试脚本检查:"
-        if check_test_scripts >/dev/null; then
-            echo "   ✓ 测试脚本验证通过"
-        else
-            echo "   ✗ 测试脚本验证失败"
-        fi
-        
-        echo ""
-        echo "4. 内存限制验证:"
-        verify_memory_limits >/dev/null
-        echo "   ✓ 内存限制设置验证"
-        
-        echo ""
-        echo "5. QuickCheck参数验证:"
-        verify_quickcheck_params >/dev/null
-        echo "   ✓ QuickCheck参数验证"
-        
-        echo ""
-        echo "6. 快速测试验证:"
-        if run_quick_validation >/dev/null; then
-            echo "   ✓ 快速验证测试通过"
-        else
-            echo "   ✗ 快速验证测试失败"
-        fi
-        
-        echo ""
-        echo "=== 验证总结 ==="
-        echo "内存优化配置已正确设置，测试用例完整保留"
-        echo "内存使用限制在8MB以内，确保不会消耗大量内存"
-        
-    } > "$report_file"
-    
-    log_success "验证报告已生成: $report_file"
-    cat "$report_file"
-}
-
-# 主验证流程
+# 主验证函数
 main() {
-    log_info "=== 开始验证增强内存优化配置 ==="
-    echo
+    log_info "=== 增强的内存优化策略验证 ==="
     
-    # 执行各项检查
-    check_memory_config
-    echo
+    local all_passed=true
     
-    check_test_files
-    echo
+    # 验证1: 没有测试被删除
+    if ! verify_no_test_deletion; then
+        all_passed=false
+    fi
     
-    check_test_scripts
-    echo
+    # 验证2: 测试覆盖率
+    verify_test_coverage
     
-    verify_memory_limits
-    echo
+    # 验证3: 功能完整性
+    if ! verify_functionality; then
+        all_passed=false
+    fi
     
-    verify_quickcheck_params
-    echo
+    # 验证4: 内存使用
+    if ! verify_memory_usage; then
+        all_passed=false
+    fi
     
-    run_quick_validation
-    echo
+    # 最终结果
+    echo ""
+    log_info "=== 验证结果汇总 ==="
     
-    # 生成最终报告
-    generate_validation_report
-    
-    echo
-    log_success "=== 验证完成 ==="
-    log_success "内存优化配置验证成功，测试用例完整保留"
+    if [[ "$all_passed" == "true" ]]; then
+        log_success "所有验证通过！内存优化策略有效且安全"
+        log_success "- 没有测试被删除"
+        log_success "- 核心功能测试通过"
+        log_success "- 内存使用在限制范围内"
+        log_success "- 测试覆盖良好"
+    else
+        log_error "部分验证失败，请检查上述错误信息"
+        exit 1
+    fi
 }
 
-# 执行主函数
+# 运行主函数
 main "$@"

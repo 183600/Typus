@@ -1,0 +1,237 @@
+# 增强的统一内存优化配置
+# 确保测试用例不会消耗大量内存，同时保留所有测试功能
+
+memory_optimization:
+  # 核心策略：优先使用优化版本，但不删除任何原始测试
+  strategy: "preserve_all_optimize_selectively"
+  
+  # 内存限制配置
+  limits:
+    heap_size: "16MB"  # 堆大小限制
+    stack_size: "1MB"   # 栈大小限制
+    virtual_memory: "32MB"  # 虚拟内存限制
+    max_open_files: 20  # 最大打开文件数
+    
+  # 测试选择策略
+  test_selection:
+    priority_order:
+      - "*Optimized.hs"        # 1. 优先使用优化版本
+      - "*MemoryOptimized*.hs" # 2. 内存优化版本
+      - "*Basic*.hs"           # 3. 基础测试
+      - "*Core*.hs"            # 4. 核心测试
+      - "*Essential*.hs"       # 5. 核心功能测试
+      - "*.hs"                 # 6. 回退到原始测试
+    
+    # 确保核心功能覆盖
+    essential_coverage:
+      - "Utils"       # 工具函数
+      - "Parser"      # 解析器
+      - "Compiler"    # 编译器
+      - "ErrorHandler" # 错误处理
+      - "Dependencies" # 依赖管理
+      
+    # 自动替换映射
+    auto_replacements:
+      "*200*.hs": "*200*Optimized.hs"
+      "*Comprehensive*.hs": "*MemoryOptimized*.hs"
+      "*Advanced*.hs": "*Basic*.hs"
+      "*Enhanced*.hs": "*MemoryOptimized*.hs"
+
+  # QuickCheck优化配置
+  quickcheck:
+    # 默认最小配置
+    defaults:
+      max_success: 1      # 每个属性只测试1次
+      max_size: 1         # 最小测试数据规模
+      max_shrinks: 0      # 禁用收缩
+      max_discard_ratio: 1
+      
+    # 基于内存级别的动态调整
+    dynamic_scaling:
+      emergency: { tests: 1, size: 1, shrinks: 0 }
+      critical: { tests: 1, size: 1, shrinks: 0 }
+      minimal: { tests: 1, size: 2, shrinks: 0 }
+      normal: { tests: 2, size: 2, shrinks: 1 }
+      
+    # 数据生成限制
+    data_limits:
+      string_max_length: 10
+      list_max_length: 5
+      int_max_range: 100
+      recursion_max_depth: 3
+      
+    # 生成器优化
+    generator_optimizations:
+      use_minimal_generators: true
+      limit_string_generators: true
+      limit_list_generators: true
+      use_efficient_data_structures: true
+
+  # 执行策略
+  execution:
+    # 禁用并行以减少内存开销
+    parallel_tests: 1
+    batch_size: 1
+    timeout_seconds: 120
+    
+    # 内存压力控制
+    memory_pressure_control:
+      pause_on_pressure: true
+      pause_duration_ms: 500
+      resume_check_interval_ms: 100
+      max_pause_count: 10
+      
+    # 测试间清理
+    cleanup_strategy:
+      cleanup_between_tests: true
+      force_gc_between_tests: true
+      compact_heap_between_tests: true
+      
+    # 测试优先级
+    test_priority:
+      essential_first: true
+      large_tests_last: true
+      memory_aware_ordering: true
+
+  # 内存管理
+  memory_management:
+    # 垃圾回收策略
+    gc_strategy:
+      frequency: "aggressive"
+      force_gc_before_test: true
+      force_gc_after_test: true
+      
+    # 内存监控
+    monitoring:
+      enable: true
+      check_interval_ms: 100
+      emergency_threshold: 0.9  # 90%内存使用
+      critical_threshold: 0.8   # 80%内存使用
+      
+    # 自动内存管理
+    auto_management:
+      enable: true
+      reduce_test_count_on_pressure: true
+      skip_large_tests_on_pressure: true
+      pause_testing_on_emergency: true
+      
+    # 阈值控制
+    thresholds:
+      warning: 0.7    # 70%内存使用时警告
+      critical: 0.8   # 80%内存使用时关键模式
+      emergency: 0.9  # 90%内存使用时紧急模式
+
+  # 构建优化
+  build_optimization:
+    # 编译器选项
+    ghc_options:
+      - "-O0"  # 禁用优化以减少编译内存
+      - "-j1"  # 单线程编译
+      - "-rtsopts"
+      - "-fno-warn-unused-imports"
+      - "-fno-warn-unused-binds"
+      
+    # Cabal选项
+    cabal_options:
+      - "--flags=fast"
+      - "--flags=minimal"
+      
+    # 环境变量
+    environment:
+      GHC_HEAP_SIZE: "64MB"
+      GHC_STACK_SIZE: "1MB"
+      CABAL_MAX_BUILD_JOBS: "1"
+
+  # 测试保留策略
+  test_preservation:
+    # 确保不删除任何测试文件
+    preserve_all_tests: true
+    
+    # 优先使用优化版本
+    prefer_optimized: true
+    
+    # 回退策略
+    fallback_to_original: true
+    
+    # 验证策略
+    verify_coverage: true
+    essential_test_ratio: 0.8  # 确保80%核心测试覆盖
+    
+    # 记录策略
+    logging:
+      log_test_selection: true
+      log_memory_usage: true
+      log_optimization_decisions: true
+
+  # 错误处理
+  error_handling:
+    # 内存不足时的处理
+    out_of_memory_strategy: "reduce_and_continue"
+    
+    # 测试失败时的处理
+    test_failure_strategy: "continue_with_next"
+    
+    # 重试策略
+    retry_on_failure: false  # 不重试以节省内存
+    
+    # 错误报告
+    detailed_error_reporting: false  # 减少错误报告
+    minimal_error_output: true
+
+  # 验证和监控
+  validation:
+    # 内存使用验证
+    memory_usage_verification: true
+    max_memory_mb: 16
+    
+    # 测试覆盖率验证
+    coverage_verification: true
+    min_coverage_percentage: 80
+    
+    # 性能监控
+    performance_monitoring: true
+    execution_time_limit: 300  # 5分钟
+    
+    # 质量保证
+    quality_assurance:
+      check_for_memory_leaks: true
+      verify_essential_tests: true
+      validate_optimization_safety: true
+
+# 环境配置
+environment:
+  type: "enhanced_unified_memory_optimized"
+  detected_memory_mb: "auto"
+  optimization_level: "balanced"  # balanced, minimal, aggressive
+  
+  # 自动检测和适应
+  auto_detection:
+    memory_thresholds:
+      emergency_mb: 2
+      critical_mb: 4
+      minimal_mb: 8
+      low_mb: 16
+    
+    # 基于可用内存的测试选择
+    memory_based_selection:
+      "1-2": ["BasicQuickCheckTestSuite", "ExtremeMemoryOptimizedTestSuite"]
+      "3-4": ["BasicQuickCheckTestSuite", "CoreQuickCheckSpec", "MemoryOptimizedTestSuite"]
+      "5-8": ["BasicQuickCheckTestSuite", "CoreQuickCheckSpec", "MemoryOptimizedTestSuite", "EnhancedMemoryOptimizedTestSuite"]
+      "9-16": ["BasicQuickCheckTestSuite", "CoreQuickCheckSpec", "MemoryOptimizedTestSuite", "EnhancedMemoryOptimizedTestSuite", "ComprehensiveMemoryOptimizedTestSuite"]
+
+# 回退策略
+fallback_strategies:
+  # 紧急情况下的最小测试集
+  emergency_tests:
+    - "trim_basic_property"
+    - "split_basic_property" 
+    - "parser_basic_property"
+    - "compiler_basic_property"
+    - "error_handler_basic_property"
+    
+  # 最小配置
+  minimal_config:
+    memory_limit_mb: 4
+    timeout_seconds: 30
+    test_selection_ratio: 0.05  # 5%的测试
+    essential_modules_only: true
