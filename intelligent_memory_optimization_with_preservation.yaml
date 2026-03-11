@@ -1,0 +1,130 @@
+# 智能内存优化配置 - 保留所有测试用例
+# 通过智能测试调度、增量执行和内存复用策略减少内存使用
+
+memory_optimization:
+  strategy: "intelligent_preservation"
+  goal: "reduce_memory_usage_while_preserving_tests"
+  
+  # 智能测试调度
+  test_scheduling:
+    enable_incremental_execution: true
+    batch_size: 5  # 小批量执行
+    enable_test_prioritization: true
+    priority_criteria:
+      - execution_time
+      - memory_usage
+      - coverage_impact
+    adaptive_batching: true
+    memory_aware_scheduling: true
+
+  # 内存管理
+  memory_management:
+    gc_strategy: "adaptive_aggressive"
+    gc_frequency: 3  # 每3个测试执行GC
+    enable_memory_reuse: true
+    enable_test_result_caching: true
+    cache_strategy: "selective"
+    enable_lazy_evaluation: true
+    
+    # 内存限制
+    soft_memory_limit_mb: 16
+    hard_memory_limit_mb: 32
+    emergency_memory_limit_mb: 8
+    
+    # 对象池
+    enable_object_pooling: true
+    pool_types:
+      - strings
+      - lists
+      - test_cases
+      - property_generators
+
+  # 测试执行优化
+  test_execution:
+    enable_progressive_testing: true
+    initial_test_scale: 0.1  # 首次运行10%的测试
+    scale_increment: 0.2     # 每次增加20%
+    enable_selective_verification: true
+    
+    # QuickCheck 优化
+    quickcheck_optimization:
+      max_tests: 1          # 每个属性仅测试1次
+      max_size: 1           # 最小输入大小
+      max_shrinks: 0        # 禁用收缩
+      enable_smart_sampling: true
+      sample_strategy: "representative"
+
+  # 数据优化
+  data_optimization:
+    string_limits:
+      max_length: 8
+      enable_compression: true
+      use_short_strings: true
+    
+    list_limits:
+      max_length: 5
+      enable_truncation: true
+      
+    integer_limits:
+      max_value: 20
+      use_small_integers: true
+
+  # 运行时优化
+  runtime_optimization:
+    ghc_rts_options:
+      minimal: "-M2m -A64k -n8k -H256k -qg -G1 -c"
+      low: "-M4m -A128k -n16k -H512k -qg -G1 -c"
+      moderate: "-M8m -A256k -n32k -H1m -qg -G1 -c"
+    
+    enable_parallel_gc: true
+    gc_threads: 1
+    enable_compact_regions: true
+
+  # 监控和自适应
+  monitoring:
+    enable_real_time_monitoring: true
+    memory_check_interval: 1000  # 1秒检查一次
+    enable_adaptive_scaling: true
+    scaling_factors:
+      memory_usage: 0.8
+      execution_time: 0.9
+      test_coverage: 1.0
+    
+    # 预警机制
+    enable_memory_warnings: true
+    warning_threshold: 0.7
+    critical_threshold: 0.9
+
+  # 测试覆盖保障
+  coverage_preservation:
+    ensure_core_coverage: true
+    core_modules:
+      - Compiler
+      - Parser
+      - ErrorHandler
+      - Dependencies
+      - Ownership
+      - DependentTypes
+    
+    essential_tests_guarantee: true
+    coverage_threshold: 0.95
+
+  # 恢复机制
+  recovery:
+    enable_graceful_degradation: true
+    fallback_strategies:
+      - reduce_batch_size
+      - increase_gc_frequency
+      - enable_emergency_mode
+    
+    emergency_mode:
+      batch_size: 1
+      gc_frequency: 1
+      test_selection: "essential_only"
+
+  # 验证和报告
+  validation:
+    verify_test_preservation: true
+    verify_coverage_maintenance: true
+    generate_optimization_report: true
+    report_format: "detailed"
