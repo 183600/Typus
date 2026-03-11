@@ -1,0 +1,40 @@
+# 超极简内存配置 - 专为极度内存受限环境设计
+memory:
+  limit_mb: 4  # 4MB内存限制，极度约束
+  batch_size: 1  # 单批处理
+  gc_frequency: 1  # 每个操作后都执行GC
+  test_selection_ratio: 0.005  # 只选择0.5%的测试
+  conservative_mode: true
+  aggressive_gc: true
+  emergency_mode: true
+  ultra_optimization: true
+  extreme_mode: true
+  ultra_extreme_mode: true
+  critical_mode: true  # 启用关键模式
+
+execution:
+  strategy: sequential  # 顺序执行，避免并发内存开销
+  max_concurrent_tests: 1
+  timeout_seconds: 60  # 60秒超时
+  enable_early_termination: true  # 启用早期终止
+
+monitoring:
+  enable_memory_monitoring: true
+  log_memory_usage: false  # 不记录内存使用以节省内存
+  memory_check_interval: 100  # 每100ms检查一次内存
+  enable_memory_warnings: false  # 禁用内存警告以减少开销
+
+optimization:
+  enable_test_reuse: true
+  enable_memory_prediction: true
+  adaptive_scaling: false
+  enable_test_filtering: true
+  enable_data_size_limiting: true
+  max_string_length: 10  # 最大字符串长度限制
+  max_list_size: 5  # 最大列表大小限制
+  max_test_depth: 2  # 最大测试深度限制
+  
+environment:
+  type: ultra_minimal_memory
+  detected_memory_mb: unknown
+  priority: critical
