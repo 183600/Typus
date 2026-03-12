@@ -136,7 +136,7 @@ instance Arbitrary ErrorCategory where
   arbitrary = elements [TypeChecking, Ownership, Parsing, Semantic, Runtime, Constraint, Inference, Integration, Unknown]
 
 instance Arbitrary T.Text where
-  arbitrary = T.pack <$> arbitrary
+  arbitrary = T.pack <$> resize 20 arbitrary  -- Limit string length to 20 chars to reduce memory usage
 
 instance Arbitrary TypeError where
   arbitrary = genTypeError

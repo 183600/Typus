@@ -62,7 +62,7 @@ import TestSupport.SuperMemoryOptimization
   , superMemoryLimitedTestGroup
   , superGC
   )
-import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
+import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample, resize)
 
 -- Import enhanced memory optimization modules
 import TestSupport.SuperMemoryOptimization 
@@ -131,7 +131,7 @@ instance Arbitrary TC.TypeError where
     return $ TC.TypeError { TC.teContext = teContext, TC.teMessage = teMessage }
 
 instance Arbitrary T.Text where
-  arbitrary = T.pack <$> arbitrary
+  arbitrary = T.pack <$> resize 20 arbitrary  -- Limit string length to 20 chars to reduce memory usage
 
 -- Import the Arbitrary instances from ErrorHandlerSpec
 instance Arbitrary ErrorSeverity where

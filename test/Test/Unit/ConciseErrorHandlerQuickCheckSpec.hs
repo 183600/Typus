@@ -17,7 +17,7 @@ import TestSupport.SuperMemoryOptimization
   , superMemoryLimitedTestGroup
   , superGC
   )
-import Test.Tasty.QuickCheck (testProperties, testProperty, property, Arbitrary(..), choose, elements, vectorOf)
+import Test.Tasty.QuickCheck (testProperties, testProperty, property, Arbitrary(..), choose, elements, vectorOf, resize)
 
 -- Import enhanced memory optimization modules
 import TestSupport.SuperMemoryOptimization 
@@ -68,7 +68,7 @@ import Data.List (sortBy)
 
 -- Arbitrary instances for QuickCheck
 instance Arbitrary T.Text where
-  arbitrary = T.pack <$> arbitrary
+  arbitrary = T.pack <$> resize 20 arbitrary  -- Limit string length to 20 chars to reduce memory usage
 instance Arbitrary ErrorSeverity where
   arbitrary = elements [Fatal, Error, Warning, Info]
 
@@ -167,8 +167,8 @@ handleError_properties :: LimitedErrorHandler -> TypeError -> Bool
 handleError_properties (LimitedErrorHandler errs) err = 
   let newErrs = handleError errs err
   in case newErrs of
-       [] -> False
        (x:_) -> length newErrs == length errs + 1 && x == err
+       [] -> False  -- This case should never occur with handleError
 
 -- | Test handleErrors properties
 handleErrors_properties :: LimitedErrorHandler -> [TypeError] -> Bool

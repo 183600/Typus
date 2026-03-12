@@ -129,7 +129,7 @@ test_complex_text_position_tracking = do
 
 -- | 生成任意非空文本用于QuickCheck测试
 instance Arbitrary T.Text where
-  arbitrary = T.pack <$> arbitrary `suchThat` (/= "")
+  arbitrary = T.pack <$> resize 20 arbitrary `suchThat` (/= "")  -- Limit string length to 20 chars to reduce memory usage
 
 -- | 辅助函数：检查span是否包含位置
 spanContains :: SourceSpan -> SourcePos -> Bool

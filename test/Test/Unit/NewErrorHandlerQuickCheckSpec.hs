@@ -25,7 +25,7 @@ import qualified Ownership.Common.Types as Own
 
 -- Additional Arbitrary instances
 instance Arbitrary T.Text where
-  arbitrary = T.pack <$> arbitrary
+  arbitrary = T.pack <$> resize 20 arbitrary  -- Limit string length to 20 chars to reduce memory usage
 
 -- Arbitrary instances for QuickCheck
 instance Arbitrary ErrorSeverity where

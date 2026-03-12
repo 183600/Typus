@@ -696,7 +696,7 @@ instance Arbitrary Dep.Constraint where
     , Dep.SizeGE <$> (T.pack <$> genIdentifier) <*> choose (0, 100)
     , Dep.RangeC <$> (T.pack <$> genIdentifier) <*> choose (0, 100) <*> choose (0, 100)
     , do len <- choose (0, 3)
-         Dep.PredC <$> (T.pack <$> genIdentifier) <*> vectorOf len arbitrary
+         Dep.PredC <$> (T.pack <$> resize 10 genIdentifier) <*> vectorOf len arbitrary  -- Limit identifier length
     ]
 
 instance Arbitrary TC.TypeConstraint where
@@ -822,10 +822,10 @@ genWellFormedExtendedGoModule = do
   imports <- listOf1 genWellFormedExtendedImportDecl
   let uniqueImports = nub imports -- Remove duplicates
   GoModule
-    <$> listOf genUniqueIdentifier
+    <$> resize 3 $ listOf genUniqueIdentifier  -- Limit to 3 identifiers
     <*> frequency [(1, pure Nothing), (3, Just <$> (PackageDecl <$> genGoPackageName))]
     <*> pure uniqueImports
-    <*> listOf arbitrary
+    <*> resize 5 $ listOf arbitrary  -- Limit to 5 arbitrary elements
 
 genWellFormedExtendedImportDecl :: Gen ImportDecl
 genWellFormedExtendedImportDecl = ImportDecl 

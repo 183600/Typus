@@ -11,11 +11,11 @@ import Test.Tasty.QuickCheck
 import Dependencies.TypeSystem (TypeVar(..), TypeConstraint(..), Substitution)
 import qualified Data.Text as T
 import Data.List (nub)
-import Test.QuickCheck (Arbitrary(..), oneof)
+import Test.QuickCheck (Arbitrary(..), oneof, resize)
 
 -- Add Arbitrary instance for T.Text
 instance Arbitrary T.Text where
-  arbitrary = T.pack <$> arbitrary
+  arbitrary = T.pack <$> resize 20 arbitrary  -- Limit string length to 20 chars to reduce memory usage
 
 -- Add Arbitrary instance for TypeVar
 instance Arbitrary TypeVar where

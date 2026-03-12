@@ -13,7 +13,7 @@ import Data.List (sort, sortOn, isInfixOf)
 
 -- Arbitrary instances for QuickCheck
 instance Arbitrary T.Text where
-  arbitrary = T.pack <$> arbitrary
+  arbitrary = T.pack <$> resize 20 arbitrary  -- Limit string length to 20 chars to reduce memory usage
 
 instance Arbitrary ErrorSeverity where
   arbitrary = elements [Fatal, Error, Warning, Info]

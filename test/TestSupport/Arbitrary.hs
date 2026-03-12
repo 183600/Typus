@@ -553,7 +553,7 @@ arbitraryTypeVar = oneof
 
 -- | Generator for arbitrary constraints
 arbitraryConstraint :: Gen Dep.Constraint
-arbitraryConstraint = Dep.SizeGT <$> (T.pack <$> genIdentifier) <*> arbitrary
+arbitraryConstraint = Dep.SizeGT <$> (T.pack <$> resize 10 genIdentifier) <*> arbitrary  -- Limit identifier length
 
 -- | Generator for arbitrary type expressions
 arbitraryTypeExpr :: Gen Dep.TypeExpr

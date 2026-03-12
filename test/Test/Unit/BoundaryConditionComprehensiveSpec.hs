@@ -86,10 +86,10 @@ genDeeplyNestedStructure n = do
       return $ "outer(" ++ inner ++ ")"
 
 genSpecialChars :: Gen String
-genSpecialChars = listOf $ elements "\0\1\2\3\4\5\6\7\8\10\11\12\13\14\15\16\17\18\19\20\21\22\23\24\25\26\27\28\29\30\31\127"
+genSpecialChars = resize 10 $ listOf $ elements "\0\1\2\3\4\5\6\7\8\10\11\12\13\14\15\16\17\18\19\20\21\22\23\24\25\26\27\28\29\30\31\127"  -- Limit to 10 chars
 
 genUnicodeString :: Gen String
-genUnicodeString = listOf $ elements $ map chr [0..255]
+genUnicodeString = resize 10 $ listOf $ elements $ map chr [0..255]  -- Limit to 10 chars
 
 genExtremePositions :: Gen SourcePos
 genExtremePositions = do

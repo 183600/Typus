@@ -18,7 +18,7 @@ import Data.List (isInfixOf)
 import Test.QuickCheck (Arbitrary(..))
 
 instance Arbitrary T.Text where
-  arbitrary = T.pack <$> arbitrary
+  arbitrary = T.pack <$> resize 20 arbitrary  -- Limit string length to 20 chars to reduce memory usage
 
 -- | Test Go toolchain properties with QuickCheck
 coreGoToolchainPropertiesSpec :: TestTree

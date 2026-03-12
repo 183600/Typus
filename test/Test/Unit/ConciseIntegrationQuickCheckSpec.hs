@@ -5,7 +5,7 @@ module Test.Unit.ConciseIntegrationQuickCheckSpec where
 
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), choose, elements)
+import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), choose, elements, resize)
 import Parser (parseTypus, TypusFile(..), tfContents)
 import Compiler (compile, generateGoCode)
 import ErrorHandler (ErrorHandler, errorCount, warningCount, infoCount)
@@ -20,7 +20,7 @@ import qualified Data.Text as T
 
 -- Arbitrary instances for QuickCheck
 instance Arbitrary T.Text where
-  arbitrary = T.pack <$> arbitrary
+  arbitrary = T.pack <$> resize 20 arbitrary  -- Limit string length to 20 chars to reduce memory usage
 
 -- Add Arbitrary instance for TestDependencyGraph
 instance Arbitrary TestDependencyGraph where

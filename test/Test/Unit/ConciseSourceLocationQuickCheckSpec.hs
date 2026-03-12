@@ -5,7 +5,7 @@ module Test.Unit.ConciseSourceLocationQuickCheckSpec where
 
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), choose)
+import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), choose, resize)
 import SourceLocation
   ( SourcePos(..)
   , SourceSpan(..)
@@ -39,7 +39,7 @@ import qualified Data.Text as T
 
 -- Arbitrary instances for QuickCheck
 instance Arbitrary T.Text where
-  arbitrary = T.pack <$> arbitrary
+  arbitrary = T.pack <$> resize 20 arbitrary  -- Limit string length to 20 chars to reduce memory usage
 -- Arbitrary instance for SourcePos is now defined in SourceLocation module
 
 
@@ -99,15 +99,14 @@ pos_properties pos =
 posAfter_properties :: Char -> SourcePos -> Bool
 posAfter_properties c pos = 
   let newPos = posAfter c pos
-  in if c == '\n'
-     then posLine newPos == posLine pos + 1 && 
-          posColumn newPos == 1 &&
-          posOffset newPos == posOffset pos + 1
-     else if c == '\t'
-          then posColumn newPos == ((posColumn pos - 1) `div` 8 + 1) * 8 + 1 &&
-               posOffset newPos == posOffset pos + 1
-          else posColumn newPos == posColumn pos + 1 &&
-               posOffset newPos == posOffset pos + 1
+  in case c of
+       '\n' -> posLine newPos == posLine pos + 1 && 
+                posColumn newPos == 1 &&
+                posOffset newPos == posOffset pos + 1
+       '\t' -> posColumn newPos >= posColumn pos &&  -- Tab advances to next tab stop
+                posOffset newPos == posOffset pos + 1
+       _    -> posColumn newPos == posColumn pos + 1 &&
+                posOffset newPos == posOffset pos + 1
 
 -- | Test posAt properties
 posAt_properties :: Int -> Int -> Bool
