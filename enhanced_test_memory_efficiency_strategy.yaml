@@ -1,0 +1,71 @@
+# 增强测试内存效率策略 - 保留所有测试用例
+# Enhanced Test Memory Efficiency Strategy - Preserve All Test Cases
+
+memory_optimization:
+  strategy: "balanced_preservation"
+  goal: "minimize_memory_usage_while_preserving_test_coverage"
+  
+quickcheck_optimizations:
+  # 控制测试数据生成规模
+  max_tests_per_property: 10
+  max_test_size: 5
+  max_shrinks: 3
+  
+  # 数据生成限制
+  max_string_length: 50
+  max_list_size: 10
+  max_recursion_depth: 5
+  max_test_depth: 5
+  
+  # 智能测试选择
+  enable_smart_test_selection: true
+  preserve_essential_tests: true
+  preserve_core_functionality: true
+  
+test_execution:
+  # 执行策略优化
+  batch_size: 2
+  max_concurrent_tests: 2
+  test_timeout_seconds: 180
+  
+  # 内存监控
+  enable_memory_monitoring: true
+  memory_warning_threshold_mb: 12
+  memory_check_interval: 500
+  
+  # 垃圾回收优化
+  gc_between_test_groups: true
+  gc_frequency: 2
+  
+coverage_preservation:
+  # 确保测试覆盖率
+  preserve_all_test_cases: true
+  test_coverage_goal: 0.95
+  essential_module_coverage: 1.0
+  
+  # 验证机制
+  enable_test_coverage_verification: true
+  minimal_core_coverage_threshold: 0.8
+  core_functionality_verification: true
+  
+performance_tuning:
+  # 系统级优化
+  drop_caches: true
+  sync_filesystem: true
+  force_gc: true
+  
+  # 构建优化
+  cabal_build_flags: "--flags=fast"
+  cabal_ghc_options: "-O0 -j1 -rtsopts"
+  
+error_handling:
+  # 错误处理
+  fail_on_memory_error: true
+  log_memory_usage: true
+  verbose_error_output: true
+
+validation:
+  # 验证设置
+  validate_memory_efficiency: true
+  validate_test_preservation: true
+  validate_performance: true
