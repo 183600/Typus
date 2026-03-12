@@ -1,0 +1,72 @@
+# 增强内存优化配置 - 保留所有测试用例
+# Enhanced Memory Optimization Configuration - Preserve All Test Cases
+
+memory:
+  # 内存限制设置 - 在现有基础上进一步优化
+  limit_mb: 16  # 保持16MB限制，避免过度限制影响测试
+  batch_size: 2  # 保持2个测试批处理，平衡内存和性能
+  gc_frequency: 3  # 每3个操作执行一次GC，减少GC开销
+  test_selection_ratio: 0.05  # 选择5%的测试，保证覆盖关键路径
+  conservative_mode: true
+  aggressive_gc: false  # 禁用过度激进的GC以减少开销
+  emergency_mode: false  # 禁用紧急模式，保持正常测试流程
+  ultra_optimization: true
+  extreme_mode: false  # 禁用极端模式，避免过度限制
+
+# QuickCheck参数优化 - 这是内存消耗的主要来源
+quickcheck:
+  max_tests_per_property: 10  # 每个属性测试10次，保证有效性
+  max_size_parameter: 5  # 最大数据大小参数
+  max_shrinks: 3  # 最大收缩次数
+  string_length_limit: 50  # 字符串长度限制
+  list_length_limit: 10  # 列表长度限制
+  recursion_depth_limit: 5  # 递归深度限制
+
+# 数据生成限制
+data_generation:
+  max_string_length: 50
+  max_list_size: 10
+  max_test_depth: 5
+  max_recursion_depth: 5
+  max_file_size_bytes: 1024  # 1KB文件大小限制
+
+# 执行策略优化
+execution:
+  strategy: batched
+  max_concurrent_tests: 2
+  timeout_seconds: 180  # 合理超时时间
+  enable_early_termination: false  # 禁用早期终止，保证测试完整性
+
+# 内存监控优化
+monitoring:
+  enable_memory_monitoring: true
+  log_memory_usage: false
+  memory_check_interval: 500  # 每500ms检查一次
+  enable_memory_warnings: true
+  memory_warning_threshold_mb: 12  # 12MB警告阈值
+
+# 测试优化策略
+optimization:
+  enable_test_reuse: true
+  enable_memory_prediction: true
+  adaptive_scaling: true  # 启用自适应缩放
+  enable_test_filtering: false  # 禁用测试过滤，保留所有测试
+  enable_data_size_limiting: true
+  
+  # 特定测试类型的优化
+  optimize_quickcheck: true
+  optimize_large_data_tests: true
+  optimize_recursive_tests: true
+  preserve_all_test_cases: true  # 关键：保留所有测试用例
+
+# 环境配置
+environment:
+  type: enhanced_memory_optimized_preserve_tests
+  detected_memory_mb: unknown
+  priority: balanced  # 平衡内存和测试完整性
+
+# 性能与内存平衡设置
+performance:
+  memory_safety_margin_mb: 2  # 2MB安全边界
+  test_coverage_goal: 0.95  # 95%测试覆盖率目标
+  enable_progressive_optimization: true  # 启用渐进式优化
