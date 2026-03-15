@@ -46,8 +46,8 @@ jobs:
             sudo rm /swapfile
           fi
 
-          # 2. 创建、设置权限并启用新的 2G 交换文件
-          sudo fallocate -l 2G /swapfile
+          # 2. 创建、设置权限并启用新的 4G 交换文件
+          sudo fallocate -l 4G /swapfile
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
           sudo swapon /swapfile
