@@ -9,7 +9,7 @@ echo "运行端到端测试..."
 echo "=================="
 
 # 查找编译器二进制文件
-COMPILER_PATH=$(find dist-newstyle/build/x86_64-linux/ghc-*/typus-*/x/typus/build/typus/typus -type f -executable 2>/dev/null | head -1)
+COMPILER_PATH=$(find dist-newstyle/build/*/ghc-*/typus-*/x/typus/build/typus/typus -type f -executable 2>/dev/null | head -1)
 if [ -z "$COMPILER_PATH" ]; then
     echo "错误: 编译器二进制文件未找到"
     echo "请先运行 'npm run build' 构建项目"

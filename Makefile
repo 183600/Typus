@@ -22,45 +22,45 @@ help:
 
 # Build the project
 build:
-	LC_ALL=C cabal build
+	@. ./.locale-env && cabal build
 	@echo "Project built successfully"
 
 # Run all tests
 test:
-	@export LC_ALL=C.UTF-8 LANG=C.UTF-8 LANGUAGE=en_US:en && cabal test --flags="-fast production" --test-show-details=direct 2>&1 | grep -v "setlocale.*cannot change locale" || true
+	@. ./.locale-env && cabal test --flags="-fast production" --test-show-details=direct
 	@echo "Tests completed!"
 
 # Run all tests via Stack (production-grade flags set in stack.yaml)
 stack-test:
-	LC_ALL=C stack test --coverage --test-arguments="--hide-successes"
+	@. ./.locale-env && stack test --coverage --test-arguments="--hide-successes"
 	scripts/coverage-report.sh
 	@echo "Stack tests with coverage completed!"
 
 # Run quick tests (without performance tests)
 test-quick:
-	LC_ALL=C cabal test --test-show-details=always --test-option=--skip=performance
+	@. ./.locale-env && cabal test --test-show-details=always --test-option=--quickcheck-tests=50
 	@echo "Quick tests passed!"
 
 # Run only unit tests
 test-unit:
-	LC_ALL=C cabal test --test-show-details=always --test-option=--skip=performance --test-option=--skip=integration
+	@. ./.locale-env && cabal test --test-show-details=always --test-option=--quickcheck-tests=50
 	@echo "Unit tests passed!"
 
 # Run only performance tests
 test-performance:
-	LC_ALL=C cabal test --test-show-details=always --test-option=--skip=unit --test-option=--skip=integration
+	@. ./.locale-env && cabal test --test-show-details=always --test-option=--quickcheck-tests=50
 	@echo "Performance tests passed!"
 
 # Run only integration tests
 test-integration:
-	LC_ALL=C cabal test --test-show-details=always --test-option=--skip=unit --test-option=--skip=performance
+	@. ./.locale-env && cabal test --test-show-details=always --test-option=--quickcheck-tests=50
 	@echo "Integration tests passed!"
 
 # Generate test coverage report
 coverage:
-	LC_ALL=C cabal configure --enable-coverage
-	LC_ALL=C cabal build
-	LC_ALL=C cabal test --test-show-details=always
+	@. ./.locale-env && cabal configure --enable-coverage
+	@. ./.locale-env && cabal build
+	@. ./.locale-env && cabal test --test-show-details=always
 	@echo "Coverage report generated in dist-newstyle/build/coverage/"
 
 # Open coverage report in browser
@@ -70,16 +70,16 @@ coverage-report:
 
 # Clean generated files
 clean:
-	LC_ALL=C cabal clean
+	@. ./.locale-env && cabal clean
 	rm -rf dist-newstyle
 	rm -rf test_temp
 	@echo "Cleaned generated files"
 
 # Install dependencies
 install:
-	LC_ALL=C cabal configure
-	LC_ALL=C cabal build
-	LC_ALL=C cabal install
+	@. ./.locale-env && cabal configure
+	@. ./.locale-env && cabal build
+	@. ./.locale-env && cabal install
 	@echo "Dependencies installed"
 
 # Run production-grade tests (strict mode with warnings as errors)

@@ -66,9 +66,8 @@ func main() {
 EOF
 
 # 编译测试输入
-if [ -f "dist-newstyle/build/x86_64-linux/ghc-*/typus-*/x/typus/build/typus/typus" ]; then
-    COMPILER_PATH=$(find dist-newstyle/build/x86_64-linux/ghc-*/typus-*/x/typus/build/typus/typus -type f -executable 2>/dev/null | head -1)
-    if [ -n "$COMPILER_PATH" ]; then
+COMPILER_PATH=$(find dist-newstyle/build/*/ghc-*/typus-*/x/typus/build/typus/typus -type f -executable 2>/dev/null | head -1)
+if [ -n "$COMPILER_PATH" ]; then
         echo "编译测试文件..."
         $COMPILER_PATH convert /tmp/test_e2e_input.typus -o /tmp/test_e2e_output.go
 
@@ -95,9 +94,6 @@ if [ -f "dist-newstyle/build/x86_64-linux/ghc-*/typus-*/x/typus/build/typus/typu
     else
         echo "警告: 编译器二进制文件未找到，跳过端到端测试"
     fi
-else
-    echo "警告: 编译器未构建，跳过端到端测试"
-fi
 
 # 6. 运行性能测试
 echo "步骤 6: 运行性能测试..."
@@ -131,7 +127,7 @@ fi
 
 # 8. 验证生成的二进制文件
 echo "步骤 8: 验证生成的二进制文件..."
-COMPILER_PATH=$(find dist-newstyle/build/x86_64-linux/ghc-*/typus-*/x/typus/build/typus/typus -type f -executable 2>/dev/null | head -1)
+COMPILER_PATH=$(find dist-newstyle/build/*/ghc-*/typus-*/x/typus/build/typus/typus -type f -executable 2>/dev/null | head -1)
 if [ -n "$COMPILER_PATH" ]; then
     echo "✓ 编译器二进制文件已生成"
     VERSION_OUTPUT=$($COMPILER_PATH --version 2>/dev/null || echo "Version command not available")
