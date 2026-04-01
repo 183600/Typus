@@ -339,8 +339,10 @@ run_test_with_advanced_memory() {
     
     # 运行测试
     local test_success=true
-    if command -v /usr/bin/time >/dev/null 2>&1; then
-        local time_output=$(/usr/bin/time -v cabal test --flags="fast" --test-options="--quickcheck-tests=$QUICKCHECK_TESTS --quickcheck-max-size=$QUICKCHECK_MAX_SIZE --quickcheck-max-shrinks=$QUICKCHECK_MAX_SHRINKS" typus-test 2>&1)
+    local time_cmd=$(command -v time || command -v /usr/bin/time || echo "")
+    
+    if [ -n "$time_cmd" ]; then
+        local time_output=$($time_cmd -v cabal test --flags="fast" --test-options="--quickcheck-tests=$QUICKCHECK_TESTS --quickcheck-max-size=$QUICKCHECK_MAX_SIZE --quickcheck-max-shrinks=$QUICKCHECK_MAX_SHRINKS" typus-test 2>&1)
         local exit_code=$?
         
         # 提取内存使用信息

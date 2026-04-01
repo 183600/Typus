@@ -99,16 +99,26 @@ detectAvailableMemory = do
                -- Try to detect actual available memory (simplified)
                detectSystemMemory
 
--- | Detect system memory (simplified implementation)
+-- | Detect system memory (cross-platform implementation)
 detectSystemMemory :: IO Int
 detectSystemMemory = do
-  -- On Linux systems, try to read from /proc/meminfo
-  result <- tryReadProcMeminfo
-  case result of
+  -- Try Linux-specific /proc/meminfo first
+  linuxResult <- tryReadProcMeminfo
+  case linuxResult of
     Just mem -> return mem
-    Nothing -> return 32  -- Default conservative estimate
+    Nothing -> do
+      -- Try macOS memory detection
+      macResult <- tryMacMemoryDetection
+      case macResult of
+        Just mem -> return mem
+        Nothing -> do
+          -- Try Windows memory detection
+          windowsResult <- tryWindowsMemoryDetection
+          case windowsResult of
+            Just mem -> return mem
+            Nothing -> return 32  -- Default conservative estimate
 
--- | Try to read memory info from /proc/meminfo
+-- | Try to read memory info from /proc/meminfo (Linux-specific)
 tryReadProcMeminfo :: IO (Maybe Int)
 tryReadProcMeminfo = do
   result <- tryReadFile "/proc/meminfo"
@@ -116,7 +126,30 @@ tryReadProcMeminfo = do
     Just content -> parseMeminfo content
     Nothing -> return Nothing
 
--- | Try to read a file (simplified)
+-- | Try macOS memory detection
+tryMacMemoryDetection :: IO (Maybe Int)
+tryMacMemoryDetection = do
+  result <- readProcess "sysctl" ["-n", "hw.memsize"] ""
+  case result of
+    bytes | not (null bytes) -> do
+      let totalBytes = read bytes :: Integer
+          totalMB = fromIntegral totalBytes `div` (1024 * 1024)
+      -- Assume 50% available for conservative estimate
+      return (Just (fromIntegral totalMB `div` 2))
+    _ -> return Nothing
+
+-- | Try Windows memory detection
+tryWindowsMemoryDetection :: IO (Maybe Int)
+tryWindowsMemoryDetection = do
+  result <- readProcess "wmic" ["OS", "get", "TotalVisibleMemorySize", "/Value"] ""
+  (case lines result of
+    [line] | "TotalVisibleMemorySize=" `isPrefixOf` line -> do
+      let prefixLength = length ("TotalVisibleMemorySize=" :: String)
+          kb = read (drop prefixLength line) :: Int
+          mb = kb `div` 1024
+      -- Assume 50% available for conservative estimate
+      return (Just (mb `div` 2))
+    _ -> return Nothing)-- | Try to read a file (cross-platform)
 tryReadFile :: FilePath -> IO (Maybe String)
 tryReadFile path = do
   result <- readProcess "cat" [path] ""

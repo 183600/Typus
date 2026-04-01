@@ -120,12 +120,20 @@ run_optimized_tests() {
     # Create a temporary file for memory monitoring
     TEMP_FILE=$(mktemp)
     
-    # Monitor memory usage in background
+    # Monitor memory usage in background (cross-platform)
     (
         while true; do
             if [ -f "/proc/$$/status" ]; then
+                # Linux
                 MEM_USAGE=$(grep VmRSS /proc/$$/status | awk '{print $2}')
                 echo "$(date): ${MEM_USAGE}KB" >> "$TEMP_FILE"
+            elif command -v ps >/dev/null 2>&1; then
+                # macOS/BSD
+                MEM_USAGE=$(ps -o rss= -p $$ 2>/dev/null | awk '{print $1}' || echo "0")
+                echo "$(date): ${MEM_USAGE}KB" >> "$TEMP_FILE"
+            else
+                # Fallback
+                echo "$(date): 0KB" >> "$TEMP_FILE"
             fi
             sleep 2
         done
@@ -189,8 +197,12 @@ cleanup_memory() {
         ghc -e "System.Mem.performGC" >/dev/null 2>&1 || true
     fi
     
-    # Clean up temporary files
-    find /tmp -name "typus-*" -type f -mtime +0 -delete 2>/dev/null || true
+    # Clean up temporary files (cross-platform)
+    if [ -n "$TMPDIR" ] && [ -d "$TMPDIR" ]; then
+        find "$TMPDIR" -name "typus-*" -type f -mtime +0 -delete 2>/dev/null || true
+    elif [ -d "/tmp" ]; then
+        find /tmp -name "typus-*" -type f -mtime +0 -delete 2>/dev/null || true
+    fi
     
     print_success "Memory cleanup completed"
 }

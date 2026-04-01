@@ -22,6 +22,7 @@ import Control.Exception (bracket, bracket_)
 import System.IO (hPutStrLn, stderr)
 import System.Process (readProcess)
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
+import System.Info (getProcessID)
 
 -- | Memory pressure levels indicating system memory state
 data MemoryPressure = 
@@ -50,16 +51,55 @@ monitorMemoryUsage action = bracket
   cleanupMemoryMonitoring
   (\_ -> action)
 
--- | Get current memory usage in MB (Linux-specific implementation)
+-- | Get current memory usage in MB (cross-platform implementation)
 getMemoryUsageMB :: IO Int
 getMemoryUsageMB = do
-  -- Try to read memory usage from /proc/self/status
+  -- Try Linux-specific /proc/self/status first
+  linuxResult <- tryGetLinuxMemoryUsage
+  case linuxResult of
+    Just usage -> return usage
+    Nothing -> do
+      -- Try macOS memory usage detection
+      macResult <- tryGetMacMemoryUsage
+      case macResult of
+        Just usage -> return usage
+        Nothing -> do
+          -- Try Windows memory usage detection
+          windowsResult <- tryGetWindowsMemoryUsage
+          case windowsResult of
+            Just usage -> return usage
+            Nothing -> return 0  -- Fallback if all detection fails
+
+-- | Try Linux memory usage detection
+tryGetLinuxMemoryUsage :: IO (Maybe Int)
+tryGetLinuxMemoryUsage = do
   result <- readProcess "grep" ["VmRSS", "/proc/self/status"] ""
   case words result of
     (_:_:kb:_) -> do
       let mb = read kb `div` 1024
-      return mb
-    _ -> return 0  -- Fallback if parsing fails
+      return (Just mb)
+    _ -> return Nothing
+
+-- | Try macOS memory usage detection
+tryGetMacMemoryUsage :: IO (Maybe Int)
+tryGetMacMemoryUsage = do
+  result <- readProcess "ps" ["-o", "rss=", "-p", show (System.Info.getProcessID)] ""
+  case result of
+    kb | not (null kb) -> do
+      let mb = read kb `div` 1024
+      return (Just mb)
+    _ -> return Nothing
+
+-- | Try Windows memory usage detection
+tryGetWindowsMemoryUsage :: IO (Maybe Int)
+tryGetWindowsMemoryUsage = do
+  result <- readProcess "wmic" ["process", "where", "processid=" ++ show (System.Info.getProcessID), "get", "WorkingSetSize", "/Value"] ""
+  case lines result of
+    [line] | "WorkingSetSize=" `isPrefixOf` line -> do
+      let bytes = read (drop (length "WorkingSetSize=") line) :: Integer
+          mb = fromIntegral bytes `div` (1024 * 1024)
+      return (Just (fromIntegral mb))
+    _ -> return Nothing
 
 -- | Calculate current memory pressure level
 calculateMemoryPressure :: IO MemoryPressure
