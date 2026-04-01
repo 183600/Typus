@@ -190,6 +190,19 @@ test-suite typus-test-enhanced
         TestSupport.OptimizedTestOrdering
         TestSupport.TestPropertyMemoryCleanup
         TestSupport.UltraLightweightTests
+        Test.Unit.CodeGenerationQuickCheckSpec
+        Test.Unit.ConciseCompilerQuickCheckSpec
+        Test.Unit.ConciseDependenciesQuickCheckSpec
+        Test.Unit.ConciseErrorHandlerQuickCheckSpec
+        Test.Unit.ConciseIntegrationQuickCheckSpec
+        Test.Unit.ConciseOwnershipQuickCheckSpec
+        Test.Unit.ConciseParserQuickCheckSpec
+        Test.Unit.ConciseSourceLocationQuickCheckSpec
+        Test.Unit.TestListPropertiesSpec
+        Test.Unit.UtilsComprehensiveSpec
+        TestSupport.AdvancedMemoryLimits
+        TestSupport.ErrorHandlerTestUtils
+        TestSupport.SuperMemoryOptimization
     build-depends:
             base >=4.7 && <5,
             typus,
@@ -216,6 +229,7 @@ executable typus
         typus
     hs-source-dirs:   app
     ghc-options:      -threaded -rtsopts -with-rtsopts=-N
+    default-language: Haskell2010
 
 -- Test Debug executable for debugging specific test cases
 executable test-debug
@@ -226,6 +240,7 @@ executable test-debug
         typus
     hs-source-dirs:   test/debug/app_debug
     ghc-options:      -threaded -rtsopts -with-rtsopts=-N
+    default-language: Haskell2010
 
 -- Smart Memory Test Runner for optimized testing with memory constraints
 executable smart-memory-test-runner
@@ -260,6 +275,7 @@ executable smart-memory-test-runner
         mtl >= 2.2 && <3,
         process >= 1.6.0 && <2
     ghc-options:      -threaded -rtsopts -with-rtsopts=-N
+    default-language: Haskell2010
 
 -- Super Optimized Test Runner for extreme memory-constrained environments
 executable super-optimized-test-runner
@@ -304,6 +320,7 @@ executable super-optimized-test-runner
         mtl >= 2.2 && <3,
         process >= 1.6.0 && <2
     ghc-options:      -threaded -rtsopts -with-rtsopts=-N
+    default-language: Haskell2010
 
 -- Adaptive Memory Test Runner that automatically selects tests based on available memory
 executable adaptive-memory-test-runner
@@ -495,7 +512,17 @@ test-suite typus-test
         TestSupport.OptimizedStringOperations,
         TestSupport.OptimizedTestOrdering,
         TestSupport.TestPropertyMemoryCleanup,
-        TestSupport.UltraLightweightTests
+        TestSupport.UltraLightweightTests,
+        Test.Unit.NewCompilerParserQuickCheckTests,
+        Test.Unit.NewDependentTypesQuickCheckTests,
+        Test.Unit.NewErrorHandlingQuickCheckTests,
+        Test.Unit.NewOwnershipQuickCheckTests,
+        Test.Unit.NewRefinementTypesQuickCheckTests,
+        TestSupport.ConsolidatedMemoryOptimization,
+        TestSupport.ErrorHandlerTestUtils,
+        TestSupport.SmartTestSelection,
+        TestSupport.SuperMemoryOptimization,
+        TestSupport.UnifiedMemoryOptimizedTestRunner
     build-depends:
         base >=4.7 && <5,
         typus,
@@ -511,6 +538,7 @@ test-suite typus-test
         containers >= 0.6 && <1,
         megaparsec >= 9.0.0 && <10,
         process >= 1.6.0 && <2
+    default-language: Haskell2010
 
 -- Memory-optimized test suite for CI/CD environments
 test-suite typus-test-optimized
@@ -600,7 +628,29 @@ test-suite typus-test-optimized
         TestSupport.OptimizedStringOperations,
         TestSupport.OptimizedTestOrdering,
         TestSupport.TestPropertyMemoryCleanup,
-        TestSupport.UltraLightweightTests
+        TestSupport.UltraLightweightTests,
+        Test.Unit.CompilerQuickCheckSpec,
+        Test.Unit.DependentTypesQuickCheckSpec,
+        Test.Unit.ErrorHandlingQuickCheckSpec,
+        Test.Unit.GoToolchainQuickCheckSpec,
+        Test.Unit.NewCompilerIntegrationTestSuite,
+        Test.Unit.NewComprehensiveTypusTestSuite,
+        Test.Unit.NewDependentTypesTestSuite,
+        Test.Unit.OwnershipQuickCheckSpec,
+        Test.Unit.ParserQuickCheckSpec,
+        Test.Unit.SourceLocationQuickCheckSpec,
+        Test.Unit.TypusCoreQuickCheckTestSuite,
+        Test.Unit.UltraMinimalCoreTestSuite,
+        TestSupport.ConsolidatedMemoryOptimization,
+        TestSupport.ErrorHandlerTestUtils,
+        TestSupport.SmartTestSelection,
+        TestSupport.SuperMemoryOptimization,
+        TestSupport.UnifiedMemoryOptimizedTestRunner,
+        Test.Unit.NewCompilerParserQuickCheckTests,
+        Test.Unit.NewDependentTypesQuickCheckTests,
+        Test.Unit.NewErrorHandlingQuickCheckTests,
+        Test.Unit.NewOwnershipQuickCheckTests,
+        Test.Unit.NewRefinementTypesQuickCheckTests
     build-depends:
         base >=4.7 && <5,
         typus,
@@ -615,8 +665,7 @@ test-suite typus-test-optimized
         containers >= 0.6 && <1,
         megaparsec >= 9.0.0 && <10,
         unix,
-        process >= 1.6.0 && <2,
-        process
+        process >= 1.6.0 && <2
     default-language: Haskell2010
 
 -- 极度最小化测试套件 - 只运行最关键的10个测试，最小内存使用
