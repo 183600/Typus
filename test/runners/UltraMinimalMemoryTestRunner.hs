@@ -53,7 +53,7 @@ createUltraMinimalTestSuite =
 main :: IO ()
 main = do
   printf "=== 超极简内存测试运行器 ===\n"
-  printf "内存限制: 4MB\n"
+  printf "内存限制: 8MB\n"
   printf "测试数量: 3个最关键测试\n"
   printf "QuickCheck配置: 最大大小=1, 测试次数=1, 收缩=0\n\n"
   

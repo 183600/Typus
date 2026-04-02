@@ -15,7 +15,8 @@ module TestSupport.AdaptiveMemoryMonitor
 
 import Test.Tasty (TestTree, testGroup, localOption)
 import Test.Tasty.QuickCheck (QuickCheckMaxSize(..), QuickCheckTests(..), QuickCheckMaxShrinks(..))
-import System.Mem (performGC)
+import System.Mem (performGC, getGCStats)
+import GHC.Stats (GCStats(..), gcdetails_live_bytes)
 import Control.Monad (replicateM_, when)
 import Control.Concurrent (threadDelay)
 import Control.Exception (bracket, bracket_)
@@ -23,6 +24,7 @@ import System.IO (hPutStrLn, stderr)
 import System.Process (readProcess)
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import System.Info (getProcessID)
+import Data.List (isPrefixOf)
 
 -- | Memory pressure levels indicating system memory state
 data MemoryPressure = 
@@ -68,7 +70,12 @@ getMemoryUsageMB = do
           windowsResult <- tryGetWindowsMemoryUsage
           case windowsResult of
             Just usage -> return usage
-            Nothing -> return 0  -- Fallback if all detection fails
+            Nothing -> do
+              -- Final fallback: use GHC RTS stats for Linux compatibility
+              ghcResult <- tryGetGhcMemoryUsage
+              case ghcResult of
+                Just usage -> return usage
+                Nothing -> return 0  -- Fallback if all detection fails
 
 -- | Try Linux memory usage detection
 tryGetLinuxMemoryUsage :: IO (Maybe Int)
@@ -100,6 +107,15 @@ tryGetWindowsMemoryUsage = do
           mb = fromIntegral bytes `div` (1024 * 1024)
       return (Just (fromIntegral mb))
     _ -> return Nothing
+
+-- | Try GHC RTS memory usage detection (cross-platform fallback)
+tryGetGhcMemoryUsage :: IO (Maybe Int)
+tryGetGhcMemoryUsage = do
+  -- Use GHC's internal memory statistics
+  stats <- getGCStats
+  let bytes = gcdetails_live_bytes (gc stats)
+      mb = bytes `div` (1024 * 1024)
+  return (Just mb)
 
 -- | Calculate current memory pressure level
 calculateMemoryPressure :: IO MemoryPressure

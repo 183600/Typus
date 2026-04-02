@@ -711,7 +711,7 @@ test-suite typus-test-ultra-minimal
                       -Wno-unused-imports
                       -O0
                       -rtsopts
-                      -with-rtsopts=-M4m
+                      -with-rtsopts=-M8m
     other-modules:
         Test.Unit.UltraMemoryOptimizedQuickCheckTests
     build-depends:

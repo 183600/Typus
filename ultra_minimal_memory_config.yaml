@@ -1,6 +1,6 @@
 # 超极简内存配置 - 专为极度内存受限环境设计
 memory:
-  limit_mb: 4  # 4MB内存限制，极度约束
+  limit_mb: 8  # 8MB内存限制，极度约束
   batch_size: 1  # 单批处理
   gc_frequency: 1  # 每个操作后都执行GC
   test_selection_ratio: 0.005  # 只选择0.5%的测试
