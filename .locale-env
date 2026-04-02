@@ -2,9 +2,9 @@
 # This file should be sourced to avoid locale warnings
 
 # Use universally available UTF-8 locale to avoid encoding issues
-# C.UTF-8 is widely available on Linux systems and provides consistent behavior
-export LC_ALL=C.UTF-8
-export LANG=C.UTF-8
+# C.utf8 is available on this Linux system and provides consistent behavior
+export LC_ALL=C.utf8
+export LANG=C.utf8
 
 # Use English language for consistent output
 # This avoids locale-related warnings in Haskell toolchain
