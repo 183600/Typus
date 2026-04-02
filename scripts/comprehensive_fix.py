@@ -10,7 +10,7 @@ def fix_syntax_errors(content):
     # 修复每一行的语法错误
     for i, line in enumerate(lines):
         # 修复assertBool语句中多余的右括号
-        if 'assertBool' in line and line.strip().endswith('))')):
+        if 'assertBool' in line and line.strip().endswith('))'):
             lines[i] = line.rstrip()[:-1]
         
         # 修复property语句中缺少的右括号
@@ -18,13 +18,13 @@ def fix_syntax_errors(content):
             lines[i] = line + '))'
         
         # 修复特定函数调用中缺少的右括号
-        if 'isRight (Right (42 :: Int))' in line and not line.rstrip().endswith('))')):
+        if 'isRight (Right (42 :: Int))' in line and not line.rstrip().endswith('))'):
             lines[i] = line + ')'
-        if 'isRight (Left ("error" :: String))' in line and not line.rstrip().endswith('))')):
+        if 'isRight (Left ("error" :: String))' in line and not line.rstrip().endswith('))'):
             lines[i] = line + ')'
-        if 'isLeft (Left ("error" :: String))' in line and not line.rstrip().endswith('))')):
+        if 'isLeft (Left ("error" :: String))' in line and not line.rstrip().endswith('))'):
             lines[i] = line + ')'
-        if 'isLeft (Right ("success" :: String))' in line and not line.rstrip().endswith('))')):
+        if 'isLeft (Right ("success" :: String))' in line and not line.rstrip().endswith('))'):
             lines[i] = line + ')'
     
     return '\n'.join(lines)

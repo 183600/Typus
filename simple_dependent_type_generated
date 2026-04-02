@@ -1,0 +1,36 @@
+package main
+
+import "fmt"
+
+
+// 精确类型定义
+type NonZero = int where { self != 0 }
+type Positive = int where { self > 0 }
+
+// 值参数化类型
+type Vector[n: int] struct {
+    data [n]float64
+}
+
+// 依赖函数签名
+func zeros(n: Positive) -> Vector[n] {
+    var data [n]float64
+    return Vector[n]{data: data}
+}
+
+func safeDiv(a: int, b: NonZero) -> int {
+    return a / b
+}
+
+func main() {
+    fmt.Println("Hello, Typus!")
+    
+    // 编译期验证
+    r := safeDiv(10, 2)    // ✓ 编译期验证 2 ≠ 0
+    fmt.Printf("10 / 2 = %d\n", r)
+    
+    // 使用值参数化类型
+    var size Positive = 3
+    v := zeros(size)       // v: Vector[3]
+    fmt.Printf("Vector length: %d\n", len(v.data))
+}

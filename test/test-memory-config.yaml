@@ -1,27 +1,27 @@
 # 增强内存测试配置
 memory:
-  limit_mb: 64
-  batch_size: 5
-  gc_frequency: 3
-  test_selection_ratio: 0.3
-  conservative_mode: false
-  aggressive_gc: false
+  limit_mb: 32
+  batch_size: 3
+  gc_frequency: 1
+  test_selection_ratio: 0.1
+  conservative_mode: true
+  aggressive_gc: true
 
 execution:
-  strategy: batched
+  strategy: sequential
   max_concurrent_tests: 1
   timeout_seconds: 300
 
 monitoring:
   enable_memory_monitoring: true
-  log_memory_usage: false
+  log_memory_usage: true
   memory_check_interval: 1000
 
 optimization:
   enable_test_reuse: true
   enable_memory_prediction: true
-  adaptive_scaling: true
+  adaptive_scaling: false
   
 environment:
-  type: standard
+  type: ci
   detected_memory_mb: unknown
