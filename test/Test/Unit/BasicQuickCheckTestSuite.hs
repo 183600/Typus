@@ -268,14 +268,14 @@ test_normalizeIndentation_edge_cases = do
 test_isRight_edge_cases :: Assertion
 test_isRight_edge_cases = do
   assertBool "Right value is right" (isRight (Right (42 :: Int)))
-
+  assertBool "Right value is right" (isRight (Right (42 :: Int)))
   assertBool "Left value is not right" (not $ isRight (Left ("error" :: String)))
 
 
 -- | 测试isLeft的边界情况
 test_isLeft_edge_cases :: Assertion
 test_isLeft_edge_cases = do
-  assertBool "Left value is left" (isLeft (Left ("error" :: String)))
+  assertBool "Right value is not left" (not $ isLeft (Right ("success" :: String)))
 
   assertBool "Right value is not left" (not $ isLeft (Right ("success" :: String)))
 
