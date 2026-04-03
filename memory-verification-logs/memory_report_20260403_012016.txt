@@ -1,0 +1,16 @@
+=== 系统信息 ===
+时间: Fri Apr  3 01:20:16 UTC 2026
+操作系统: Linux
+内核版本: 6.17.0-1008-azure
+内存信息:
+               total        used        free      shared  buff/cache   available
+Mem:            15Gi       4.4Gi       1.5Gi        53Mi        10Gi        11Gi
+Swap:          4.0Gi          0B       4.0Gi
+CPU信息:
+CPU(s):                                  4
+Model name:                              AMD EPYC 7763 64-Core Processor
+Thread(s) per core:                      2
+NUMA node0 CPU(s):                       0-3
+
+=== 基准测试 ===
+开始时间: Fri Apr  3 01:20:16 UTC 2026
