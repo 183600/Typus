@@ -35,12 +35,12 @@ declare -A QUICKCHECK_CONFIGS=(
 
 # RTS内存限制配置（更保守）
 declare -A RTS_CONFIGS=(
-    ["critical"]="-M6m -A512k -n64k -H512k -qg -G1"
-    ["minimal"]="-M12m -A1m -n128k -H1m -qg -G1"
-    ["ultra"]="-M20m -A2m -n256k -H2m -qg -G1"
-    ["enhanced"]="-M28m -A3m -n512k -H3m -qg -G1"
-    ["optimized"]="-M40m -A4m -n1m -H4m -qg -G1"
-    ["standard"]="-M56m -A8m -n2m -H6m -qg -G1"
+    ["critical"]="-M6m -A512k -n64k -H512k -G1"
+    ["minimal"]="-M12m -A1m -n128k -H1m -G1"
+    ["ultra"]="-M20m -A2m -n256k -H2m -G1"
+    ["enhanced"]="-M28m -A3m -n512k -H3m -G1"
+    ["optimized"]="-M40m -A4m -n1m -H4m -G1"
+    ["standard"]="-M56m -A8m -n2m -H6m -G1"
 )
 
 # 显示帮助信息

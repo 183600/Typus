@@ -82,7 +82,12 @@ check_memory() {
     print_status "Checking system memory..."
     
     # Try different methods to get available memory
-    if command -v free >/dev/null 2>&1; then
+    if [ -f /proc/meminfo ]; then
+        # Linux with /proc/meminfo (most reliable)
+        local available=$(grep MemAvailable /proc/meminfo | awk '{printf "%.0f", $2/1024}')
+        print_config "Available memory: ${available}MB"
+        suggest_memory_config "$available"
+    elif command -v free >/dev/null 2>&1; then
         # Linux with free command
         local available=$(free -m | awk 'NR==2{printf "%.0f", $7}')
         print_config "Available memory: ${available}MB"
@@ -149,16 +154,16 @@ run_enhanced_tests() {
     # Set RTS options for memory limits
     case "$memory_level" in
         "micro")
-            export GHCRTS="-M16m -A512k -n64k -H2m -qg"
+            export GHCRTS="-M16m -A512k -n64k -H2m"
             ;;
         "ultra_light")
-            export GHCRTS="-M24m -A1m -n128k -H3m -qg"
+            export GHCRTS="-M24m -A1m -n128k -H3m"
             ;;
         "enhanced")
-            export GHCRTS="-M32m -A2m -n256k -H4m -qg"
+            export GHCRTS="-M32m -A2m -n256k -H4m"
             ;;
         "standard")
-            export GHCRTS="-M48m -A4m -n512k -H6m -qg"
+            export GHCRTS="-M48m -A4m -n512k -H6m"
             ;;
     esac
     

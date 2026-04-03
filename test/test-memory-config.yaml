@@ -1,27 +1,27 @@
-# 增强内存测试配置
+# 增强内存测试配置 - Linux优化版
 memory:
-  limit_mb: 32
-  batch_size: 3
-  gc_frequency: 1
-  test_selection_ratio: 0.1
-  conservative_mode: true
-  aggressive_gc: true
+  limit_mb: 256
+  batch_size: 10
+  gc_frequency: 5
+  test_selection_ratio: 0.5
+  conservative_mode: false
+  aggressive_gc: false
 
 execution:
-  strategy: sequential
-  max_concurrent_tests: 1
-  timeout_seconds: 300
+  strategy: batched
+  max_concurrent_tests: 2
+  timeout_seconds: 600
 
 monitoring:
   enable_memory_monitoring: true
-  log_memory_usage: true
-  memory_check_interval: 1000
+  log_memory_usage: false
+  memory_check_interval: 500
 
 optimization:
   enable_test_reuse: true
   enable_memory_prediction: true
-  adaptive_scaling: false
+  adaptive_scaling: true
   
 environment:
-  type: ci
-  detected_memory_mb: unknown
+  type: linux
+  detected_memory_mb: 15989
