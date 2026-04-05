@@ -1,8 +1,8 @@
 #!/bin/bash
 # Script to run tests with production flags and check for warnings
 
-# Set C locale to avoid locale warnings
-export LC_ALL=C
+# Use project locale settings to avoid encoding issues
+source "$(dirname "$0")/../.locale-env"
 
 echo "Running tests with production flags..."
 cabal test --flags="-fast production" --test-show-details=direct

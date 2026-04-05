@@ -398,10 +398,14 @@ main = do
     generateMemoryOptimizationReport
     exitSuccess
   
-  -- 验证参数
-  case args of
+  -- 过滤掉以'--'开头的参数（这些是传递给tasty的选项，如--quickcheck-tests）
+  let tastyArgs = filter (\arg -> "--" `isPrefixOf` arg) args
+      envArgs = filter (\arg -> not ("--" `isPrefixOf` arg)) args
+  
+  -- 验证环境参数（最多一个）
+  case envArgs of
     [] -> do
-      -- 没有参数，自动检测环境
+      -- 没有环境参数，自动检测环境
       env <- detectTestEnvironment
       config <- return $ getTestRunConfig env
       if enableContinuousMonitoring config
@@ -430,8 +434,8 @@ main = do
         printHelp
         exitFailure
     _ -> do
-      -- 多个参数，错误
-      putStrLn "错误: 只能指定一个环境参数"
+      -- 多个环境参数，错误
+      putStrLn "错误: 只能指定一个环境参数（忽略以'--'开头的参数）"
       putStrLn ""
       printHelp
       exitFailure
