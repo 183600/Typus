@@ -24,7 +24,7 @@ jobs:
 
       IFLOW_API_KEY: ${{ secrets.IFLOW_API_KEY }}
       IFLOW_BASE_URL: https://apis.iflow.cn/v1
-      IFLOW_MODEL_NAME: deepseek-v3.2
+      IFLOW_MODEL_NAME: deepseek-v3.2-reasoner
 
       GH_TOKEN: ${{ github.token }}
       GITEE_REMOTE_URL: ${{ secrets.GITEE_REMOTE_URL }}
