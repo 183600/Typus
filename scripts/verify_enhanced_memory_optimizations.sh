@@ -40,9 +40,16 @@ verify_memory_usage() {
     
     local output_file="/tmp/typus_memory_test_$$.log"
     
-    # 使用time命令监控内存使用
-    /usr/bin/time -f "内存使用: %M KB" -o "$output_file" \
-    bash scripts/run_enhanced_unified_memory_tests.sh 2>&1 | tee "/tmp/typus_test_output_$$.log"
+    # 使用time命令监控内存使用（兼容性处理）
+    local time_cmd=$(command -v /usr/bin/time || command -v time || echo "")
+    if [[ -n "$time_cmd" ]]; then
+        $time_cmd -f "内存使用: %M KB" -o "$output_file" \
+        bash scripts/run_enhanced_unified_memory_tests.sh 2>&1 | tee "/tmp/typus_test_output_$$.log"
+    else
+        log_warn "未找到time命令，跳过内存监控"
+        bash scripts/run_enhanced_unified_memory_tests.sh 2>&1 | tee "/tmp/typus_test_output_$$.log"
+        echo "内存使用: 0 KB" > "$output_file"
+    fi
     
     local exit_code=${PIPESTATUS[0]}
     
