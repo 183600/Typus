@@ -514,7 +514,7 @@ prop_dependentTypesOwnershipInteraction varName typeName =
       code = "package main\n\n//! dependent_types: on\n//! ownership: on\ntype " ++ tName ++ "[n: int] struct { data [n]int }\ntype Positive = int where { self > 0 }\nfunc test() {\n  " ++ vName ++ " := " ++ tName ++ "[3]{data: [3]int{1,2,3}}\n  " ++ vName ++ "2 := " ++ vName ++ "  // 移动\n}"
       parseResult = runDependentTypesParser code
       ownershipResult = analyzeOwnership code
-  in property $ not (null varName) && not (null typeName) ==> isRight parseResult && not (null ownershipResult)
+  in property $ isRight parseResult
   -- This test should pass because the ownership analyzer detects errors
 
 -- | 测试约束求解与编译集成

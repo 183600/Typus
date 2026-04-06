@@ -211,7 +211,7 @@ prop_dependentTypesOwnershipInteraction s1 s2 =
       code = "package main\n\n//! dependent_types: on\n//! ownership: on\ntype Vector[int] struct { data [3]int }\nvar " ++ name1 ++ " Vector[int] = Vector[int]{data: [3]int{1,2,3}}\nvar " ++ name2 ++ " = " ++ name1
       parseResult = parseTypusFile code
       ownershipResult = analyzeOwnership code
-  in property $ (isRight parseResult && null ownershipResult) ==> True
+  in property $ isRight parseResult
 
 -- | 测试编译与语法验证的一致性
 prop_compileValidationConsistency :: String -> Property
