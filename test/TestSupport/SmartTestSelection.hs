@@ -40,6 +40,7 @@ import System.Mem (performGC)
 import Control.Monad (replicateM_, when)
 import Text.Printf (printf)
 import System.Process (readProcess)
+import Control.Exception (catch, IOException)
 import Control.Concurrent (threadDelay)
 
 -- | Memory tier classification
@@ -129,7 +130,8 @@ tryReadProcMeminfo = do
 -- | Try macOS memory detection
 tryMacMemoryDetection :: IO (Maybe Int)
 tryMacMemoryDetection = do
-  result <- readProcess "sysctl" ["-n", "hw.memsize"] ""
+  result <- catch (readProcess "sysctl" ["-n", "hw.memsize"] "")
+                  (\e -> const (return "") (e :: IOException))
   case result of
     bytes | not (null bytes) -> do
       let totalBytes = read bytes :: Integer
@@ -141,7 +143,8 @@ tryMacMemoryDetection = do
 -- | Try Windows memory detection
 tryWindowsMemoryDetection :: IO (Maybe Int)
 tryWindowsMemoryDetection = do
-  result <- readProcess "wmic" ["OS", "get", "TotalVisibleMemorySize", "/Value"] ""
+  result <- catch (readProcess "wmic" ["OS", "get", "TotalVisibleMemorySize", "/Value"] "")
+                  (\e -> const (return "") (e :: IOException))
   (case lines result of
     [line] | "TotalVisibleMemorySize=" `isPrefixOf` line -> do
       let prefixLength = length ("TotalVisibleMemorySize=" :: String)
@@ -152,7 +155,8 @@ tryWindowsMemoryDetection = do
     _ -> return Nothing)-- | Try to read a file (cross-platform)
 tryReadFile :: FilePath -> IO (Maybe String)
 tryReadFile path = do
-  result <- readProcess "cat" [path] ""
+  result <- catch (readProcess "cat" [path] "")
+                  (\e -> const (return "") (e :: IOException))
   return (Just result)
 
 -- | Parse meminfo to get available memory

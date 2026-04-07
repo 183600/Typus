@@ -19,7 +19,7 @@ import System.Mem (performGC, getGCStats)
 import GHC.Stats (GCStats(..), gcdetails_live_bytes)
 import Control.Monad (replicateM_, when)
 import Control.Concurrent (threadDelay)
-import Control.Exception (bracket, bracket_)
+import Control.Exception (bracket, bracket_, catch, IOException)
 import System.IO (hPutStrLn, stderr)
 import System.Process (readProcess)
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
@@ -80,7 +80,8 @@ getMemoryUsageMB = do
 -- | Try Linux memory usage detection
 tryGetLinuxMemoryUsage :: IO (Maybe Int)
 tryGetLinuxMemoryUsage = do
-  result <- readProcess "grep" ["VmRSS", "/proc/self/status"] ""
+  result <- catch (readProcess "grep" ["VmRSS", "/proc/self/status"] "")
+                  (\e -> const (return "") (e :: IOException))
   case words result of
     (_:_:kb:_) -> do
       let mb = read kb `div` 1024
@@ -90,7 +91,8 @@ tryGetLinuxMemoryUsage = do
 -- | Try macOS memory usage detection
 tryGetMacMemoryUsage :: IO (Maybe Int)
 tryGetMacMemoryUsage = do
-  result <- readProcess "ps" ["-o", "rss=", "-p", show (System.Info.getProcessID)] ""
+  result <- catch (readProcess "ps" ["-o", "rss=", "-p", show (System.Info.getProcessID)] "")
+                  (\e -> const (return "") (e :: IOException))
   case result of
     kb | not (null kb) -> do
       let mb = read kb `div` 1024
@@ -100,7 +102,8 @@ tryGetMacMemoryUsage = do
 -- | Try Windows memory usage detection
 tryGetWindowsMemoryUsage :: IO (Maybe Int)
 tryGetWindowsMemoryUsage = do
-  result <- readProcess "wmic" ["process", "where", "processid=" ++ show (System.Info.getProcessID), "get", "WorkingSetSize", "/Value"] ""
+  result <- catch (readProcess "wmic" ["process", "where", "processid=" ++ show (System.Info.getProcessID), "get", "WorkingSetSize", "/Value"] "")
+                  (\e -> const (return "") (e :: IOException))
   case lines result of
     [line] | "WorkingSetSize=" `isPrefixOf` line -> do
       let bytes = read (drop (length "WorkingSetSize=") line) :: Integer

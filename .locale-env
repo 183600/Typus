@@ -1,11 +1,34 @@
+#!/bin/bash
 # Locale settings for Typus project
 # This file should be sourced to avoid locale warnings
+# Dynamically selects the best available UTF-8 locale
 
-# Use universally available UTF-8 locale to avoid encoding issues
-# C.utf8 is available on this Linux system and provides consistent behavior
-export LC_ALL=C.utf8
-export LANG=C.utf8
+# Function to check if a locale is available
+check_locale() {
+    command -v locale >/dev/null 2>&1 && locale -a 2>/dev/null | grep -i "^$1$" >/dev/null 2>&1
+}
+
+# Try locale candidates in order of preference
+if check_locale "C.utf8"; then
+    export LC_ALL=C.utf8
+    export LANG=C.utf8
+elif check_locale "C.UTF-8"; then
+    export LC_ALL=C.UTF-8
+    export LANG=C.UTF-8
+elif check_locale "en_US.UTF-8"; then
+    export LC_ALL=en_US.UTF-8
+    export LANG=en_US.UTF-8
+elif check_locale "C"; then
+    export LC_ALL=C
+    export LANG=C
+else
+    # Fallback to POSIX if nothing else works
+    export LC_ALL=POSIX
+    export LANG=POSIX
+fi
 
 # Use English language for consistent output
-# This avoids locale-related warnings in Haskell toolchain
 export LANGUAGE=en_US:en
+
+# Optional: print selected locale for debugging
+# echo "Selected locale: $LC_ALL" >&2
